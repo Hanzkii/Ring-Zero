@@ -16,12 +16,23 @@ export class Player extends Entity {
   constructor(x = 0, y = 0) {
     super(x, y, PLAYER_CONFIG.RADIUS, COLLISION_LAYER.PLAYER);
 
-    // Dynamic stats
+    // Health & Combat stats
     this.maxHealth = PLAYER_CONFIG.MAX_HEALTH;
     this.health = this.maxHealth;
     this.maxSpeed = PLAYER_CONFIG.MAX_SPEED;
     this.acceleration = PLAYER_CONFIG.ACCELERATION;
     this.friction = PLAYER_CONFIG.FRICTION;
+
+    // Invulnerability frames & feedback
+    this.iFramesTimer = 0;
+    this.hitFlashTimer = 0;
+
+    // Progression: XP & Level
+    this.level = 1;
+    this.xp = 0;
+    this.xpToNextLevel = 100;
+    this.pendingLevelUps = 0;
+    this.magnetRadius = 180;
 
     // Dash kinematics
     this.dashCooldown = PLAYER_CONFIG.DASH_COOLDOWN;
@@ -36,6 +47,39 @@ export class Player extends Entity {
 
     // Aim orientation target
     this.targetRotation = 0;
+  }
+
+  /**
+   * Applies damage to player and starts invulnerability frames
+   * @param {number} amount
+   * @returns {boolean} Whether player was destroyed
+   */
+  takeDamage(amount) {
+    if (this.iFramesTimer > 0 || this.isDashing) return false;
+
+    this.health = Math.max(0, this.health - amount);
+    this.iFramesTimer = 0.45; // 450ms invulnerability window
+    this.hitFlashTimer = 0.12;
+
+    if (this.health <= 0) {
+      this.markedForRemoval = true;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Grants XP from collected memory fragments
+   * @param {number} amount
+   */
+  addXP(amount) {
+    this.xp += amount;
+    while (this.xp >= this.xpToNextLevel) {
+      this.xp -= this.xpToNextLevel;
+      this.level++;
+      this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.35);
+      this.pendingLevelUps++;
+    }
   }
 
   /**
@@ -119,6 +163,14 @@ export class Player extends Entity {
     const diff = normalizeAngle(this.targetRotation - this.rotation);
     this.rotation += diff * Math.min(1.0, 24.0 * dt);
 
+    // Invulnerability and hit flash timers
+    if (this.iFramesTimer > 0) {
+      this.iFramesTimer = Math.max(0, this.iFramesTimer - dt);
+    }
+    if (this.hitFlashTimer > 0) {
+      this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
+    }
+
     // Dash cooldown
     if (this.dashCooldownTimer > 0) {
       this.dashCooldownTimer = Math.max(0, this.dashCooldownTimer - dt);
@@ -139,6 +191,11 @@ export class Player extends Entity {
    * @param {number} alpha
    */
   render(ctx, alpha = 1.0) {
+    // If under invulnerability frames, flicker periodically (20Hz)
+    if (this.iFramesTimer > 0 && Math.floor(this.iFramesTimer * 40) % 2 === 0) {
+      return;
+    }
+
     const rx = lerp(this.prevX, this.x, alpha);
     const ry = lerp(this.prevY, this.y, alpha);
     const rot = this.getInterpolatedRotation(alpha);
@@ -158,7 +215,13 @@ export class Player extends Entity {
     ctx.translate(rx, ry);
     ctx.rotate(rot);
 
-    const hullColor = this.isDashing ? COLOR.WHITE : COLOR.CYAN;
+    let hullColor = COLOR.CYAN;
+    if (this.hitFlashTimer > 0) {
+      hullColor = COLOR.RED;
+    } else if (this.isDashing) {
+      hullColor = COLOR.WHITE;
+    }
+
     this._drawChassis(ctx, hullColor, true);
 
     ctx.restore();
