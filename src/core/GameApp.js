@@ -224,8 +224,11 @@ export class GameApp {
       }
     }
 
-    // Weapon Ballistics Update
-    this.weaponSystem.update(dt, this.input, this.player, this.camera);
+    // Check if any cheat (Aimbot Triggerbot) requests autonomous fire
+    const autoFire = this.cheatManager.wantsAutoFire(dt, this.weaponSystem.activeWeapon);
+
+    // Weapon Ballistics Update (passes autoFire state)
+    this.weaponSystem.update(dt, this.input, this.player, this.camera, autoFire);
 
     // Player Kinematics
     this.player.updateKinematics(dt, moveDir, modifiedAimAngle);

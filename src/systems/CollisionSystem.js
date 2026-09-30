@@ -93,10 +93,6 @@ export class CollisionSystem {
           const died = enemy.takeDamage(proj.damage, this._knockbackDir, proj.knockback);
           this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 6, proj.color);
 
-          if (proj.isCritical) {
-            this.camera.addTrauma(0.15);
-          }
-
           if (died) {
             // Destruction explosion
             this.particleSystem.emitBurst(enemy.x, enemy.y, 16, enemy.color, 280);

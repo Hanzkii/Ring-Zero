@@ -143,6 +143,21 @@ export class CheatManager {
   }
 
   /**
+   * Queries if any active exploit requests automatic firing (e.g. Aimbot Triggerbot)
+   * @param {number} dt
+   * @param {Object} weapon
+   * @returns {boolean}
+   */
+  wantsAutoFire(dt, weapon) {
+    for (const cheat of this.activeCheats.values()) {
+      if (cheat.enabled && cheat.shouldAutoShoot && cheat.shouldAutoShoot(dt, weapon)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Pipeline Hook: Updates active enemies per tick (Backtrack history recording)
    * @param {import('../entities/Enemy.js').Enemy} enemy
    * @param {number} dt

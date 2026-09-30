@@ -16,6 +16,28 @@ export class AimbotCheat extends CheatInterceptor {
     this.targetLeadPos = new Vec2();
     this.currentLockedAngle = 0;
     this.hasTarget = false;
+    this.autoShootTimer = 0;
+  }
+
+  /**
+   * Evaluates if Aimbot should automatically fire at the locked target
+   * @param {number} dt
+   * @param {Object} weapon
+   * @returns {boolean}
+   */
+  shouldAutoShoot(dt, weapon) {
+    if (!this.hasTarget || !this.currentTarget || this.currentTarget.markedForRemoval) {
+      return false;
+    }
+
+    this.autoShootTimer -= dt;
+    if (this.autoShootTimer <= 0) {
+      const mult = this.level === 1 ? 1.2 : this.level === 2 ? 1.0 : 0.85;
+      const interval = weapon ? weapon.fireInterval * mult : 0.25;
+      this.autoShootTimer = interval;
+      return true;
+    }
+    return false;
   }
 
   /**

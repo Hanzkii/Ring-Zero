@@ -198,7 +198,7 @@ export class WeaponSystem {
    * @param {import('../entities/Player.js').Player} player
    * @param {import('../core/Camera2D.js').Camera2D} camera
    */
-  update(dt, input, player, camera) {
+  update(dt, input, player, camera, autoFire = false) {
     const weapon = this.activeWeapon;
     if (!weapon) return;
 
@@ -216,11 +216,12 @@ export class WeaponSystem {
       weapon.startReload();
     }
 
-    // Determine fire trigger
+    // Determine fire trigger (supports manual input or autonomous aimbot triggerbot)
     const wantsFire =
-      weapon.mode === 'auto'
+      autoFire ||
+      (weapon.mode === 'auto'
         ? input.isMouseButtonDown(0)
-        : input.isMouseButtonJustPressed(0);
+        : input.isMouseButtonJustPressed(0));
 
     if (wantsFire) {
       if (weapon.currentAmmo <= 0) {
@@ -279,8 +280,7 @@ export class WeaponSystem {
       }
     }
 
-    // Camera recoil kick
-    camera.addTrauma(weapon.recoilTrauma);
+    // Screen shake when shooting has been removed for absolute combat precision
   }
 
   _spawnBullet(params) {
