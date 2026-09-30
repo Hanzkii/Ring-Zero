@@ -21,6 +21,9 @@ import { Enemy } from '../entities/Enemy.js';
 import { Drop } from '../entities/Drop.js';
 import { VectorRenderer } from '../ui/VectorRenderer.js';
 import { Vec2 } from './VectorMath.js';
+import { BSPFacilityMap } from '../world/BSPFacilityMap.js';
+import { CellularCavernMap } from '../world/CellularCavernMap.js';
+import { Raycaster2D } from '../world/Raycaster2D.js';
 
 export const APP_STATE = {
   BOOT: 'BOOT',
@@ -110,6 +113,15 @@ export class GameApp {
       cheatManager: this.cheatManager,
     });
 
+    // Procedural World Architecture & Raycasting
+    this.raycaster = new Raycaster2D(950);
+    this.currentBiome = 'facility';
+    this.currentSeed = 1337;
+    /** @type {import('../world/DestructibleProp.js').DestructibleProp[]} */
+    this.props = [];
+    this.map = null;
+    this.loadMap(this.currentBiome, this.currentSeed);
+
     // Game loop setup
     this.loop = new GameLoop({
       onUpdate: (dt) => this.update(dt),
@@ -134,6 +146,40 @@ export class GameApp {
     this.canvas.style.height = `${height}px`;
 
     this.camera.resize(width, height, dpr);
+  }
+
+  /**
+   * Loads or switches procedural map architecture and updates spatial grid
+   * @param {string} biomeType - 'facility' or 'cavern'
+   * @param {number} [seed=1337]
+   */
+  loadMap(biomeType, seed = 1337) {
+    if (this.map) {
+      for (const wall of this.map.walls) {
+        this.spatialGrid.remove(wall);
+      }
+      for (const prop of this.props) {
+        this.spatialGrid.remove(prop);
+      }
+    }
+
+    this.currentBiome = biomeType;
+    this.currentSeed = seed;
+
+    if (biomeType === 'cavern') {
+      this.map = new CellularCavernMap(seed);
+    } else {
+      this.map = new BSPFacilityMap(seed);
+    }
+
+    this.props = this.map.props;
+
+    for (const wall of this.map.walls) {
+      this.spatialGrid.insert(wall);
+    }
+    for (const prop of this.props) {
+      this.spatialGrid.insert(prop);
+    }
   }
 
   /**
@@ -244,6 +290,24 @@ export class GameApp {
     // Wave Director Update
     this.waveManager.update(dt, this.player, this.enemies.length);
 
+    // Dynamic Biome Progression: Waves 1-5 Facility, Wave 6+ Decrypted Caverns
+    const targetBiome = this.waveManager.currentWave >= 6 ? 'cavern' : 'facility';
+    if (this.currentBiome !== targetBiome) {
+      this.loadMap(targetBiome, 2048 + this.waveManager.currentWave);
+      this.camera.addTrauma(0.4);
+      this.particleSystem.emitBurst(0, 0, 40, COLOR.CYAN, 360);
+    }
+
+    // Destructible Props Update
+    for (let i = this.props.length - 1; i >= 0; i--) {
+      const prop = this.props[i];
+      prop.update(dt);
+      if (prop.markedForRemoval) {
+        this.spatialGrid.remove(prop);
+        this.props.splice(i, 1);
+      }
+    }
+
     // Enemy AI & Kinematics
     for (let i = 0; i < this.enemies.length; i++) {
       const enemy = this.enemies[i];
@@ -285,7 +349,8 @@ export class GameApp {
       this.player,
       this.enemies,
       this.drops,
-      (childEnemy) => this.spawnEnemy(childEnemy)
+      (childEnemy) => this.spawnEnemy(childEnemy),
+      this.props
     );
 
     // Cleanup dead enemies & drops from active lists and spatial hash
@@ -340,38 +405,56 @@ export class GameApp {
     // 2. Draw Arena Boundaries
     this._renderWorldBoundaries(ctx);
 
-    // 3. Draw Spatial Grid Overlay (if toggled)
+    // 3. Render Procedural Map Architecture (walls, floor accents, props)
+    if (this.map) {
+      this.map.render(ctx, this.camera);
+    }
+
+    // 4. Render Dynamic Smoke Cooling Plumes
+    if (this.map && this.map.smokeVents) {
+      this.raycaster.renderSmokePlumes(ctx, this.map.smokeVents, performance.now() * 0.001);
+    }
+
+    // 5. Draw Spatial Grid Overlay (if toggled)
     if (this.showSpatialGridDebug) {
       this.spatialGrid.renderDebug(ctx, bounds);
     }
 
-    // 4. Render Drops (XP gems and Hardware Weapon Crates)
+    // 6. Render Drops (XP gems and Hardware Weapon Crates)
     for (const drop of this.drops) {
       drop.render(ctx, alpha);
     }
 
-    // 5. Render Security Daemons
+    // 7. Render Security Daemons
     for (const enemy of this.enemies) {
       enemy.render(ctx, alpha);
     }
 
-    // 6. Render Player Cyber-Chassis
+    // 8. Render Player Cyber-Chassis
     if (this.player.health > 0) {
       this.player.render(ctx, alpha);
     }
 
-    // 7. Render Projectiles
+    // 9. Render Projectiles
     this.projectilePool.forEachActive((proj) => {
       proj.render(ctx, alpha);
     });
 
-    // 8. Render Vector Particles
+    // 10. Render Vector Particles
     this.particleSystem.render(ctx, alpha);
 
-    // 9. Draw Targeting Laser & Crosshair
+    // 11. 2D Dynamic Line-of-Sight Fog of War
+    if (this.map) {
+      const segments = this.map.getSegments();
+      const poly = this.raycaster.computeVisibilityPolygon(this.player.x, this.player.y, segments);
+      const wallhackActive = this.cheatManager.hasCheat('wallhack');
+      this.raycaster.renderFogOfWar(ctx, this.player.x, this.player.y, poly, this.camera, wallhackActive);
+    }
+
+    // 12. Draw Targeting Laser & Crosshair
     this._renderTargetingHUD(ctx);
 
-    // 10. Render Active Cheat World Overlays (ESP boxes, lock lines, backtrack ghosts)
+    // 13. Render Active Cheat World Overlays (ESP boxes, lock lines, backtrack ghosts)
     this.cheatManager.renderWorld(ctx, alpha, {
       player: this.player,
       enemies: this.enemies,
@@ -450,7 +533,7 @@ export class GameApp {
     ctx.font = '11px monospace';
     ctx.fillStyle = COLOR.WHITE_DIM;
     ctx.fillText(`FPS: ${this.loop.fps} | TPS: ${this.loop.tps} | FRAME: ${this.loop.frameTimeMs.toFixed(1)}ms`, 20, 38);
-    ctx.fillText(`DAEMONS ACTIVE: ${this.enemies.length} | BULLETS: ${this.projectilePool.activeCount}`, 20, 54);
+    ctx.fillText(`SECTOR: ${this.currentBiome.toUpperCase()} [SEED:${this.currentSeed}] | PROPS: ${this.props.length} | DAEMONS: ${this.enemies.length}`, 20, 54);
 
     // Active Exploit Badges
     this.cheatManager.renderHUD(ctx, 20, 74);

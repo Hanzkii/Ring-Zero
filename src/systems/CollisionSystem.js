@@ -7,6 +7,7 @@ import { COLLISION_LAYER, WORLD, COLOR } from '../core/Constants.js';
 import { DROP_TYPE } from '../entities/Drop.js';
 import { Enemy, ENEMY_ARCHETYPES } from '../entities/Enemy.js';
 import { Vec2 } from '../core/VectorMath.js';
+import { PROP_TYPE } from '../world/DestructibleProp.js';
 
 export class CollisionSystem {
   /**
@@ -38,12 +39,19 @@ export class CollisionSystem {
    * @param {Enemy[]} enemyList
    * @param {import('../entities/Drop.js').Drop[]} dropList
    * @param {function(Enemy): void} onSpawnChildEnemy - Spawns mini-daemons on split
+   * @param {import('../world/DestructibleProp.js').DestructibleProp[]} [propList=null]
    */
-  resolve(dt, player, enemyList, dropList, onSpawnChildEnemy) {
+  resolve(dt, player, enemyList, dropList, onSpawnChildEnemy, propList = null) {
     this._resolveProjectilesVsEnemies(enemyList, dropList, onSpawnChildEnemy);
     this._resolveProjectilesVsPlayer(player);
     this._resolveEnemiesVsPlayer(player, enemyList);
     this._resolvePlayerVsDrops(player, dropList);
+    this._resolveEntitiesVsWalls(player, enemyList);
+    if (propList) {
+      this._resolveEntitiesVsProps(player, enemyList, propList);
+      this._resolveProjectilesVsProps(propList, dropList, enemyList, player);
+    }
+    this._resolveProjectilesVsWalls();
     this._resolveProjectilesVsWorldBounds();
   }
 
@@ -263,6 +271,257 @@ export class CollisionSystem {
         }
       }
     }
+  }
+
+  /**
+   * Circle vs AABB collision resolution
+   * @param {Object} circle - Object with x, y, (vx, vy optional)
+   * @param {Object} aabb - Object with minX, maxX, minY, maxY
+   * @param {number} radius
+   * @returns {boolean}
+   */
+  _resolveCircleVsAABB(circle, aabb, radius) {
+    const closestX = Math.max(aabb.minX, Math.min(circle.x, aabb.maxX));
+    const closestY = Math.max(aabb.minY, Math.min(circle.y, aabb.maxY));
+
+    const dx = circle.x - closestX;
+    const dy = circle.y - closestY;
+    const distSq = dx * dx + dy * dy;
+
+    if (distSq < radius * radius && distSq > 0.0001) {
+      const dist = Math.sqrt(distSq);
+      const penetration = radius - dist;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      circle.x += nx * penetration;
+      circle.y += ny * penetration;
+
+      // Cancel velocity moving into wall
+      if (typeof circle.vx === 'number' && typeof circle.vy === 'number') {
+        const dot = circle.vx * nx + circle.vy * ny;
+        if (dot < 0) {
+          circle.vx -= dot * nx;
+          circle.vy -= dot * ny;
+        }
+      }
+      return true;
+    } else if (distSq <= 0.0001) {
+      // Circle center inside AABB - push out along closest edge
+      const leftDist = circle.x - aabb.minX;
+      const rightDist = aabb.maxX - circle.x;
+      const topDist = circle.y - aabb.minY;
+      const botDist = aabb.maxY - circle.y;
+
+      const minDist = Math.min(leftDist, rightDist, topDist, botDist);
+      if (minDist === leftDist) {
+        circle.x = aabb.minX - radius;
+        if (circle.vx && circle.vx > 0) circle.vx = 0;
+      } else if (minDist === rightDist) {
+        circle.x = aabb.maxX + radius;
+        if (circle.vx && circle.vx < 0) circle.vx = 0;
+      } else if (minDist === topDist) {
+        circle.y = aabb.minY - radius;
+        if (circle.vy && circle.vy > 0) circle.vy = 0;
+      } else {
+        circle.y = aabb.maxY + radius;
+        if (circle.vy && circle.vy < 0) circle.vy = 0;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Push player and enemies out of static walls
+   */
+  _resolveEntitiesVsWalls(player, enemyList) {
+    // 1. Player vs Walls
+    if (player && !player.markedForRemoval) {
+      this.spatialGrid.queryRadius(
+        player.x,
+        player.y,
+        player.radius + 60,
+        COLLISION_LAYER.WALL,
+        this._candidateList
+      );
+      for (const wall of this._candidateList) {
+        this._resolveCircleVsAABB(player, wall, player.radius);
+      }
+    }
+
+    // 2. Enemies vs Walls
+    for (const enemy of enemyList) {
+      if (!enemy.active || enemy.markedForRemoval) continue;
+      this.spatialGrid.queryRadius(
+        enemy.x,
+        enemy.y,
+        enemy.radius + 50,
+        COLLISION_LAYER.WALL,
+        this._candidateList
+      );
+      for (const wall of this._candidateList) {
+        this._resolveCircleVsAABB(enemy, wall, enemy.radius);
+      }
+    }
+  }
+
+  /**
+   * Push player and enemies out of solid props
+   */
+  _resolveEntitiesVsProps(player, enemyList, propList) {
+    if (player && !player.markedForRemoval) {
+      this.spatialGrid.queryRadius(
+        player.x,
+        player.y,
+        player.radius + 40,
+        COLLISION_LAYER.PROP,
+        this._candidateList
+      );
+      for (const prop of this._candidateList) {
+        if (!prop.markedForRemoval) {
+          this._resolveCircleVsAABB(player, prop, player.radius);
+        }
+      }
+    }
+
+    for (const enemy of enemyList) {
+      if (!enemy.active || enemy.markedForRemoval) continue;
+      this.spatialGrid.queryRadius(
+        enemy.x,
+        enemy.y,
+        enemy.radius + 40,
+        COLLISION_LAYER.PROP,
+        this._candidateList
+      );
+      for (const prop of this._candidateList) {
+        if (!prop.markedForRemoval) {
+          this._resolveCircleVsAABB(enemy, prop, enemy.radius);
+        }
+      }
+    }
+  }
+
+  /**
+   * Projectiles vs static walls (with Wallhack pierce check)
+   */
+  _resolveProjectilesVsWalls() {
+    this.projectilePool.forEachActive((proj) => {
+      if (proj.markedForRemoval) return;
+
+      this.spatialGrid.queryRadius(
+        proj.x,
+        proj.y,
+        proj.radius + 20,
+        COLLISION_LAYER.WALL,
+        this._candidateList
+      );
+
+      for (const wall of this._candidateList) {
+        if (
+          proj.x >= wall.minX - proj.radius &&
+          proj.x <= wall.maxX + proj.radius &&
+          proj.y >= wall.minY - proj.radius &&
+          proj.y <= wall.maxY + proj.radius
+        ) {
+          let canPierce = false;
+          if (this.cheatManager && this.cheatManager.hasCheat('wallhack')) {
+            const wallhack = this.cheatManager.getCheat('wallhack');
+            const remaining = proj.hitsRemaining !== undefined ? proj.hitsRemaining : proj.pierce;
+            if (wallhack && wallhack.level >= 2 && remaining > 0) {
+              canPierce = true;
+            }
+          }
+
+          if (canPierce) {
+            if (proj.hitsRemaining !== undefined) proj.hitsRemaining--;
+            else proj.pierce--;
+            this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 3, COLOR.CYAN);
+          } else {
+            this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 6, proj.color);
+            proj.markedForRemoval = true;
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Projectiles vs destructible props
+   */
+  _resolveProjectilesVsProps(propList, dropList, enemyList, player) {
+    this.projectilePool.forEachActive((proj) => {
+      if (proj.markedForRemoval) return;
+
+      this.spatialGrid.queryRadius(
+        proj.x,
+        proj.y,
+        proj.radius + 24,
+        COLLISION_LAYER.PROP,
+        this._candidateList
+      );
+
+      for (const prop of this._candidateList) {
+        if (!prop.active || prop.markedForRemoval) continue;
+
+        if (
+          proj.x >= prop.minX - proj.radius &&
+          proj.x <= prop.maxX + proj.radius &&
+          proj.y >= prop.minY - proj.radius &&
+          proj.y <= prop.maxY + proj.radius
+        ) {
+          const destroyed = prop.takeDamage(proj.damage);
+          this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 5, prop.color);
+
+          if (destroyed) {
+            this.spatialGrid.remove(prop);
+
+            if (prop.propType === PROP_TYPE.EXPLOSIVE_CELL) {
+              this.particleSystem.emitBurst(prop.x, prop.y, 22, COLOR.RED, 320);
+              this.camera.addTrauma(0.3);
+
+              const blastRadius = 140;
+              for (const enemy of enemyList) {
+                if (!enemy.active || enemy.markedForRemoval) continue;
+                const d = Math.hypot(enemy.x - prop.x, enemy.y - prop.y);
+                if (d < blastRadius + enemy.radius) {
+                  const dir = new Vec2(enemy.x - prop.x, enemy.y - prop.y).normalize();
+                  const died = enemy.takeDamage(120, dir, 300);
+                  if (died) {
+                    this.particleSystem.emitBurst(enemy.x, enemy.y, 14, enemy.color, 240);
+                    const drops = enemy.generateDrops();
+                    for (const drop of drops) {
+                      dropList.push(drop);
+                      this.spatialGrid.insert(drop);
+                    }
+                  }
+                }
+              }
+
+              if (player && !player.markedForRemoval) {
+                const pd = Math.hypot(player.x - prop.x, player.y - prop.y);
+                if (pd < blastRadius + player.radius) {
+                  player.takeDamage(25);
+                  this.camera.addTrauma(0.35);
+                  this.particleSystem.emitBurst(player.x, player.y, 10, COLOR.RED, 200);
+                }
+              }
+            } else {
+              this.particleSystem.emitBurst(prop.x, prop.y, 14, COLOR.CYAN, 200);
+              const drops = prop.generateDrops();
+              for (const drop of drops) {
+                dropList.push(drop);
+                this.spatialGrid.insert(drop);
+              }
+            }
+          }
+
+          const shouldDespawn = proj.onHit(prop);
+          if (shouldDespawn) break;
+        }
+      }
+    });
   }
 
   /**

@@ -86,6 +86,14 @@ export class Projectile extends Entity {
     this.markedForRemoval = false;
   }
 
+  get pierce() {
+    return this.hitsRemaining;
+  }
+
+  set pierce(val) {
+    this.hitsRemaining = val;
+  }
+
   /**
    * Advances bullet trajectory
    * @param {number} dt
