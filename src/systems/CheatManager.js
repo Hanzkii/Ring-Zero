@@ -204,10 +204,8 @@ export class CheatManager {
    * @returns {boolean}
    */
   wantsAutoFire(dt, weapon) {
-    const hasSilentAim = this.hasCheat('silentaim');
     for (const cheat of this.activeCheats.values()) {
       if (cheat.enabled && cheat.shouldAutoShoot) {
-        if (hasSilentAim && cheat.id === 'aimbot') continue;
         if (cheat.shouldAutoShoot(dt, weapon)) {
           return true;
         }

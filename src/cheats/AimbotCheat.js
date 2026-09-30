@@ -18,34 +18,6 @@ export class AimbotCheat extends CheatInterceptor {
     this.currentLockedAngle = 0;
     this.hasTarget = false;
     this.isBacktrackTarget = false;
-    this.autoShootTimer = 0;
-  }
-
-  /**
-   * Evaluates if Aimbot should automatically fire at the locked target.
-   * Only fires when an enemy or backtrack tick is actively targeted and shootable.
-   * @param {number} dt
-   * @param {Object} weapon
-   * @returns {boolean}
-   */
-  shouldAutoShoot(dt, weapon) {
-    if (!this.hasTarget || !this.currentTarget || this.currentTarget.markedForRemoval) {
-      this.autoShootTimer = 0;
-      return false;
-    }
-
-    if (weapon && (weapon.isReloading || weapon.currentAmmo <= 0)) {
-      return false;
-    }
-
-    this.autoShootTimer -= dt;
-    if (this.autoShootTimer <= 0) {
-      const mult = this.level === 1 ? 1.2 : this.level === 2 ? 1.0 : 0.85;
-      const interval = weapon ? weapon.fireInterval * mult : 0.25;
-      this.autoShootTimer = interval;
-      return true;
-    }
-    return false;
   }
 
   /**

@@ -401,8 +401,7 @@ console.log('\n9. Testing Backtrack Physical Hit Registration & Exploit Targetin
   };
   aimbot.onAimInput(0, new Vec2(1, 0), blockedContext);
   assert(aimbot.hasTarget === false, 'Aimbot target cleared when all targets are blocked by walls');
-  const wantsAutoFireBlocked = aimbot.shouldAutoShoot(0.016, aimContext.weapon);
-  assert(wantsAutoFireBlocked === false, 'Aimbot shouldAutoShoot returns false when no target in sight (prevents wall shooting)');
+  assert(typeof aimbot.shouldAutoShoot === 'undefined', 'Aimbot has no shouldAutoShoot — firing is Triggerbot/SilentAim domain');
 
   // Test SilentAim targeting backtrack tick
   const silentAim = new SilentAimCheat();
