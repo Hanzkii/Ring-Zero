@@ -1,0 +1,153 @@
+/* ==========================================================================
+   Ring Zero - Vector HUD & Boot Terminal Styles
+   Minimalist military-spec telemetry & privilege escalation styling.
+   ========================================================================== */
+
+#terminal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100;
+  background: radial-gradient(circle at center, rgba(13, 17, 26, 0.94) 0%, rgba(7, 10, 15, 0.98) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#terminal-overlay.terminal-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.terminal-box {
+  width: 90%;
+  max-width: 640px;
+  background: rgba(11, 14, 20, 0.95);
+  border: 1px solid var(--color-cyan-dim);
+  padding: 32px;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.08);
+}
+
+/* Corner bracket accents */
+.terminal-box::before,
+.terminal-box::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-cyan);
+}
+
+.terminal-box::before {
+  top: -2px;
+  left: -2px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.terminal-box::after {
+  bottom: -2px;
+  right: -2px;
+  border-left: none;
+  border-top: none;
+}
+
+.terminal-header {
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.terminal-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--color-cyan);
+  text-transform: uppercase;
+}
+
+.terminal-subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1.5px;
+  margin-top: 6px;
+}
+
+.terminal-body {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 28px;
+}
+
+.terminal-body p {
+  margin-bottom: 12px;
+}
+
+.terminal-log {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--color-green);
+  margin: 16px 0;
+}
+
+.terminal-log span {
+  color: var(--color-amber);
+}
+
+.terminal-controls {
+  margin-top: 18px;
+  padding: 12px;
+  border-left: 2px solid var(--color-cyan);
+  background: rgba(0, 240, 255, 0.03);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.terminal-controls strong {
+  color: var(--color-cyan);
+}
+
+.terminal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+.btn-vector {
+  background: transparent;
+  color: var(--color-cyan);
+  border: 1px solid var(--color-cyan);
+  padding: 14px 28px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  outline: none;
+}
+
+.btn-vector:hover {
+  background: var(--color-cyan);
+  color: var(--color-bg-dark);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+}
+
+.btn-vector:active {
+  transform: scale(0.98);
+}
+
+.terminal-prompt {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}

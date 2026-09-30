@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ring Zero // 2D Procedural Kernel Shooter</title>
+  <meta name="description" content="Ring Zero: A 2D top-down procedural wave shooter built with vanilla ES6+ modules and HTML5 Canvas. Zero external dependencies.">
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="./styles/hud.css">
+</head>
+<body>
+
+  <!-- Fullscreen Canvas Viewport -->
+  <div id="canvas-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- Boot Terminal / User Gesture Unlock Overlay -->
+  <div id="terminal-overlay">
+    <div class="terminal-box">
+      <div class="terminal-header">
+        <h1 class="terminal-title">RING ZERO</h1>
+        <div class="terminal-subtitle">PRIVILEGE ESCALATION // KERNEL MEMORY INTERCEPTOR</div>
+      </div>
+      <div class="terminal-body">
+        <p>SYSTEM WARNING: Kernel-space privilege deauthorization detected. Hostile security daemons are sanitizing memory blocks.</p>
+        <div class="terminal-log">
+          <div>[STATUS] RING 3 (USERLAND) MOUNTED.</div>
+          <div>[KERNEL] EXPLOIT HOOK PIPELINE: <span>ARMED</span></div>
+          <div>[AUDIO] WEB AUDIO SYNTHESIZER: <span>STANDBY (REQUIRES GESTURE)</span></div>
+        </div>
+        <p>Weaponize hardware ballistics and runtime cheat exploits to breach Ring 0 clearance.</p>
+        <div class="terminal-controls">
+          <div><strong>CONTROLS:</strong> [W,A,S,D] Move &bull; [MOUSE] Aim &bull; [LMB] Primary Fire</div>
+          <div><strong>AGILITY:</strong> [SPACE / RMB] Hyper-Velocity Dash &bull; [G] Toggle Spatial Hash Grid</div>
+        </div>
+      </div>
+      <div class="terminal-footer">
+        <button id="btn-init-kernel" class="btn-vector">INITIALIZE KERNEL ACCESS</button>
+        <div class="terminal-prompt">PRESS [ENTER] OR CLICK TO EXECUTE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main ES6 Module Entry -->
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+/* ==========================================================================
+   Ring Zero - Core Reset & Layout Styles
+   Pure CSS. Zero frameworks.
+   ========================================================================== */
+
+:root {
+  --color-bg-dark: #070A0F;
+  --color-bg-slate: #0D111A;
+  --color-cyan: #00F0FF;
+  --color-cyan-dim: rgba(0, 240, 255, 0.35);
+  --color-amber: #FFB000;
+  --color-red: #FF2A6D;
+  --color-green: #05FFA1;
+  --color-white: #FFFFFF;
+  --font-mono: 'Consolas', 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--color-bg-dark);
+  color: var(--color-white);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  cursor: crosshair;
+  background-color: var(--color-bg-dark);
+}
