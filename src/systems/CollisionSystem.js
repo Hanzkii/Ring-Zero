@@ -437,9 +437,16 @@ export class CollisionSystem {
           let canPierce = false;
           if (this.cheatManager && this.cheatManager.hasCheat('wallhack')) {
             const wallhack = this.cheatManager.getCheat('wallhack');
-            const remaining = proj.hitsRemaining !== undefined ? proj.hitsRemaining : proj.pierce;
-            if (wallhack && wallhack.level >= 2 && remaining > 0) {
-              canPierce = true;
+            if (wallhack && proj.layer === COLLISION_LAYER.PROJECTILE_PLAYER) {
+              // Max level Wallhack (Rank 3): bullets shoot completely through walls!
+              if (wallhack.level >= 3 || proj.penetratesWalls) {
+                this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 1, COLOR.CYAN);
+                continue;
+              }
+              const remaining = proj.hitsRemaining !== undefined ? proj.hitsRemaining : proj.pierce;
+              if (wallhack.level >= 2 && remaining > 0) {
+                canPierce = true;
+              }
             }
           }
 

@@ -157,7 +157,7 @@ export const CHEAT_REGISTRY = {
     rankDescriptions: [
       'Rank 1: Live wireframe bounding boxes, distance markers, and health telemetry',
       'Rank 2: Threat color classification & +1 bullet armor piercing',
-      'Rank 3: Long-range threat snaplines & +2 bullet armor piercing',
+      'Rank 3: Full geometric wall penetration (bullets shoot through walls) & threat snaplines',
     ],
   },
   SPINBOT: {

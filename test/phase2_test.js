@@ -67,6 +67,13 @@ console.log('1. Testing WeaponSystem & Archetypes:');
   assert(weaponSys.activeWeapon.currentAmmo === 12, 'Weapon reloaded back to full clip');
   assert(weaponSys.activeWeapon.isReloading === false, 'Weapon exits reload state');
 
+  // Test automatic reload when reaching 0 ammo
+  weaponSys.activeWeapon.currentAmmo = 0;
+  weaponSys.activeWeapon.update(0.016);
+  assert(weaponSys.activeWeapon.isReloading === true, 'Weapon automatically enters reload state when ammo reaches 0');
+  weaponSys.activeWeapon.update(1.0);
+  assert(weaponSys.activeWeapon.currentAmmo === 12, 'Weapon auto-reload completed back to full clip');
+
   // Test Multi-pellet weapon (Combat Sweeper)
   const sweeper = new WeaponInstance(WEAPON_ARCHETYPES.COMBAT_SWEEPER);
   weaponSys.equipWeapon(sweeper);

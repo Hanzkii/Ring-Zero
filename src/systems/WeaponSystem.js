@@ -127,6 +127,9 @@ export class WeaponInstance {
         this.isReloading = false;
         this.currentAmmo = this.clipSize;
       }
+    } else if (this.currentAmmo <= 0) {
+      // Automatically reload when clip is empty
+      this.startReload();
     }
   }
 
@@ -245,6 +248,10 @@ export class WeaponSystem {
   _fireWeapon(weapon, player, baseAimAngle, camera) {
     weapon.currentAmmo--;
     weapon.cooldownTimer = weapon.fireInterval;
+
+    if (weapon.currentAmmo <= 0) {
+      weapon.startReload();
+    }
 
     // Apply movement penalty to spread
     const playerSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);

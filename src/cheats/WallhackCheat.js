@@ -22,6 +22,9 @@ export class WallhackCheat extends CheatInterceptor {
     if (this.level >= 2) {
       bulletParams.pierce += this.level - 1; // +1 pierce at Lv 2, +2 pierce at Lv 3
     }
+    if (this.level >= 3) {
+      bulletParams.penetratesWalls = true; // Max rank: bullets shoot through walls!
+    }
     spawnCallback(bulletParams);
   }
 

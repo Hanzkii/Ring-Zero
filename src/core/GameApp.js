@@ -249,6 +249,9 @@ export class GameApp {
     const moveDir = this.input.getMovementVector();
     this.input.updateAim(this.player, this.camera);
 
+    const wallhack = this.cheatManager.getCheat('wallhack');
+    const canShootThroughWalls = !!(wallhack && wallhack.level >= 3);
+
     // Apply cheat aim interceptors (e.g. Aimbot predictive angle lock)
     const modifiedAimAngle = this.cheatManager.applyAimInterceptors(
       this.input.aimAngle,
@@ -261,7 +264,7 @@ export class GameApp {
         weapon: this.weaponSystem.activeWeapon,
         raycaster: this.raycaster,
         wallSegments: this.map ? this.map.getSegments() : [],
-        hasWallhack: this.cheatManager.hasCheat('wallhack'),
+        hasWallhack: canShootThroughWalls,
         backtrackCheat: this.cheatManager.getCheat('backtrack'),
       }
     );

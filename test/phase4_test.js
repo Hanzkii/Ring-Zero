@@ -250,6 +250,26 @@ console.log('\n6. Testing Static Wall & Prop Collisions in CollisionSystem:');
   assert(piercingBullet.markedForRemoval === false, 'Wallhack bullet penetrates wall without despawning');
   assert(piercingBullet.pierce === 0, 'Wallhack bullet decremented pierce counter');
 
+  // Test 3b: Projectile with Max Level Wallhack (Rank 3: full geometric wall penetration)
+  cheatManager.addOrUpgradeCheat('wallhack'); // Lv 3 (Max)
+  const maxWallBullet = pool.obtain();
+  maxWallBullet.spawn({
+    x: 0,
+    y: 0,
+    vx: 500,
+    vy: 0,
+    damage: 20,
+    pierce: 2,
+    layer: COLLISION_LAYER.PROJECTILE_PLAYER,
+    color: COLOR.CYAN,
+  });
+  grid.insert(maxWallBullet);
+
+  maxWallBullet.x = 15;
+  collisionSystem._resolveProjectilesVsWalls();
+  assert(maxWallBullet.markedForRemoval === false, 'Max Level Wallhack bullet shoots through wall without despawning');
+  assert(maxWallBullet.pierce === 2, 'Max Level Wallhack bullet maintains full pierce when shooting through walls');
+
   // Test 4: Projectile vs Destructible Prop (Server Rack)
   const rack = new DestructibleProp(300, 300, PROP_TYPE.SERVER_RACK);
   grid.insert(rack);
