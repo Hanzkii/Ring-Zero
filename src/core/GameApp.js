@@ -13,6 +13,8 @@ import { ParticleSystem } from '../systems/ParticleSystem.js';
 import { WeaponSystem } from '../systems/WeaponSystem.js';
 import { WaveManager, WAVE_STATE } from '../systems/WaveManager.js';
 import { CollisionSystem } from '../systems/CollisionSystem.js';
+import { CheatManager } from '../systems/CheatManager.js';
+import { DraftModal } from '../ui/DraftModal.js';
 import { Player } from '../entities/Player.js';
 import { Projectile } from '../entities/Projectile.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -23,6 +25,7 @@ import { Vec2 } from './VectorMath.js';
 export const APP_STATE = {
   BOOT: 'BOOT',
   RUN: 'RUN',
+  DRAFT: 'DRAFT',
   PAUSED: 'PAUSED',
   GAMEOVER: 'GAMEOVER',
 };
@@ -44,6 +47,8 @@ export class GameApp {
     this.input = new InputManager(canvas);
     this.camera = new Camera2D(window.innerWidth, window.innerHeight);
     this.spatialGrid = new SpatialHashGrid(128);
+    this.cheatManager = new CheatManager();
+    this.draftModal = new DraftModal(document.body, (chosenDef) => this.onExploitDrafted(chosenDef));
 
     // World bounds
     this.worldBounds = {
@@ -79,6 +84,18 @@ export class GameApp {
 
     // Weapon & Wave Systems
     this.weaponSystem = new WeaponSystem(this.projectilePool);
+    this.weaponSystem.fireInterceptor = (bulletParams, spawnCb) => {
+      this.cheatManager.applyWeaponFireInterceptors(
+        bulletParams,
+        {
+          player: this.player,
+          spatialGrid: this.spatialGrid,
+          weapon: this.weaponSystem.activeWeapon,
+        },
+        spawnCb
+      );
+    };
+
     this.waveManager = new WaveManager({
       onSpawnEnemy: (enemy) => this.spawnEnemy(enemy),
     });
@@ -90,6 +107,7 @@ export class GameApp {
       particleSystem: this.particleSystem,
       weaponSystem: this.weaponSystem,
       camera: this.camera,
+      cheatManager: this.cheatManager,
     });
 
     // Game loop setup
@@ -136,10 +154,44 @@ export class GameApp {
   }
 
   /**
+   * Invoked when user selects an exploit card in the draft modal
+   * @param {Object} chosenDef
+   */
+  onExploitDrafted(chosenDef) {
+    this.cheatManager.addOrUpgradeCheat(chosenDef.id);
+    this.player.pendingLevelUps--;
+
+    // If another level-up is pending, open next draft round
+    if (this.player.pendingLevelUps > 0) {
+      const nextOptions = this.cheatManager.generateDraftOptions(3);
+      if (nextOptions.length > 0) {
+        this.draftModal.open(nextOptions);
+        return;
+      }
+    }
+
+    // Resume simulation
+    this.state = APP_STATE.RUN;
+  }
+
+  /**
    * Deterministic 60Hz physics and simulation update
    * @param {number} dt - Fixed delta time (1/60 s)
    */
   update(dt) {
+    // Check pending level-up draft trigger
+    if (this.player.pendingLevelUps > 0 && this.state === APP_STATE.RUN) {
+      const options = this.cheatManager.generateDraftOptions(3);
+      if (options.length > 0) {
+        this.state = APP_STATE.DRAFT;
+        this.draftModal.open(options);
+        return;
+      } else {
+        // All clearance cheats maxed
+        this.player.pendingLevelUps = 0;
+      }
+    }
+
     if (this.state !== APP_STATE.RUN) return;
 
     // Toggle Spatial Grid Debug with 'KeyG'
@@ -147,9 +199,22 @@ export class GameApp {
       this.showSpatialGridDebug = !this.showSpatialGridDebug;
     }
 
-    // Input collection & Aim
+    // Input collection & Aim Interception
     const moveDir = this.input.getMovementVector();
     this.input.updateAim(this.player, this.camera);
+
+    // Apply cheat aim interceptors (e.g. Aimbot predictive angle lock)
+    const modifiedAimAngle = this.cheatManager.applyAimInterceptors(
+      this.input.aimAngle,
+      this.input.aimVector,
+      {
+        player: this.player,
+        spatialGrid: this.spatialGrid,
+        enemies: this.enemies,
+        dt,
+        weapon: this.weaponSystem.activeWeapon,
+      }
+    );
 
     // Player dash impulse check (Space or Right Mouse Button)
     if (this.input.isKeyJustPressed('Space') || this.input.isMouseButtonJustPressed(2)) {
@@ -163,7 +228,8 @@ export class GameApp {
     this.weaponSystem.update(dt, this.input, this.player, this.camera);
 
     // Player Kinematics
-    this.player.updateKinematics(dt, moveDir, this.input.aimAngle);
+    this.player.updateKinematics(dt, moveDir, modifiedAimAngle);
+    this.cheatManager.updatePlayer(this.player, dt, {});
 
     // Clamp player to arena perimeter
     const halfW = WORLD.DEFAULT_WIDTH * 0.5 - 32;
@@ -182,6 +248,7 @@ export class GameApp {
         const p = this.projectilePool.obtain();
         if (p) p.spawn(pulseParams);
       });
+      this.cheatManager.updateEnemy(enemy, dt, { player: this.player });
       this.spatialGrid.update(enemy);
     }
 
@@ -301,6 +368,13 @@ export class GameApp {
     // 9. Draw Targeting Laser & Crosshair
     this._renderTargetingHUD(ctx);
 
+    // 10. Render Active Cheat World Overlays (ESP boxes, lock lines, backtrack ghosts)
+    this.cheatManager.renderWorld(ctx, alpha, {
+      player: this.player,
+      enemies: this.enemies,
+      camera: this.camera,
+    });
+
     // End camera world coordinate space
     this.camera.end(ctx);
 
@@ -374,6 +448,9 @@ export class GameApp {
     ctx.fillStyle = COLOR.WHITE_DIM;
     ctx.fillText(`FPS: ${this.loop.fps} | TPS: ${this.loop.tps} | FRAME: ${this.loop.frameTimeMs.toFixed(1)}ms`, 20, 38);
     ctx.fillText(`DAEMONS ACTIVE: ${this.enemies.length} | BULLETS: ${this.projectilePool.activeCount}`, 20, 54);
+
+    // Active Exploit Badges
+    this.cheatManager.renderHUD(ctx, 20, 74);
 
     // Top-Center: Wave Director Telemetry
     ctx.textAlign = 'center';

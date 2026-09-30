@@ -16,13 +16,15 @@ export class CollisionSystem {
    * @param {import('./ParticleSystem.js').ParticleSystem} options.particleSystem
    * @param {import('./WeaponSystem.js').WeaponSystem} options.weaponSystem
    * @param {import('../core/Camera2D.js').Camera2D} options.camera
+   * @param {import('./CheatManager.js').CheatManager} [options.cheatManager]
    */
-  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera }) {
+  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera, cheatManager = null }) {
     this.spatialGrid = spatialGrid;
     this.projectilePool = projectilePool;
     this.particleSystem = particleSystem;
     this.weaponSystem = weaponSystem;
     this.camera = camera;
+    this.cheatManager = cheatManager;
 
     // Reusable candidate query arrays
     this._candidateList = [];
@@ -71,7 +73,20 @@ export class CollisionSystem {
         const dy = enemy.y - proj.y;
         const totalR = enemy.radius + proj.radius;
 
+        let hitRegistered = false;
+
+        // 1. Direct hit check
         if (dx * dx + dy * dy <= totalR * totalR) {
+          hitRegistered = true;
+        } else if (this.cheatManager && this.cheatManager.hasCheat('backtrack')) {
+          // 2. Backtrack ghost check
+          const backtrack = this.cheatManager.getCheat('backtrack');
+          if (backtrack && backtrack.checkGhostCollision(proj, enemy)) {
+            hitRegistered = true;
+          }
+        }
+
+        if (hitRegistered) {
           // Bullet hit registered
           this._knockbackDir.set(proj.vx, proj.vy).normalize();
 
@@ -131,9 +146,26 @@ export class CollisionSystem {
 
       if (dx * dx + dy * dy <= totalR * totalR) {
         if (!player.isDashing && player.iFramesTimer <= 0) {
-          player.takeDamage(proj.damage);
-          this.camera.addTrauma(0.28);
-          this.particleSystem.emitBurst(player.x, player.y, 10, COLOR.RED, 220);
+          // Cheat evasion check (Spinbot Anti-Aim)
+          let finalDamage = proj.damage;
+          let evaded = false;
+          if (this.cheatManager) {
+            const check = this.cheatManager.applyTakeDamageInterceptors(proj.damage, {
+              player,
+              sourceEntity: proj,
+              isContact: false,
+            });
+            finalDamage = check.damage;
+            evaded = check.evaded;
+          }
+
+          if (evaded) {
+            this.particleSystem.emitImpact(player.x, player.y, proj.rotation, 8, COLOR.GREEN);
+          } else {
+            player.takeDamage(finalDamage);
+            this.camera.addTrauma(0.28);
+            this.particleSystem.emitBurst(player.x, player.y, 10, COLOR.RED, 220);
+          }
         }
         proj.markedForRemoval = true;
       }
@@ -169,16 +201,32 @@ export class CollisionSystem {
           this.particleSystem.emitImpact(enemy.x, enemy.y, player.rotation, 8, COLOR.CYAN);
           this.camera.addTrauma(0.18);
         } else if (player.iFramesTimer <= 0) {
-          // Player receives contact damage
-          player.takeDamage(enemy.contactDamage);
-          this.camera.addTrauma(0.35);
-          this.particleSystem.emitBurst(player.x, player.y, 14, COLOR.RED, 240);
+          // Cheat evasion check (Spinbot Anti-Aim)
+          let finalDamage = enemy.contactDamage;
+          let evaded = false;
+          if (this.cheatManager) {
+            const check = this.cheatManager.applyTakeDamageInterceptors(enemy.contactDamage, {
+              player,
+              sourceEntity: enemy,
+              isContact: true,
+            });
+            finalDamage = check.damage;
+            evaded = check.evaded;
+          }
 
-          // Push player back
-          const dist = Math.sqrt(distSq);
-          if (dist > 0.1) {
-            player.vx += (dx / dist) * 260;
-            player.vy += (dy / dist) * 260;
+          if (evaded) {
+            this.particleSystem.emitImpact(player.x, player.y, player.rotation, 10, COLOR.GREEN);
+          } else {
+            player.takeDamage(finalDamage);
+            this.camera.addTrauma(0.35);
+            this.particleSystem.emitBurst(player.x, player.y, 14, COLOR.RED, 240);
+
+            // Push player back
+            const dist = Math.sqrt(distSq);
+            if (dist > 0.1) {
+              player.vx += (dx / dist) * 260;
+              player.vy += (dy / dist) * 260;
+            }
           }
         }
       }
