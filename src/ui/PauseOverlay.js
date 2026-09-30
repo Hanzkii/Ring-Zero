@@ -42,6 +42,13 @@ export class PauseOverlay {
     document.body.appendChild(this.overlayEl);
   }
 
+  get currentWeaponSystem() {
+    if (typeof this.weaponSystem === 'function') {
+      return this.weaponSystem();
+    }
+    return this.weaponSystem;
+  }
+
   open() {
     this.isOpen = true;
     this.soundBank?.playUIClick();
@@ -56,10 +63,11 @@ export class PauseOverlay {
   }
 
   render() {
-    const activeCheats = Array.from(this.cheatManager.activeCheats.values());
-    const weapon1 = this.weaponSystem.slots[0];
-    const weapon2 = this.weaponSystem.slots[1];
-    const activeIdx = this.weaponSystem.activeSlot;
+    const ws = this.currentWeaponSystem;
+    const activeCheats = this.cheatManager ? Array.from(this.cheatManager.activeCheats.values()) : [];
+    const weapon1 = ws?.slots?.[0] || null;
+    const weapon2 = ws?.slots?.[1] || null;
+    const activeIdx = ws?.activeSlot ?? 0;
 
     let exploitsHtml = '';
     if (activeCheats.length === 0) {

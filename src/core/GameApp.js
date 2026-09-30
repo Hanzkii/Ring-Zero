@@ -95,15 +95,6 @@ export class GameApp {
     // Sync debug grid setting
     this.showSpatialGridDebug = !!this.storage.settings?.showDebugGrid;
 
-    this.pauseOverlay = new PauseOverlay({
-      cheatManager: this.cheatManager,
-      weaponSystem: this.weaponSystem,
-      soundBank: this.soundBank,
-      onResume: () => this.resumeSimulation(),
-      onOpenSettings: () => this.openSettings(),
-      onAbortRun: () => this.abortRun(),
-    });
-
     this.terminalUI = new TerminalUI({
       storage: this.storage,
       soundBank: this.soundBank,
@@ -158,6 +149,15 @@ export class GameApp {
     this.weaponSystem.onReloadDone = () => {
       this.soundBank.playReloadDone();
     };
+
+    this.pauseOverlay = new PauseOverlay({
+      cheatManager: this.cheatManager,
+      weaponSystem: this.weaponSystem,
+      soundBank: this.soundBank,
+      onResume: () => this.resumeSimulation(),
+      onOpenSettings: () => this.openSettings(),
+      onAbortRun: () => this.abortRun(),
+    });
 
     this.weaponSystem.fireInterceptor = (bulletParams, spawnCb) => {
       this.cheatManager.applyWeaponFireInterceptors(
