@@ -12,34 +12,35 @@ export class TriggerbotCheat extends CheatInterceptor {
     super(CHEAT_REGISTRY.TRIGGERBOT);
     this.targetInCrosshair = false;
     this.fireTimer = 0;
+    this.backtrackCheat = null;
+    this.backtrackTarget = null;
   }
 
   /**
    * Checks if an enemy is in line with the player's crosshair ray
    * @param {number} aimAngle
    * @param {Vec2} aimVector
-   * @param {Object} context
+   * @param {Object} context - { player, enemies, backtrackCheat }
    * @returns {number}
    */
   onAimInput(aimAngle, aimVector, context) {
     if (!this.enabled) {
       this.targetInCrosshair = false;
+      this.backtrackCheat = null;
+      this.backtrackTarget = null;
       return aimAngle;
     }
 
-    const { player, enemies } = context;
+    const { player, enemies, backtrackCheat } = context;
+    this.backtrackCheat = backtrackCheat || null;
     if (!player || !enemies) return aimAngle;
 
     const maxDist = 700;
     const rayDir = new Vec2(Math.cos(aimAngle), Math.sin(aimAngle));
     let hitFound = false;
-
-    // Tolerance cone depends on rank:
-    // Rank 1: tight ray tolerance (18px)
-    // Rank 2: expanded tolerance (28px)
-    // Rank 3: generous snap tolerance (40px)
     const tolerance = 14 + this.level * 10;
 
+    // Primary active enemy check
     for (let i = 0; i < enemies.length; i++) {
       const enemy = enemies[i];
       if (!enemy.active || enemy.markedForRemoval) continue;
@@ -48,7 +49,6 @@ export class TriggerbotCheat extends CheatInterceptor {
       const dist = toEnemy.length();
       if (dist > maxDist || dist < 1) continue;
 
-      // Project onto ray
       const proj = toEnemy.dot(rayDir);
       if (proj <= 0) continue; // Behind player
 
@@ -59,12 +59,41 @@ export class TriggerbotCheat extends CheatInterceptor {
       }
     }
 
+    // Backtrack ghost check if no active hit
+    if (!hitFound && this.backtrackCheat && this.backtrackCheat.enabled) {
+      for (let i = 0; i < enemies.length; i++) {
+        const enemy = enemies[i];
+        if (!enemy.active || enemy.markedForRemoval) continue;
+        const history = this.backtrackCheat.historyMap.get(enemy.id);
+        if (!history || history.length < 2) continue;
+        for (let j = history.length - 1; j >= 0; j--) {
+          const snap = history[j];
+          const toSnap = new Vec2(snap.x - player.x, snap.y - player.y);
+          const distSnap = toSnap.length();
+          if (distSnap > maxDist || distSnap < 1) continue;
+          const projSnap = toSnap.dot(rayDir);
+          if (projSnap <= 0) continue;
+          const perpDistSnap = Math.sqrt(Math.max(0, distSnap * distSnap - projSnap * projSnap));
+          if (perpDistSnap <= enemy.radius + tolerance) {
+            hitFound = true;
+            this.backtrackTarget = enemy;
+            break;
+          }
+        }
+        if (hitFound) break;
+      }
+    }
+
     this.targetInCrosshair = hitFound;
     return aimAngle;
   }
 
   shouldAutoShoot() {
-    return this.enabled && this.targetInCrosshair;
+    if (!this.enabled || !this.targetInCrosshair) return false;
+    if (this.backtrackTarget && this.backtrackCheat) {
+      this.backtrackCheat.rewindEnemy(this.backtrackTarget);
+    }
+    return true;
   }
 
   onRenderHUD(ctx, x, y) {

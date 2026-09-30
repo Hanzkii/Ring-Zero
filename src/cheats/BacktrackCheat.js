@@ -101,21 +101,40 @@ export class BacktrackCheat extends CheatInterceptor {
   }
 
   /**
-   * Checks if a projectile hits any ghost across all active enemies
+   * Checks all enemies for a backtrack ghost collision with a projectile.
+   * Returns the first enemy that collides with a ghost, or null.
    * @param {import('../entities/Projectile.js').Projectile} proj
-   * @param {import('../entities/Enemy.js').Enemy[]} enemies
-   * @returns {import('../entities/Enemy.js').Enemy|null} The rewound enemy if hit, or null
+   * @param {Array<import('../entities/Enemy.js').Enemy>} enemyList
+   * @returns {import('../entities/Enemy.js').Enemy|null}
    */
-  checkAllGhostsCollision(proj, enemies) {
-    if (!enemies) return null;
-    for (let i = 0; i < enemies.length; i++) {
-      const enemy = enemies[i];
+  checkAllGhostsCollision(proj, enemyList) {
+    for (const enemy of enemyList) {
       if (!enemy.active || enemy.markedForRemoval) continue;
       if (this.checkGhostCollision(proj, enemy)) {
         return enemy;
       }
     }
     return null;
+  }
+
+  /**
+   * Rewinds the given enemy to its latest historical snapshot.
+   * Used by Triggerbot when targeting a backtrack tick.
+   * @param {import('../entities/Enemy.js').Enemy} enemy
+   */
+  rewindEnemy(enemy) {
+    const history = this.historyMap.get(enemy.id);
+    if (!history || history.length < 2) return false;
+    // Use the most recent snapshot (last entry)
+    const snap = history[history.length - 1];
+    enemy.x = snap.x;
+    enemy.y = snap.y;
+    enemy.vx = 0;
+    enemy.vy = 0;
+    // Truncate history to this point (retain up to this snapshot)
+    history.length = history.length;
+    this.rewindCount++;
+    return true;
   }
 
   /**
