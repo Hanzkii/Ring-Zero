@@ -273,8 +273,8 @@ export class GameApp {
     // Check if any cheat (Aimbot Triggerbot) requests autonomous fire
     const autoFire = this.cheatManager.wantsAutoFire(dt, this.weaponSystem.activeWeapon);
 
-    // Weapon Ballistics Update (passes autoFire state)
-    this.weaponSystem.update(dt, this.input, this.player, this.camera, autoFire);
+    // Weapon Ballistics Update (passes autoFire state and aimbot-modified aim angle)
+    this.weaponSystem.update(dt, this.input, this.player, this.camera, autoFire, modifiedAimAngle);
 
     // Player Kinematics
     this.player.updateKinematics(dt, moveDir, modifiedAimAngle);
@@ -443,14 +443,15 @@ export class GameApp {
     // 10. Render Vector Particles
     this.particleSystem.render(ctx, alpha);
 
-    // 11. 2D Dynamic Line-of-Sight Fog of War
+    // 11. 2D Dynamic Line-of-Sight Fog of War (Forward Vision Cone following crosshair)
     if (this.map) {
       const px = this.player.prevX + (this.player.x - this.player.prevX) * alpha;
       const py = this.player.prevY + (this.player.y - this.player.prevY) * alpha;
+      const aimAngle = this.player.getInterpolatedRotation(alpha);
       const segments = this.map.getSegments();
-      const poly = this.raycaster.computeVisibilityPolygon(px, py, segments);
+      const poly = this.raycaster.computeVisibilityPolygon(px, py, segments, aimAngle);
       const wallhackActive = this.cheatManager.hasCheat('wallhack');
-      this.raycaster.renderFogOfWar(ctx, px, py, poly, this.camera, wallhackActive);
+      this.raycaster.renderFogOfWar(ctx, px, py, poly, this.camera, wallhackActive, aimAngle);
     }
 
     // 12. Draw Targeting Laser & Crosshair
@@ -500,17 +501,40 @@ export class GameApp {
   _renderTargetingHUD(ctx) {
     const pointer = this.input.worldPointer;
     const weapon = this.weaponSystem.activeWeapon;
+    const aimbot = this.cheatManager.hasCheat('aimbot') ? this.cheatManager.getCheat('aimbot') : null;
 
-    // Laser sight line from player to pointer
-    VectorRenderer.strokeLine(
-      ctx,
-      this.player.x,
-      this.player.y,
-      pointer.x,
-      pointer.y,
-      COLOR.CYAN_MUTED,
-      1
-    );
+    if (aimbot && aimbot.hasTarget && aimbot.currentTarget && !aimbot.currentTarget.markedForRemoval) {
+      // Laser sight locks straight onto enemy predictive lead position
+      VectorRenderer.strokeLine(
+        ctx,
+        this.player.x,
+        this.player.y,
+        aimbot.targetLeadPos.x,
+        aimbot.targetLeadPos.y,
+        COLOR.CYAN,
+        1.5
+      );
+      // Targeting brackets around locked enemy
+      VectorRenderer.drawTargetBracket(
+        ctx,
+        aimbot.targetLeadPos.x,
+        aimbot.targetLeadPos.y,
+        aimbot.currentTarget.radius * 2.4 + 4,
+        COLOR.CYAN,
+        4
+      );
+    } else {
+      // Laser sight line from player to pointer
+      VectorRenderer.strokeLine(
+        ctx,
+        this.player.x,
+        this.player.y,
+        pointer.x,
+        pointer.y,
+        COLOR.CYAN_MUTED,
+        1
+      );
+    }
 
     // Combat crosshair with spread expansion
     const spreadPx = weapon ? (weapon.spreadRad * 180) / Math.PI * 1.5 : 0;

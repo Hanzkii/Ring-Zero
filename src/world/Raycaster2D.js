@@ -5,13 +5,18 @@
  */
 
 import { COLOR } from '../core/Constants.js';
+import { angleDiff } from '../core/VectorMath.js';
 
 export class Raycaster2D {
   /**
-   * @param {number} [maxDistance=950] - View distance in pixels
+   * @param {number} [maxDistance=1050] - View distance in pixels
    */
-  constructor(maxDistance = 950) {
+  constructor(maxDistance = 1050) {
     this.maxDistance = maxDistance;
+
+    // Vision cone configuration
+    this.fovHalfAngle = (58 * Math.PI) / 180; // 116° forward cone
+    this.nearRadius = 85;                     // 360° close awareness radius around player
 
     // Preallocated internal arrays to avoid GC
     this._uniqueAngles = [];
@@ -75,12 +80,14 @@ export class Raycaster2D {
 
   /**
    * Computes the 2D visibility polygon around (px, py)
+   * Supports forward vision cone following crosshair orientation
    * @param {number} px
    * @param {number} py
    * @param {import('./MapGenerator.js').WallSegment[]} allSegments
+   * @param {number} [aimAngle=null] - Direction of crosshair
    * @returns {Array<{x: number, y: number, angle: number}>} Ordered polygon vertices
    */
-  computeVisibilityPolygon(px, py, allSegments) {
+  computeVisibilityPolygon(px, py, allSegments, aimAngle = null) {
     const R = this.maxDistance;
     const boxMinX = px - R;
     const boxMaxX = px + R;
@@ -103,14 +110,36 @@ export class Raycaster2D {
       }
     }
 
-    // 2. Collect unique ray angles from segment endpoints + uniform radial baseline
+    // 2. Collect unique ray angles
     const angles = this._uniqueAngles;
     angles.length = 0;
 
-    // Baseline uniform circle rays (64 rays for a smooth circular perimeter)
+    // Baseline uniform circle rays
     const baseRays = 64;
     for (let i = 0; i < baseRays; i++) {
       angles.push((i / baseRays) * Math.PI * 2 - Math.PI);
+    }
+
+    const hasAimCone = typeof aimAngle === 'number';
+    const fovHalf = this.fovHalfAngle;
+    const nearR = this.nearRadius;
+
+    if (hasAimCone) {
+      // Vision cone boundary rays
+      angles.push(
+        aimAngle - fovHalf - 0.001,
+        aimAngle - fovHalf,
+        aimAngle - fovHalf + 0.001,
+        aimAngle + fovHalf - 0.001,
+        aimAngle + fovHalf,
+        aimAngle + fovHalf + 0.001
+      );
+      // Denser forward rays inside the cone for a smooth forward arc
+      const coneRays = 24;
+      for (let i = 1; i < coneRays; i++) {
+        const t = (i / coneRays) * 2 - 1; // [-1, 1]
+        angles.push(aimAngle + t * fovHalf);
+      }
     }
 
     // Cast 3 rays at each candidate segment endpoint: theta - eps, theta, theta + eps
@@ -134,12 +163,27 @@ export class Raycaster2D {
       while (angle <= -Math.PI) angle += Math.PI * 2;
       while (angle > Math.PI) angle -= Math.PI * 2;
 
+      // Determine max unobstructed range for this angle
+      let maxDistForAngle = R;
+      if (hasAimCone) {
+        const diff = Math.abs(angleDiff(aimAngle, angle));
+        if (diff <= fovHalf) {
+          maxDistForAngle = R;
+        } else if (diff <= fovHalf + 0.16) {
+          // Smooth edge falloff
+          const s = (diff - fovHalf) / 0.16;
+          maxDistForAngle = R * (1 - s) + nearR * s;
+        } else {
+          maxDistForAngle = nearR;
+        }
+      }
+
       const dirX = Math.cos(angle);
       const dirY = Math.sin(angle);
 
-      let minT = R;
-      let hitX = px + dirX * R;
-      let hitY = py + dirY * R;
+      let minT = maxDistForAngle;
+      let hitX = px + dirX * minT;
+      let hitY = py + dirY * minT;
 
       for (let j = 0; j < candidates.length; j++) {
         const seg = candidates[j];
@@ -180,8 +224,9 @@ export class Raycaster2D {
    * @param {Array<{x: number, y: number}>} poly - Ordered visibility polygon
    * @param {import('../core/Camera2D.js').Camera2D} camera
    * @param {boolean} [wallhackActive=false] - When true, fog density is lightened to military night-vision
+   * @param {number} [aimAngle=null] - Direction of crosshair
    */
-  renderFogOfWar(ctx, px, py, poly, camera, wallhackActive = false) {
+  renderFogOfWar(ctx, px, py, poly, camera, wallhackActive = false, aimAngle = null) {
     if (!poly || poly.length < 3) return;
 
     ctx.save();
@@ -219,8 +264,8 @@ export class Raycaster2D {
     ctx.fill('evenodd');
 
     // 4. Draw razor-sharp vector boundary along the visibility polygon perimeter
-    ctx.strokeStyle = wallhackActive ? COLOR.CYAN_DIM : 'rgba(0, 240, 255, 0.22)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = wallhackActive ? COLOR.CYAN_DIM : 'rgba(0, 240, 255, 0.28)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(poly[0].x, poly[0].y);
     for (let i = 1; i < poly.length; i++) {
@@ -228,6 +273,24 @@ export class Raycaster2D {
     }
     ctx.closePath();
     ctx.stroke();
+
+    // 5. Subtle forward vision cone guide lines
+    if (typeof aimAngle === 'number') {
+      const fovHalf = this.fovHalfAngle;
+      const R = this.maxDistance;
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + Math.cos(aimAngle - fovHalf) * (R * 0.9), py + Math.sin(aimAngle - fovHalf) * (R * 0.9));
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + Math.cos(aimAngle + fovHalf) * (R * 0.9), py + Math.sin(aimAngle + fovHalf) * (R * 0.9));
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+    }
 
     ctx.restore();
   }

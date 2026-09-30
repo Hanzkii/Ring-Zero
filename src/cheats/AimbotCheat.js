@@ -103,20 +103,12 @@ export class AimbotCheat extends CheatInterceptor {
       this.targetLeadPos.copy(leadPos);
       const desiredAngle = Math.atan2(leadPos.y - player.y, leadPos.x - player.x);
 
-      // Snap speed: Lv 1 = 18 rad/s, Lv 2 = 34 rad/s, Lv 3 = Instant
-      if (this.level >= 3) {
-        this.currentLockedAngle = desiredAngle;
-        return desiredAngle;
-      } else {
-        const snapSpeed = 16 + this.level * 16;
-        const angDiff = angleDiff(rawAimAngle, desiredAngle);
-        const maxStep = snapSpeed * dt;
-        const clampedStep = Math.max(-maxStep, Math.min(maxStep, angDiff));
-        this.currentLockedAngle = normalizeAngle(rawAimAngle + clampedStep);
-        return this.currentLockedAngle;
-      }
+      // Dead-center precision lock onto target
+      this.currentLockedAngle = desiredAngle;
+      return desiredAngle;
     }
 
+    this.currentLockedAngle = rawAimAngle;
     return rawAimAngle;
   }
 

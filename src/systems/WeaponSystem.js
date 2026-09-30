@@ -197,8 +197,10 @@ export class WeaponSystem {
    * @param {import('../core/InputManager.js').InputManager} input
    * @param {import('../entities/Player.js').Player} player
    * @param {import('../core/Camera2D.js').Camera2D} camera
+   * @param {boolean} [autoFire=false]
+   * @param {number} [aimAngleOverride=null] - Overrides raw mouse aim angle (e.g. from Aimbot lock)
    */
-  update(dt, input, player, camera, autoFire = false) {
+  update(dt, input, player, camera, autoFire = false, aimAngleOverride = null) {
     const weapon = this.activeWeapon;
     if (!weapon) return;
 
@@ -227,7 +229,8 @@ export class WeaponSystem {
       if (weapon.currentAmmo <= 0) {
         weapon.startReload();
       } else if (weapon.canFire) {
-        this._fireWeapon(weapon, player, input.aimAngle, camera);
+        const fireAngle = typeof aimAngleOverride === 'number' ? aimAngleOverride : input.aimAngle;
+        this._fireWeapon(weapon, player, fireAngle, camera);
       }
     }
   }
