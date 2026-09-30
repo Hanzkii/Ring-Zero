@@ -37,6 +37,22 @@ export class Camera2D {
     this.bounds = null; // { minX, minY, maxX, maxY }
   }
 
+  get x() {
+    return this.pos.x;
+  }
+
+  set x(val) {
+    this.pos.x = val;
+  }
+
+  get y() {
+    return this.pos.y;
+  }
+
+  set y(val) {
+    this.pos.y = val;
+  }
+
   resize(width, height, dpr = 1) {
     this.viewportWidth = width;
     this.viewportHeight = height;

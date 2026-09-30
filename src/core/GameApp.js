@@ -445,10 +445,12 @@ export class GameApp {
 
     // 11. 2D Dynamic Line-of-Sight Fog of War
     if (this.map) {
+      const px = this.player.prevX + (this.player.x - this.player.prevX) * alpha;
+      const py = this.player.prevY + (this.player.y - this.player.prevY) * alpha;
       const segments = this.map.getSegments();
-      const poly = this.raycaster.computeVisibilityPolygon(this.player.x, this.player.y, segments);
+      const poly = this.raycaster.computeVisibilityPolygon(px, py, segments);
       const wallhackActive = this.cheatManager.hasCheat('wallhack');
-      this.raycaster.renderFogOfWar(ctx, this.player.x, this.player.y, poly, this.camera, wallhackActive);
+      this.raycaster.renderFogOfWar(ctx, px, py, poly, this.camera, wallhackActive);
     }
 
     // 12. Draw Targeting Laser & Crosshair

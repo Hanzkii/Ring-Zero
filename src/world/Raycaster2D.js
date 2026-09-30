@@ -186,25 +186,28 @@ export class Raycaster2D {
 
     ctx.save();
 
-    // Viewport dimensions in world coordinates
-    const viewW = camera.viewportWidth;
-    const viewH = camera.viewportHeight;
-    const left = camera.x - viewW * 0.5 - 60;
-    const top = camera.y - viewH * 0.5 - 60;
-    const right = camera.x + viewW * 0.5 + 60;
-    const bottom = camera.y + viewH * 0.5 + 60;
+    // Viewport dimensions in world coordinates (with robust fallbacks to player coords)
+    const camX = camera && camera.pos ? camera.pos.x : (camera && typeof camera.x === 'number' ? camera.x : px);
+    const camY = camera && camera.pos ? camera.pos.y : (camera && typeof camera.y === 'number' ? camera.y : py);
+
+    // Expand outer bounding box well beyond viewport (3500px radius) to cover the entire arena
+    const boxRadius = 3500;
+    const left = camX - boxRadius;
+    const right = camX + boxRadius;
+    const top = camY - boxRadius;
+    const bottom = camY + boxRadius;
 
     // Begin combined path for evenodd fill
     ctx.beginPath();
 
-    // 1. Outer viewport boundary rectangle (covers whole screen)
+    // 1. Outer viewport boundary rectangle (covers whole screen and arena)
     ctx.moveTo(left, top);
     ctx.lineTo(right, top);
     ctx.lineTo(right, bottom);
     ctx.lineTo(left, bottom);
     ctx.closePath();
 
-    // 2. Inner visibility polygon (the line-of-sight area that remains clear)
+    // 2. Inner visibility polygon (the line-of-sight area around the player that remains clear)
     ctx.moveTo(poly[0].x, poly[0].y);
     for (let i = 1; i < poly.length; i++) {
       ctx.lineTo(poly[i].x, poly[i].y);
@@ -212,7 +215,7 @@ export class Raycaster2D {
     ctx.closePath();
 
     // 3. Fill only the occluded regions outside the polygon using evenodd
-    ctx.fillStyle = wallhackActive ? 'rgba(7, 10, 15, 0.60)' : 'rgba(7, 10, 15, 0.95)';
+    ctx.fillStyle = wallhackActive ? 'rgba(7, 10, 15, 0.55)' : 'rgba(7, 10, 15, 0.95)';
     ctx.fill('evenodd');
 
     // 4. Draw razor-sharp vector boundary along the visibility polygon perimeter
