@@ -25,6 +25,9 @@ export class SpinbotCheat extends CheatInterceptor {
     // 1440 deg/s at Lv 1, 2160 deg/s at Lv 2, 2880 deg/s at Lv 3
     const spinRate = (1440 + (this.level - 1) * 720) * (Math.PI / 180);
     this.spinAngle = (this.spinAngle + spinRate * dt) % (Math.PI * 2);
+    if (player) {
+      player.visualRotationOffset = this.spinAngle;
+    }
 
     if (this.evasionTriggeredTimer > 0) {
       this.evasionTriggeredTimer = Math.max(0, this.evasionTriggeredTimer - dt);

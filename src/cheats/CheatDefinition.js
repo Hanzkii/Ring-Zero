@@ -13,9 +13,9 @@ export const RING_TIER = {
 };
 
 export const CHEAT_RARITY = {
-  COMMON: { name: 'USERLAND', color: COLOR.CYAN },
-  RARE: { name: 'DRIVER', color: COLOR.AMBER },
-  KERNEL: { name: 'KERNEL EXECUTION', color: COLOR.RED },
+  COMMON: { name: 'USERLAND [RING 3]', color: COLOR.CYAN },
+  RARE: { name: 'DRIVER SPACE [RING 2]', color: COLOR.AMBER },
+  KERNEL: { name: 'KERNEL EXECUTION [RING 0]', color: COLOR.RED },
 };
 
 /**
@@ -33,6 +33,7 @@ export class CheatInterceptor {
     this.tier = def.tier;
     this.rarity = def.rarity;
     this.description = def.description;
+    this.rankDescriptions = def.rankDescriptions || [];
     this.level = 1;
     this.maxLevel = def.maxLevel || 3;
     this.color = def.color || COLOR.CYAN;
@@ -41,6 +42,7 @@ export class CheatInterceptor {
 
   /**
    * Upgrades the cheat to the next rank
+   * @returns {boolean} Whether upgrade succeeded
    */
   upgrade() {
     if (this.level < this.maxLevel) {
@@ -48,6 +50,19 @@ export class CheatInterceptor {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Returns perk description for current or requested level
+   * @param {number} [targetLevel]
+   * @returns {string}
+   */
+  getPerkDescription(targetLevel = this.level) {
+    const idx = targetLevel - 1;
+    if (idx >= 0 && idx < this.rankDescriptions.length) {
+      return this.rankDescriptions[idx];
+    }
+    return this.description;
   }
 
   /**
@@ -124,6 +139,11 @@ export const CHEAT_REGISTRY = {
     color: COLOR.CYAN,
     maxLevel: 3,
     description: 'Autonomous target acquisition with velocity leading and vector lock-on lines.',
+    rankDescriptions: [
+      'Rank 1: Predictive angle snap (18 rad/s, 45° FOV, 400px range)',
+      'Rank 2: Accelerated snap speed (34 rad/s, 70° FOV, 580px range)',
+      'Rank 3: Instantaneous snap lock-on (180° FOV, 760px range)',
+    ],
   },
   WALLHACK: {
     id: 'wallhack',
@@ -134,6 +154,11 @@ export const CHEAT_REGISTRY = {
     color: COLOR.CYAN,
     maxLevel: 3,
     description: 'Telemetry outlines displaying enemy distance, health, and geometric penetration.',
+    rankDescriptions: [
+      'Rank 1: Live wireframe bounding boxes, distance markers, and health telemetry',
+      'Rank 2: Threat color classification & +1 bullet armor piercing',
+      'Rank 3: Long-range threat snaplines & +2 bullet armor piercing',
+    ],
   },
   SPINBOT: {
     id: 'spinbot',
@@ -144,6 +169,11 @@ export const CHEAT_REGISTRY = {
     color: COLOR.AMBER,
     maxLevel: 3,
     description: 'Rapid angle desynchronization causing incoming damage checks to glance and miss.',
+    rankDescriptions: [
+      'Rank 1: 1440°/s visual desync spin & 25% glancing blow evasion chance',
+      'Rank 2: 2160°/s visual desync spin & 35% glancing blow evasion chance',
+      'Rank 3: 2880°/s hyper-spin desync & 50% glancing blow evasion chance',
+    ],
   },
   DOUBLETAP: {
     id: 'doubletap',
@@ -153,7 +183,12 @@ export const CHEAT_REGISTRY = {
     rarity: CHEAT_RARITY.RARE,
     color: COLOR.AMBER,
     maxLevel: 3,
-    description: 'Emulates network packet choke to multiplex 2-3 bullets per tick at zero ammo cost.',
+    description: 'Emulates network packet choke to multiplex duplicate bullets per shot at zero ammo cost.',
+    rankDescriptions: [
+      'Rank 1: Multiplexes 1 extra bullet per shot (+100% burst volume) at 0 ammo cost',
+      'Rank 2: Multiplexes 2 extra bullets per shot (+200% burst volume) at 0 ammo cost',
+      'Rank 3: Multiplexes 3 extra bullets per shot (+300% burst volume) at 0 ammo cost',
+    ],
   },
   SILENTAIM: {
     id: 'silentaim',
@@ -164,6 +199,11 @@ export const CHEAT_REGISTRY = {
     color: COLOR.RED,
     maxLevel: 3,
     description: 'Dynamically curves bullet trajectories toward enemy hitboxes without altering aim crosshair.',
+    rankDescriptions: [
+      'Rank 1: Silently curves fired bullets into target centers within 35° FOV cone',
+      'Rank 2: Expands curvature cone to 55° FOV with guaranteed critical strikes',
+      'Rank 3: Full 90° FOV curvature cone with maximum critical damage strikes',
+    ],
   },
   BACKTRACK: {
     id: 'backtrack',
@@ -173,6 +213,11 @@ export const CHEAT_REGISTRY = {
     rarity: CHEAT_RARITY.RARE,
     color: COLOR.AMBER,
     maxLevel: 3,
-    description: 'Maintains 90-frame historical ring buffer. Shooting enemy ghosts rewinds their position.',
+    description: 'Maintains 90-frame historical circular buffer. Shooting enemy ghosts rewinds their position.',
+    rankDescriptions: [
+      'Rank 1: 45-frame circular buffer (~0.75s rewind on ghost hitbox hit)',
+      'Rank 2: 65-frame circular buffer (~1.1s rewind on ghost hitbox hit)',
+      'Rank 3: 90-frame full circular buffer (~1.5s rewind on ghost hitbox hit)',
+    ],
   },
 };

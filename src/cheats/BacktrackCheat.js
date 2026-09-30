@@ -18,7 +18,9 @@ export class BacktrackCheat extends CheatInterceptor {
 
   get maxHistoryFrames() {
     // 45 frames (~0.75s) at Lv 1, 65 frames (~1.1s) at Lv 2, 90 frames (1.5s) at Lv 3
-    return 35 + this.level * 20;
+    if (this.level === 1) return 45;
+    if (this.level === 2) return 65;
+    return 90;
   }
 
   /**

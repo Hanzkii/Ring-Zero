@@ -15,11 +15,12 @@ export class CheatManager {
   constructor() {
     /** @type {Map<string, import('../cheats/CheatDefinition.js').CheatInterceptor>} */
     this.activeCheats = new Map();
-    this.clearanceRing = RING_TIER.RING_3; // Default starting clearance
+    // Default to Ring 0 clearance so all 6 core exploits are immediately draftable during runs
+    this.clearanceRing = RING_TIER.RING_0;
   }
 
   /**
-   * Installs a new cheat or upgrades an existing one
+   * Installs a new cheat or upgrades an existing one (Rank 1 to 3)
    * @param {string} cheatId
    * @returns {import('../cheats/CheatDefinition.js').CheatInterceptor|null}
    */
@@ -95,7 +96,6 @@ export class CheatManager {
    * @param {function(Object): void} spawnCallback
    */
   applyWeaponFireInterceptors(bulletParams, context, spawnCallback) {
-    // Collect active cheats that intercept weapon fire
     const fireInterceptors = [];
     for (const cheat of this.activeCheats.values()) {
       if (cheat.enabled && cheat.onWeaponFire) {
@@ -143,7 +143,7 @@ export class CheatManager {
   }
 
   /**
-   * Pipeline Hook: Updates active enemies per tick
+   * Pipeline Hook: Updates active enemies per tick (Backtrack history recording)
    * @param {import('../entities/Enemy.js').Enemy} enemy
    * @param {number} dt
    * @param {Object} context
@@ -157,7 +157,7 @@ export class CheatManager {
   }
 
   /**
-   * Pipeline Hook: Updates player state
+   * Pipeline Hook: Updates player state (Spinbot visual angle desync)
    * @param {import('../entities/Player.js').Player} player
    * @param {number} dt
    * @param {Object} context
@@ -201,9 +201,11 @@ export class CheatManager {
   }
 
   /**
-   * Generates 3 randomized, non-duplicate exploit cards for mid-run level-up draft
+   * Generates 3 randomized, non-duplicate exploit cards for mid-run level-up draft.
+   * Ensures that drafting an owned cheat upgrades its rank (Rank 1 to 3) rather than duplicating it.
+   * Max-level cheats are excluded from the pool.
    * @param {number} [count=3]
-   * @returns {Array<{ def: Object, isUpgrade: boolean, currentLevel: number }>}
+   * @returns {Array<{ def: Object, isUpgrade: boolean, currentLevel: number, nextLevel: number, nextPerkDescription: string }>}
    */
   generateDraftOptions(count = 3) {
     const candidates = [];
@@ -211,30 +213,39 @@ export class CheatManager {
     for (const key of Object.keys(CHEAT_REGISTRY)) {
       const def = CHEAT_REGISTRY[key];
 
-      // Verify clearance tier (Ring 3 is lowest clearance, Ring 0 is highest)
-      if (def.tier < this.clearanceRing) {
+      // Check clearance level
+      if (this.clearanceRing !== null && def.tier < this.clearanceRing) {
         continue;
       }
 
       const activeInstance = this.activeCheats.get(def.id);
       if (activeInstance) {
+        // Only include if not yet max level
         if (activeInstance.level < activeInstance.maxLevel) {
+          const nextLevel = activeInstance.level + 1;
+          const nextPerk = def.rankDescriptions ? def.rankDescriptions[nextLevel - 1] : def.description;
           candidates.push({
             def,
             isUpgrade: true,
             currentLevel: activeInstance.level,
+            nextLevel: nextLevel,
+            nextPerkDescription: nextPerk,
           });
         }
       } else {
+        // Not yet owned: offer as Rank 1
+        const firstPerk = def.rankDescriptions ? def.rankDescriptions[0] : def.description;
         candidates.push({
           def,
           isUpgrade: false,
           currentLevel: 0,
+          nextLevel: 1,
+          nextPerkDescription: firstPerk,
         });
       }
     }
 
-    // Shuffle and pick up to `count`
+    // Shuffle candidate pool
     for (let i = candidates.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [candidates[i], candidates[j]] = [candidates[j], candidates[i]];

@@ -47,6 +47,9 @@ export class Player extends Entity {
 
     // Aim orientation target
     this.targetRotation = 0;
+
+    // Visual angle desync offset (driven by Spinbot.asi)
+    this.visualRotationOffset = 0;
   }
 
   /**
@@ -198,7 +201,7 @@ export class Player extends Entity {
 
     const rx = lerp(this.prevX, this.x, alpha);
     const ry = lerp(this.prevY, this.y, alpha);
-    const rot = this.getInterpolatedRotation(alpha);
+    const rot = this.getInterpolatedRotation(alpha) + (this.visualRotationOffset || 0);
 
     // 1. Draw motion ghost trails
     for (const trail of this.dashTrails) {

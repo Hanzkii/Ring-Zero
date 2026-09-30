@@ -24,7 +24,7 @@ export class DraftModal {
     this.modalEl.innerHTML = `
       <div class="draft-container">
         <div class="draft-header">
-          <div class="draft-sub">// MEMORY FRAGMENT COMPILED // RUNTIME ESCALATION //</div>
+          <div class="draft-sub">// MEMORY FRAGMENT COMPILED // PRIVILEGE ESCALATION //</div>
           <h2 class="draft-title">SELECT EXPLOIT INJECTION</h2>
         </div>
         <div class="draft-cards" id="draft-cards-container"></div>
@@ -38,8 +38,8 @@ export class DraftModal {
   }
 
   /**
-   * Opens the draft selection modal with 3 exploit options
-   * @param {Array<{ def: Object, isUpgrade: boolean, currentLevel: number }>} options
+   * Opens the draft selection modal with exploit options
+   * @param {Array<{ def: Object, isUpgrade: boolean, currentLevel: number, nextLevel: number, nextPerkDescription: string }>} options
    */
   open(options) {
     if (this.isOpen || options.length === 0) return;
@@ -55,8 +55,12 @@ export class DraftModal {
       const card = document.createElement('div');
       card.className = `draft-card draft-card-${opt.def.rarity.name.toLowerCase().replace(/\s+/g, '-')}`;
       
-      const badgeText = opt.isUpgrade ? `UPGRADE -> Lv.${opt.currentLevel + 1}` : 'NEW INJECTION';
+      const badgeText = opt.isUpgrade
+        ? `UPGRADE &bull; RANK ${opt.nextLevel}/3`
+        : `NEW EXPLOIT &bull; RANK 1/3`;
+
       const rarityColor = opt.def.color;
+      const btnText = opt.isUpgrade ? `UPGRADE TO RANK ${opt.nextLevel}` : 'INJECT SCRIPT';
 
       card.innerHTML = `
         <div class="card-hotkey">[ ${idx + 1} ]</div>
@@ -66,8 +70,11 @@ export class DraftModal {
         <div class="card-filename">${opt.def.filename}</div>
         <div class="card-name">${opt.def.name}</div>
         <div class="card-desc">${opt.def.description}</div>
+        <div class="card-perk" style="border-left: 2px solid ${rarityColor}; padding-left: 8px; margin-bottom: 16px; font-size: 11px; color: ${COLOR.WHITE};">
+          <strong>TARGET PERK:</strong> ${opt.nextPerkDescription}
+        </div>
         <button class="btn-inject" style="color: ${rarityColor}; border-color: ${rarityColor}">
-          INJECT SCRIPT
+          ${btnText}
         </button>
       `;
 
