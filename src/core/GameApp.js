@@ -259,6 +259,10 @@ export class GameApp {
         enemies: this.enemies,
         dt,
         weapon: this.weaponSystem.activeWeapon,
+        raycaster: this.raycaster,
+        wallSegments: this.map ? this.map.getSegments() : [],
+        hasWallhack: this.cheatManager.hasCheat('wallhack'),
+        backtrackCheat: this.cheatManager.getCheat('backtrack'),
       }
     );
 
@@ -507,7 +511,8 @@ export class GameApp {
 
     if (activeAim && activeAim.hasTarget && activeAim.currentTarget && !activeAim.currentTarget.markedForRemoval) {
       const isSilent = activeAim.id === 'silentaim';
-      const lockColor = isSilent ? COLOR.RED : COLOR.CYAN;
+      const isBacktrack = activeAim.isBacktrackTarget;
+      const lockColor = isBacktrack ? COLOR.AMBER : (isSilent ? COLOR.RED : COLOR.CYAN);
       // Laser sight locks straight onto enemy predictive lead position
       VectorRenderer.strokeLine(
         ctx,

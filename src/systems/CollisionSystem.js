@@ -74,6 +74,10 @@ export class CollisionSystem {
         this._candidateList
       );
 
+      let hitEnemy = null;
+      let isGhostHit = false;
+
+      // 1. Direct hit check on spatial candidates
       for (const enemy of this._candidateList) {
         if (!enemy.active || enemy.markedForRemoval) continue;
 
@@ -81,56 +85,62 @@ export class CollisionSystem {
         const dy = enemy.y - proj.y;
         const totalR = enemy.radius + proj.radius;
 
-        let hitRegistered = false;
-
-        // 1. Direct hit check
         if (dx * dx + dy * dy <= totalR * totalR) {
-          hitRegistered = true;
-        } else if (this.cheatManager && this.cheatManager.hasCheat('backtrack')) {
-          // 2. Backtrack ghost check
-          const backtrack = this.cheatManager.getCheat('backtrack');
-          if (backtrack && backtrack.checkGhostCollision(proj, enemy)) {
-            hitRegistered = true;
+          hitEnemy = enemy;
+          break;
+        }
+      }
+
+      // 2. If no direct hit, check backtrack ghost collision across all active enemies
+      if (!hitEnemy && this.cheatManager && this.cheatManager.hasCheat('backtrack')) {
+        const backtrack = this.cheatManager.getCheat('backtrack');
+        if (backtrack) {
+          hitEnemy = backtrack.checkAllGhostsCollision(proj, enemyList);
+          if (hitEnemy) {
+            isGhostHit = true;
+            this.spatialGrid.update(hitEnemy);
+            this.particleSystem.emitBurst(hitEnemy.x, hitEnemy.y, 10, COLOR.AMBER, 200);
+          }
+        }
+      }
+
+      if (hitEnemy) {
+        const enemy = hitEnemy;
+        // Bullet hit registered
+        this._knockbackDir.set(proj.vx, proj.vy).normalize();
+
+        const died = enemy.takeDamage(proj.damage, this._knockbackDir, proj.knockback);
+        this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 6, isGhostHit ? COLOR.AMBER : proj.color);
+
+        if (died) {
+          // Destruction explosion
+          this.particleSystem.emitBurst(enemy.x, enemy.y, 16, enemy.color, 280);
+
+          // Generate memory fragments and weapon crates
+          const drops = enemy.generateDrops();
+          for (const d of drops) {
+            dropList.push(d);
+            this.spatialGrid.insert(d);
+          }
+
+          // Memory-Leak split mechanic: spawns 2 Mini Bit-Scanners
+          if (enemy.type === 'MEMORY_LEAK' && onSpawnChildEnemy) {
+            for (let i = 0; i < 2; i++) {
+              const child = new Enemy(
+                enemy.x + (i === 0 ? -12 : 12),
+                enemy.y + (i === 0 ? -12 : 12),
+                ENEMY_ARCHETYPES.BIT_SCANNER
+              );
+              child.health = 20;
+              child.maxHealth = 20;
+              child.speed = 260;
+              onSpawnChildEnemy(child);
+            }
           }
         }
 
-        if (hitRegistered) {
-          // Bullet hit registered
-          this._knockbackDir.set(proj.vx, proj.vy).normalize();
-
-          const died = enemy.takeDamage(proj.damage, this._knockbackDir, proj.knockback);
-          this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 6, proj.color);
-
-          if (died) {
-            // Destruction explosion
-            this.particleSystem.emitBurst(enemy.x, enemy.y, 16, enemy.color, 280);
-
-            // Generate memory fragments and weapon crates
-            const drops = enemy.generateDrops();
-            for (const d of drops) {
-              dropList.push(d);
-              this.spatialGrid.insert(d);
-            }
-
-            // Memory-Leak split mechanic: spawns 2 Mini Bit-Scanners
-            if (enemy.type === 'MEMORY_LEAK' && onSpawnChildEnemy) {
-              for (let i = 0; i < 2; i++) {
-                const child = new Enemy(
-                  enemy.x + (i === 0 ? -12 : 12),
-                  enemy.y + (i === 0 ? -12 : 12),
-                  ENEMY_ARCHETYPES.BIT_SCANNER
-                );
-                child.health = 20;
-                child.maxHealth = 20;
-                child.speed = 260;
-                onSpawnChildEnemy(child);
-              }
-            }
-          }
-
-          const shouldDespawn = proj.onHit(enemy);
-          if (shouldDespawn) break;
-        }
+        const shouldDespawn = proj.onHit(enemy);
+        if (shouldDespawn) return;
       }
     });
   }

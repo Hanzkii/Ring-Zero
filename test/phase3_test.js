@@ -15,6 +15,9 @@ import { Player } from '../src/entities/Player.js';
 import { Enemy, ENEMY_ARCHETYPES } from '../src/entities/Enemy.js';
 import { Projectile } from '../src/entities/Projectile.js';
 import { SpatialHashGrid } from '../src/systems/SpatialHashGrid.js';
+import { CollisionSystem } from '../src/systems/CollisionSystem.js';
+import { ObjectPool } from '../src/core/ObjectPool.js';
+import { ParticleSystem } from '../src/systems/ParticleSystem.js';
 import { Vec2 } from '../src/core/VectorMath.js';
 
 let passed = 0;
@@ -295,6 +298,118 @@ console.log('\n8. Testing SilentAim Overriding Aimbot & Autonomous Shooting:');
   silentAim.autoShootTimer = 0;
   const managerAutoFire2 = manager.wantsAutoFire(0.016, context.weapon);
   assert(managerAutoFire2 === true, 'CheatManager.wantsAutoFire queries SilentAim triggerbot');
+}
+
+// 9. Backtrack Physical Hit Registration & Aimbot/SilentAim Backtrack Targeting
+console.log('\n9. Testing Backtrack Physical Hit Registration & Exploit Targeting:');
+{
+  const spatialGrid = new SpatialHashGrid(128);
+  const projectilePool = new ObjectPool({
+    factory: () => new Projectile(),
+    reset: (p) => p.reset(),
+    initialCapacity: 20,
+  });
+  const particleSystem = new ParticleSystem(100);
+  const manager = new CheatManager();
+  const backtrack = manager.addOrUpgradeCheat('backtrack');
+
+  const collisionSystem = new CollisionSystem({
+    spatialGrid,
+    projectilePool,
+    particleSystem,
+    cheatManager: manager,
+  });
+
+  const player = new Player(0, 0);
+  // Enemy currently at (300, 0)
+  const enemy = new Enemy(300, 0, ENEMY_ARCHETYPES.BIT_SCANNER);
+  spatialGrid.insert(enemy);
+  const enemies = [enemy];
+
+  // Record history when enemy was at (100, 0), (150, 0), (200, 0), (250, 0), (300, 0)
+  const positions = [100, 150, 200, 250, 300];
+  for (const x of positions) {
+    enemy.x = x;
+    backtrack.onEnemyUpdate(enemy, 0.016);
+  }
+  enemy.x = 300; // current position is at 300
+
+  // Fire bullet at historical ghost location (150, 0) -- 150px away from enemy's current body at 300!
+  const proj = projectilePool.obtain();
+  proj.spawn({
+    x: 150,
+    y: 0,
+    angle: 0,
+    damage: 40,
+    pierce: 1,
+    layer: 1 << 2, // PROJECTILE_PLAYER
+  });
+
+  const dropList = [];
+  collisionSystem.resolve(0.016, player, enemies, dropList, () => {});
+
+  assert(enemy.x === 150, 'Enemy was physically rewound to the shot backtrack ghost coordinate (150, 0)');
+  assert(enemy.health < 32, 'Enemy took physical bullet damage from ghost hit');
+  assert(backtrack.rewindCount >= 1, 'Backtrack rewind counter incremented on physical hit');
+
+  // Reset enemy state so it is live and positioned at (300, 0) behind the wall
+  enemy.active = true;
+  enemy.markedForRemoval = false;
+  enemy.health = 32;
+  for (const x of positions) {
+    enemy.x = x;
+    backtrack.onEnemyUpdate(enemy, 0.016);
+  }
+  enemy.x = 300;
+  spatialGrid.update(enemy);
+
+  // Test Aimbot targeting backtrack tick when enemy body is blocked by a mock wall
+  const aimbot = new AimbotCheat();
+  const mockRaycaster = {
+    // Enemy body at (300, 0) is blocked by wall, but ghost at (150, 0) is unblocked!
+    hasLineOfSight(x1, y1, x2, y2) {
+      if (x2 >= 280) return false; // blocked by wall
+      return true; // unblocked
+    }
+  };
+
+  const aimContext = {
+    player,
+    spatialGrid,
+    enemies,
+    dt: 0.016,
+    weapon: { speed: 1200, fireInterval: 0.2 },
+    raycaster: mockRaycaster,
+    wallSegments: [{ x1: 250, y1: -50, x2: 250, y2: 50 }],
+    hasWallhack: false,
+    backtrackCheat: backtrack,
+  };
+
+  const aimResult = aimbot.onAimInput(0, new Vec2(1, 0), aimContext);
+  assert(aimbot.hasTarget === true, 'Aimbot targeted unblocked target');
+  assert(aimbot.isBacktrackTarget === true, 'Aimbot specifically locked onto the unblocked backtrack ghost tick');
+  assert(aimbot.targetLeadPos.x <= 200, 'Aimbot targeting lead pos is at the backtrack ghost tick position');
+
+  // Test LOS check preventing constant autofire when everything is occluded
+  const blockedRaycaster = {
+    hasLineOfSight() { return false; } // everything blocked
+  };
+  const blockedContext = {
+    ...aimContext,
+    raycaster: blockedRaycaster,
+    backtrackCheat: null,
+  };
+  aimbot.onAimInput(0, new Vec2(1, 0), blockedContext);
+  assert(aimbot.hasTarget === false, 'Aimbot target cleared when all targets are blocked by walls');
+  const wantsAutoFireBlocked = aimbot.shouldAutoShoot(0.016, aimContext.weapon);
+  assert(wantsAutoFireBlocked === false, 'Aimbot shouldAutoShoot returns false when no target in sight (prevents wall shooting)');
+
+  // Test SilentAim targeting backtrack tick
+  const silentAim = new SilentAimCheat();
+  silentAim.onAimInput(0, new Vec2(1, 0), aimContext);
+  assert(silentAim.hasTarget === true, 'SilentAim acquired target');
+  assert(silentAim.isBacktrackTarget === true, 'SilentAim locked onto backtrack ghost tick');
+  assert(silentAim.targetLeadPos.x <= 200, 'SilentAim lead pos is at backtrack tick');
 }
 
 console.log(`\n=== TEST SUMMARY: ${passed} PASSED, ${failed} FAILED ===\n`);

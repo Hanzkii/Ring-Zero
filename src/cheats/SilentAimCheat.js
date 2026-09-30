@@ -2,7 +2,7 @@
  * Ring Zero - SilentAim.vmp (Kernel Execution / Ring 0)
  * Reality exploit curving bullet trajectory angles directly toward enemy hitboxes.
  * Functions as an advanced autonomous aimbot with auto-lock, triggerbot auto-firing,
- * and guaranteed critical strikes with crimson vector telemetry.
+ * backtrack ghost targeting, and rich vector visualization.
  */
 
 import { CheatInterceptor, CHEAT_REGISTRY } from './CheatDefinition.js';
@@ -18,18 +18,25 @@ export class SilentAimCheat extends CheatInterceptor {
     this.targetLeadPos = new Vec2();
     this.currentLockedAngle = 0;
     this.hasTarget = false;
+    this.isBacktrackTarget = false;
     this.autoShootTimer = 0;
     this.redirectedCount = 0;
   }
 
   /**
-   * Autonomous triggerbot: Periodically auto-shoots locked targets
+   * Autonomous triggerbot: Periodically auto-shoots locked targets.
+   * Only fires when an enemy or backtrack tick is actively targeted and shootable.
    * @param {number} dt
    * @param {Object} weapon
    * @returns {boolean}
    */
   shouldAutoShoot(dt, weapon) {
     if (!this.hasTarget || !this.currentTarget || this.currentTarget.markedForRemoval) {
+      this.autoShootTimer = 0;
+      return false;
+    }
+
+    if (weapon && (weapon.isReloading || weapon.currentAmmo <= 0)) {
       return false;
     }
 
@@ -45,14 +52,24 @@ export class SilentAimCheat extends CheatInterceptor {
   }
 
   /**
-   * Predictive target acquisition and angle lock
+   * Predictive target acquisition and angle lock (supports enemy bodies and backtrack ghost ticks)
    * @param {number} rawAimAngle
    * @param {Vec2} aimVector
-   * @param {Object} context - { player, spatialGrid, enemies, dt, weapon }
+   * @param {Object} context - { player, spatialGrid, enemies, dt, weapon, raycaster, wallSegments, hasWallhack, backtrackCheat }
    * @returns {number}
    */
   onAimInput(rawAimAngle, aimVector, context) {
-    const { player, spatialGrid, dt = 0.016, weapon } = context;
+    const {
+      player,
+      spatialGrid,
+      dt = 0.016,
+      weapon,
+      raycaster,
+      wallSegments = [],
+      hasWallhack = false,
+      backtrackCheat = null,
+    } = context;
+
     if (!player || !spatialGrid) return rawAimAngle;
 
     // FOV cone & acquisition range scale with rank:
@@ -72,41 +89,87 @@ export class SilentAimCheat extends CheatInterceptor {
 
     let bestTarget = null;
     let bestScore = Infinity;
-    const leadPos = new Vec2();
+    const bestTargetPos = new Vec2();
+    let isBacktrack = false;
 
     for (const enemy of candidates) {
       if (!enemy.active || enemy.markedForRemoval) continue;
 
+      // 1. Direct enemy body targeting
       const dx = enemy.x - player.x;
       const dy = enemy.y - player.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 10) continue;
 
-      const angleToEnemy = Math.atan2(dy, dx);
-      const diff = Math.abs(angleDiff(rawAimAngle, angleToEnemy));
+      if (dist >= 10 && dist <= maxRange) {
+        const angleToEnemy = Math.atan2(dy, dx);
+        const diff = Math.abs(angleDiff(rawAimAngle, angleToEnemy));
 
-      if (diff <= fovHalfAngle) {
-        // Predictive lead calculation: t = distance / bulletSpeed
-        const tLead = dist / bulletSpeed;
-        const lx = enemy.x + (enemy.vx || 0) * tLead;
-        const ly = enemy.y + (enemy.vy || 0) * tLead;
+        if (diff <= fovHalfAngle) {
+          const hasDirectLOS =
+            hasWallhack ||
+            !raycaster ||
+            raycaster.hasLineOfSight(player.x, player.y, enemy.x, enemy.y, wallSegments);
 
-        // Weight by angular diff and distance
-        const score = diff * 0.6 + (dist / maxRange) * 0.4;
-        if (score < bestScore) {
-          bestScore = score;
-          bestTarget = enemy;
-          leadPos.set(lx, ly);
+          if (hasDirectLOS) {
+            const tLead = dist / bulletSpeed;
+            const lx = enemy.x + (enemy.vx || 0) * tLead;
+            const ly = enemy.y + (enemy.vy || 0) * tLead;
+
+            const score = diff * 0.6 + (dist / maxRange) * 0.4;
+            if (score < bestScore) {
+              bestScore = score;
+              bestTarget = enemy;
+              bestTargetPos.set(lx, ly);
+              isBacktrack = false;
+            }
+          }
+        }
+      }
+
+      // 2. Backtrack ghost tick targeting
+      if (backtrackCheat && backtrackCheat.historyMap) {
+        const history = backtrackCheat.historyMap.get(enemy.id);
+        if (history && history.length >= 3) {
+          const step = Math.max(1, Math.floor(history.length / 5));
+          for (let i = 0; i < history.length - 1; i += step) {
+            const snap = history[i];
+            const gdx = snap.x - player.x;
+            const gdy = snap.y - player.y;
+            const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
+            if (gDist < 10 || gDist > maxRange) continue;
+
+            const gAngle = Math.atan2(gdy, gdx);
+            const gDiff = Math.abs(angleDiff(rawAimAngle, gAngle));
+
+            if (gDiff <= fovHalfAngle) {
+              const hasGhostLOS =
+                hasWallhack ||
+                !raycaster ||
+                raycaster.hasLineOfSight(player.x, player.y, snap.x, snap.y, wallSegments);
+
+              if (hasGhostLOS) {
+                // Prioritize backtrack ghost ticks when close or with great line of sight
+                const gScore = gDiff * 0.55 + (gDist / maxRange) * 0.35;
+                if (gScore < bestScore) {
+                  bestScore = gScore;
+                  bestTarget = enemy;
+                  bestTargetPos.set(snap.x, snap.y);
+                  isBacktrack = true;
+                }
+              }
+            }
+          }
         }
       }
     }
 
     this.currentTarget = bestTarget;
     this.hasTarget = bestTarget !== null;
+    this.isBacktrackTarget = isBacktrack;
 
     if (bestTarget) {
-      this.targetLeadPos.copy(leadPos);
-      const desiredAngle = Math.atan2(leadPos.y - player.y, leadPos.x - player.x);
+      this.targetLeadPos.copy(bestTargetPos);
+      const desiredAngle = Math.atan2(bestTargetPos.y - player.y, bestTargetPos.x - player.x);
       this.currentLockedAngle = desiredAngle;
       return desiredAngle;
     }
@@ -129,7 +192,16 @@ export class SilentAimCheat extends CheatInterceptor {
         ? this.currentTarget
         : null;
 
-    if (!target && player && spatialGrid) {
+    if (target) {
+      const dx = this.targetLeadPos.x - bulletParams.x;
+      const dy = this.targetLeadPos.y - bulletParams.y;
+      const redirectedAngle = Math.atan2(dy, dx);
+
+      bulletParams.angle = redirectedAngle;
+      bulletParams.isCritical = true; // Kernel Silent Aim guarantees critical strike
+      bulletParams.color = this.isBacktrackTarget ? COLOR.AMBER : COLOR.RED;
+      this.redirectedCount++;
+    } else if (player && spatialGrid) {
       const maxAngleTolerance = this.level === 3 ? Math.PI : (35 + this.level * 25) * (Math.PI / 180);
       const searchRadius = 550 + this.level * 150;
 
@@ -156,52 +228,102 @@ export class SilentAimCheat extends CheatInterceptor {
           bestEnemy = enemy;
         }
       }
-      target = bestEnemy;
-    }
 
-    if (target) {
-      const dx = target.x - bulletParams.x;
-      const dy = target.y - bulletParams.y;
-      const redirectedAngle = Math.atan2(dy, dx);
+      if (bestEnemy) {
+        const dx = bestEnemy.x - bulletParams.x;
+        const dy = bestEnemy.y - bulletParams.y;
+        const redirectedAngle = Math.atan2(dy, dx);
 
-      bulletParams.angle = redirectedAngle;
-      bulletParams.isCritical = true; // Kernel Silent Aim guarantees critical strike
-      bulletParams.color = COLOR.RED;
-      this.redirectedCount++;
+        bulletParams.angle = redirectedAngle;
+        bulletParams.isCritical = true;
+        bulletParams.color = COLOR.RED;
+        this.redirectedCount++;
+      }
     }
 
     spawnCallback(bulletParams);
   }
 
   /**
-   * Renders lock-on telemetry in world space: crimson laser link, targeting brackets, and lead reticle
+   * Renders lock-on telemetry in world space:
+   * Visualizes target identity, highlight silhouette, distance, health, and aiming vector.
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} alpha
    * @param {Object} context
    */
   onRenderWorld(ctx, alpha, context) {
-    if (!this.hasTarget || !this.currentTarget || this.currentTarget.markedForRemoval) return;
-
     const { player } = context;
+
+    if (!this.hasTarget || !this.currentTarget || this.currentTarget.markedForRemoval) {
+      // Draw detection scan cone around player's aim angle when scanning
+      if (player && this.level < 3) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 42, 109, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+        const aimAngle = player.rotation;
+        const fovHalfAngle = (45 + this.level * 25) * (Math.PI / 180);
+        const maxRange = 550 + this.level * 150;
+
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, maxRange, aimAngle - fovHalfAngle, aimAngle + fovHalfAngle);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+      return;
+    }
+
     const target = this.currentTarget;
-    const lead = this.targetLeadPos;
+    const targetPos = this.targetLeadPos;
+    const isBacktrack = this.isBacktrackTarget;
+    const beamColor = isBacktrack ? COLOR.AMBER : COLOR.RED;
 
     ctx.save();
-    // 1. Vector laser beam from player to target lead position
-    VectorRenderer.strokeLine(ctx, player.x, player.y, lead.x, lead.y, COLOR.RED, 1.5);
 
-    // 2. Lock-on brackets around target
-    VectorRenderer.drawTargetBracket(ctx, target.x, target.y, target.radius * 2.8, COLOR.RED);
+    // 1. High-contrast vector tracer link from player to locked target position
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = beamColor;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(targetPos.x, targetPos.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
 
-    // 3. Predictive lead reticle
-    VectorRenderer.drawCrosshair(ctx, lead.x, lead.y, 5, COLOR.WHITE);
-    VectorRenderer.strokeLine(ctx, target.x, target.y, lead.x, lead.y, COLOR.RED_DIM, 1);
+    // 2. Lock-on diamond / octagonal targeting bracket around target position
+    const bracketSize = (target.radius || 16) * 3.0;
+    VectorRenderer.drawTargetBracket(ctx, targetPos.x, targetPos.y, bracketSize, beamColor, 4);
 
-    // Telemetry label
-    ctx.font = '9px monospace';
-    ctx.fillStyle = COLOR.RED;
+    // 3. Inner lock crosshair and lead reticle
+    VectorRenderer.drawCrosshair(ctx, targetPos.x, targetPos.y, 6, COLOR.WHITE);
+
+    // 4. Enemy wireframe silhouette highlight (so enemy is clearly visible even inside fog of war!)
+    ctx.strokeStyle = beamColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(target.x, target.y, target.radius + 3, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // If locked onto backtrack tick, draw dashed connector line from enemy body to the backtrack tick
+    if (isBacktrack) {
+      ctx.strokeStyle = COLOR.AMBER;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.moveTo(target.x, target.y);
+      ctx.lineTo(targetPos.x, targetPos.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 5. Telemetry label badge
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = beamColor;
     ctx.textAlign = 'center';
-    ctx.fillText(`SILENTAIM//KERNEL_LOCK [Lv.${this.level}]`, target.x, target.y - target.radius - 12);
+    const tag = isBacktrack
+      ? `[SILENT LOCK: BACKTRACK TICK]`
+      : `[SILENT LOCK: ${target.type || 'ENEMY'} HP ${Math.ceil(target.health)}/${target.maxHealth}]`;
+    ctx.fillText(tag, targetPos.x, targetPos.y - bracketSize * 0.5 - 6);
 
     ctx.restore();
   }
@@ -209,9 +331,12 @@ export class SilentAimCheat extends CheatInterceptor {
   onRenderHUD(ctx, x, y) {
     ctx.save();
     ctx.font = '10px monospace';
-    ctx.fillStyle = this.hasTarget ? COLOR.RED : COLOR.RED_DIM;
+    ctx.fillStyle = this.hasTarget ? (this.isBacktrackTarget ? COLOR.AMBER : COLOR.RED) : COLOR.RED_DIM;
+    const status = this.hasTarget
+      ? (this.isBacktrackTarget ? 'BACKTRACK_LOCKED' : 'KERNEL_LOCKED')
+      : 'SCANNING';
     ctx.fillText(
-      `[SILENTAIM.VMP Lv.${this.level}] ${this.hasTarget ? 'KERNEL_LOCKED' : 'SCANNING'} (${this.redirectedCount} CURVED)`,
+      `[SILENTAIM.VMP Lv.${this.level}] ${status} (${this.redirectedCount} CURVED)`,
       x,
       y
     );

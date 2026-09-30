@@ -61,16 +61,17 @@ export class BacktrackCheat extends CheatInterceptor {
    */
   checkGhostCollision(proj, enemy) {
     const history = this.historyMap.get(enemy.id);
-    if (!history || history.length < 8) return false;
+    if (!history || history.length < 3) return false;
 
     let closestSnap = null;
     let closestDistSq = Infinity;
     let closestIndex = -1;
-    const totalR = enemy.radius + proj.radius;
+    // Generous hitbox allowance for reliable hit registration on fast bullets
+    const totalR = enemy.radius + proj.radius + 6;
     const totalRSq = totalR * totalR;
 
     // Find the closest historical snapshot within collision radius
-    for (let i = 0; i < history.length - 2; i++) {
+    for (let i = 0; i < history.length - 1; i++) {
       const snap = history[i];
       const dx = proj.x - snap.x;
       const dy = proj.y - snap.y;
@@ -97,6 +98,24 @@ export class BacktrackCheat extends CheatInterceptor {
     }
 
     return false;
+  }
+
+  /**
+   * Checks if a projectile hits any ghost across all active enemies
+   * @param {import('../entities/Projectile.js').Projectile} proj
+   * @param {import('../entities/Enemy.js').Enemy[]} enemies
+   * @returns {import('../entities/Enemy.js').Enemy|null} The rewound enemy if hit, or null
+   */
+  checkAllGhostsCollision(proj, enemies) {
+    if (!enemies) return null;
+    for (let i = 0; i < enemies.length; i++) {
+      const enemy = enemies[i];
+      if (!enemy.active || enemy.markedForRemoval) continue;
+      if (this.checkGhostCollision(proj, enemy)) {
+        return enemy;
+      }
+    }
+    return null;
   }
 
   /**
