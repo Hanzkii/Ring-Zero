@@ -103,24 +103,17 @@ export class Raycaster2D {
       }
     }
 
-    // Add perimeter bounding segments around viewpoint so rays are always bounded
-    const bTop = { x1: boxMinX, y1: boxMinY, x2: boxMaxX, y2: boxMinY };
-    const bRight = { x1: boxMaxX, y1: boxMinY, x2: boxMaxX, y2: boxMaxY };
-    const bBot = { x1: boxMaxX, y1: boxMaxY, x2: boxMinX, y2: boxMaxY };
-    const bLeft = { x1: boxMinX, y1: boxMaxY, x2: boxMinX, y2: boxMinY };
-    candidates.push(bTop, bRight, bBot, bLeft);
-
     // 2. Collect unique ray angles from segment endpoints + uniform radial baseline
     const angles = this._uniqueAngles;
     angles.length = 0;
 
-    // Baseline uniform circle rays (32 rays)
-    const baseRays = 32;
+    // Baseline uniform circle rays (64 rays for a smooth circular perimeter)
+    const baseRays = 64;
     for (let i = 0; i < baseRays; i++) {
       angles.push((i / baseRays) * Math.PI * 2 - Math.PI);
     }
 
-    // Cast 3 rays at each candidate segment endpoint: theta, theta - eps, theta + eps
+    // Cast 3 rays at each candidate segment endpoint: theta - eps, theta, theta + eps
     const eps = 0.0001;
     for (let i = 0; i < candidates.length; i++) {
       const seg = candidates[i];
@@ -136,7 +129,11 @@ export class Raycaster2D {
     poly.length = 0;
 
     for (let i = 0; i < angles.length; i++) {
-      const angle = angles[i];
+      let angle = angles[i];
+      // Normalize angle to (-Math.PI, Math.PI]
+      while (angle <= -Math.PI) angle += Math.PI * 2;
+      while (angle > Math.PI) angle -= Math.PI * 2;
+
       const dirX = Math.cos(angle);
       const dirY = Math.sin(angle);
 
@@ -175,6 +172,8 @@ export class Raycaster2D {
 
   /**
    * Renders the dynamic fog-of-war mask over the camera viewport
+   * Uses standard evenodd fill to leave the visible line-of-sight polygon 100% clear and unoccluded,
+   * while covering occluded shadows and distant areas with dark atmospheric fog.
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} px - Player X
    * @param {number} py - Player Y
@@ -190,39 +189,34 @@ export class Raycaster2D {
     // Viewport dimensions in world coordinates
     const viewW = camera.viewportWidth;
     const viewH = camera.viewportHeight;
-    const left = camera.x - viewW * 0.5 - 20;
-    const top = camera.y - viewH * 0.5 - 20;
-    const w = viewW + 40;
-    const h = viewH + 40;
+    const left = camera.x - viewW * 0.5 - 60;
+    const top = camera.y - viewH * 0.5 - 60;
+    const right = camera.x + viewW * 0.5 + 60;
+    const bottom = camera.y + viewH * 0.5 + 60;
 
-    // Use an offscreen canvas or 2-step composite to carve the visibility polygon
-    // Step 1: Draw full dark fog over the screen
-    ctx.fillStyle = wallhackActive ? 'rgba(5, 10, 18, 0.65)' : 'rgba(5, 9, 15, 0.94)';
-    ctx.fillRect(left, top, w, h);
-
-    // Step 2: Carve out the visibility polygon using 'destination-out'
-    ctx.globalCompositeOperation = 'destination-out';
-
+    // Begin combined path for evenodd fill
     ctx.beginPath();
+
+    // 1. Outer viewport boundary rectangle (covers whole screen)
+    ctx.moveTo(left, top);
+    ctx.lineTo(right, top);
+    ctx.lineTo(right, bottom);
+    ctx.lineTo(left, bottom);
+    ctx.closePath();
+
+    // 2. Inner visibility polygon (the line-of-sight area that remains clear)
     ctx.moveTo(poly[0].x, poly[0].y);
     for (let i = 1; i < poly.length; i++) {
       ctx.lineTo(poly[i].x, poly[i].y);
     }
     ctx.closePath();
 
-    // Fill with radial gradient for soft edge falloff
-    const grad = ctx.createRadialGradient(px, py, this.maxDistance * 0.45, px, py, this.maxDistance);
-    grad.addColorStop(0, 'rgba(0, 0, 0, 1)');
-    grad.addColorStop(0.85, 'rgba(0, 0, 0, 0.85)');
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = grad;
-    ctx.fill();
+    // 3. Fill only the occluded regions outside the polygon using evenodd
+    ctx.fillStyle = wallhackActive ? 'rgba(7, 10, 15, 0.60)' : 'rgba(7, 10, 15, 0.95)';
+    ctx.fill('evenodd');
 
-    // Reset composite operation
-    ctx.globalCompositeOperation = 'source-over';
-
-    // Step 3: Draw razor-sharp vector boundary along the visibility polygon edge
-    ctx.strokeStyle = wallhackActive ? COLOR.CYAN_MUTED : 'rgba(0, 240, 255, 0.12)';
+    // 4. Draw razor-sharp vector boundary along the visibility polygon perimeter
+    ctx.strokeStyle = wallhackActive ? COLOR.CYAN_DIM : 'rgba(0, 240, 255, 0.22)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(poly[0].x, poly[0].y);
