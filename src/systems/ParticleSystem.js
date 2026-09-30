@@ -166,4 +166,11 @@ export class ParticleSystem {
       p.render(ctx, alpha);
     });
   }
+
+  /**
+   * Reclaims all active particles back to the object pool
+   */
+  clear() {
+    this.pool.releaseAll();
+  }
 }

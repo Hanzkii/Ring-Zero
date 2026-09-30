@@ -356,31 +356,43 @@ export class GameApp {
   }
 
   /**
-   * Transitions from BOOT to RUN state and starts game loop
+   * Starts a brand new run
    */
-  start() {
-    this.applyFirmwareBonuses();
-    this.state = APP_STATE.RUN;
-    this.loop.start();
+  startRun() {
+    this.restartRun();
   }
 
   /**
-   * Restarts simulation for a new run
+   * Transitions from BOOT to RUN state and starts game loop
    */
-  restart() {
+  start() {
+    this.startRun();
+  }
+
+  /**
+   * Resets all simulation state and begins/restarts run in-place without page reload
+   */
+  restartRun() {
+    // 1. Reset player state and apply permanent firmware bonuses
     this.applyFirmwareBonuses();
     this.player.reset();
     this.player.x = 0;
     this.player.y = 0;
+    this.player.vx = 0;
+    this.player.vy = 0;
     this.score = 0;
     this.stats = { shotsFired: 0, shotsHit: 0, enemiesKilled: 0 };
+
+    // 2. Clear cheats
     this.cheatManager.activeCheats.clear();
     this.cheatManager.clearanceRing = this.storage.clearanceRing;
 
+    // 3. Reset weapons
     this.weaponSystem.slots[0] = this.weaponSystem._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.KERNEL_PISTOL));
     this.weaponSystem.slots[1] = null;
     this.weaponSystem.activeSlot = 0;
 
+    // 4. Clear active entities, pools, and spatial grid
     for (const e of this.enemies) this.spatialGrid.remove(e);
     for (const d of this.drops) this.spatialGrid.remove(d);
     this.enemies.length = 0;
@@ -388,11 +400,37 @@ export class GameApp {
     this.projectilePool.releaseAll();
     this.particleSystem.clear();
 
+    // 5. Reset camera
+    this.camera.pos.set(0, 0);
+    this.camera.prevPos.set(0, 0);
+    this.camera.targetPos.set(0, 0);
+    this.camera.trauma = 0;
+
+    // 6. Reset wave timers and wave director back to Wave 1
     this.waveManager.reset();
+
+    // 7. Rebuild / reseed procedural map and update player cell
     this.loadMap('facility', 1337);
     this.spatialGrid.update(this.player);
 
+    // 8. Close pause/draft modals if open
+    if (this.pauseOverlay && this.pauseOverlay.isOpen) this.pauseOverlay.close();
+    if (this.draftModal && this.draftModal.isOpen) this.draftModal.close();
+
+    // 9. Transition state and launch game loop
     this.state = APP_STATE.RUN;
+    if (!this.loop.isRunning) {
+      this.loop.start();
+    } else {
+      this.loop.resume();
+    }
+  }
+
+  /**
+   * Backward-compatible restart alias
+   */
+  restart() {
+    this.restartRun();
   }
 
   /**
@@ -422,6 +460,27 @@ export class GameApp {
    * @param {number} dt - Fixed delta time (1/60 s)
    */
   update(dt) {
+    // If game over, handle Enter to re-deploy or Escape for main menu
+    if (this.state === APP_STATE.GAMEOVER) {
+      if (this.input.isKeyJustPressed('Enter')) {
+        if (this.terminalUI?.diagnosticModal) {
+          this.terminalUI.diagnosticModal.style.display = 'none';
+        }
+        this.restartRun();
+      } else if (this.input.isKeyJustPressed('Escape')) {
+        if (this.terminalUI?.diagnosticModal) {
+          this.terminalUI.diagnosticModal.style.display = 'none';
+        }
+        if (this.terminalUI?.bootOverlay) {
+          this.terminalUI.bootOverlay.style.display = 'flex';
+          this.terminalUI.bootOverlay.classList.remove('terminal-hidden');
+          this.terminalUI.switchTab('briefing');
+        }
+      }
+      this.input.postUpdate();
+      return;
+    }
+
     // If paused, handle ESC / KeyP to resume or close settings modal
     if (this.state === APP_STATE.PAUSED) {
       if (this.input.isKeyJustPressed('Escape') || this.input.isKeyJustPressed('KeyP')) {
@@ -967,7 +1026,7 @@ export class GameApp {
 
     ctx.font = '12px monospace';
     ctx.fillStyle = COLOR.CYAN;
-    ctx.fillText('PRESS [F5] OR RELOAD TO RE-INITIALIZE KERNEL ACCESS', w * 0.5, h * 0.56);
+    ctx.fillText('PRESS [ENTER] TO RE-DEPLOY // [ESC] FOR MAIN MENU', w * 0.5, h * 0.56);
 
     ctx.restore();
   }

@@ -598,6 +598,9 @@ export class TerminalUI {
         </div>
 
         <div class="terminal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button id="btn-main-menu" class="btn-vector" style="border-color: ${COLOR.CYAN}; color: ${COLOR.CYAN};">
+            MAIN MENU
+          </button>
           <button id="btn-open-shop" class="btn-vector" style="border-color: ${COLOR.AMBER}; color: ${COLOR.AMBER};">
             CLEARANCE SHOP
           </button>
@@ -632,21 +635,59 @@ export class TerminalUI {
       this.soundBank.playLevelUp();
     });
 
-    // Hook redeploy button
-    document.getElementById('btn-redeploy')?.addEventListener('click', () => {
+    const triggerRedeploy = () => {
       this.diagnosticModal.style.display = 'none';
       this.soundBank.playUIClick();
-      if (this.onRestartRun) this.onRestartRun();
-    });
+      if (this.onRestartRun) {
+        this.onRestartRun();
+      } else if (this.onStartRun) {
+        this.onStartRun();
+      }
+    };
+
+    const triggerMainMenu = () => {
+      this.diagnosticModal.style.display = 'none';
+      this.soundBank.playUIClick();
+      if (this.bootOverlay) {
+        this.bootOverlay.style.display = 'flex';
+        this.bootOverlay.classList.remove('terminal-hidden');
+      }
+      this.switchTab('briefing');
+    };
+
+    // Hook redeploy button
+    document.getElementById('btn-redeploy')?.addEventListener('click', triggerRedeploy);
+
+    // Hook main menu button
+    document.getElementById('btn-main-menu')?.addEventListener('click', triggerMainMenu);
 
     // Hook clearance shop button
     document.getElementById('btn-open-shop')?.addEventListener('click', () => {
       this.diagnosticModal.style.display = 'none';
+      this.soundBank.playUIClick();
       if (this.bootOverlay) {
         this.bootOverlay.style.display = 'flex';
         this.bootOverlay.classList.remove('terminal-hidden');
       }
       this.switchTab('shop');
     });
+
+    // Keyboard navigation when diagnostic modal is active
+    const onDiagKeyDown = (e) => {
+      if (this.diagnosticModal.style.display !== 'none' && this.diagnosticModal.style.display !== '') {
+        if (e.code === 'Enter' && document.activeElement !== callsignInput) {
+          e.preventDefault();
+          window.removeEventListener('keydown', onDiagKeyDown);
+          triggerRedeploy();
+        } else if (e.code === 'Escape') {
+          e.preventDefault();
+          window.removeEventListener('keydown', onDiagKeyDown);
+          triggerMainMenu();
+        }
+      } else {
+        window.removeEventListener('keydown', onDiagKeyDown);
+      }
+    };
+    window.addEventListener('keydown', onDiagKeyDown);
   }
 }
