@@ -131,7 +131,7 @@ Proceed with Phase 5.5: Visual & UI Polish Overhaul for Ring Zero:
 Ensure pure vanilla ES6+ standards, zero external assets, and verify all 319 existing tests continue passing.
 ```
 
-## 4. Next Session Execution Prompt: Phase 6: Exploit Fixes, Procedural Music, Visual Redesign, and Economy Magnetics.
+## 5. Next Session Execution Prompt: Phase 6: Exploit Fixes, Procedural Music, Visual Redesign, and Economy Magnetics.
 
 ```text
 Proceed with Phase 6: Exploit Fixes, Procedural Music, Visual Redesign, and Economy Magnetics.
