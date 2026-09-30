@@ -15,34 +15,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate:
+  test-and-validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Validate ES6 Syntax Integrity
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate ES6 Module Syntax
         run: |
-          node --check src/main.js
-          node --check src/core/Constants.js
-          node --check src/core/VectorMath.js
-          node --check src/core/GameLoop.js
-          node --check src/core/InputManager.js
-          node --check src/core/Camera2D.js
-          node --check src/core/ObjectPool.js
-          node --check src/core/GameApp.js
-          node --check src/systems/SpatialHashGrid.js
-          node --check src/entities/Entity.js
-          node --check src/entities/Player.js
-          node --check src/ui/VectorRenderer.js
-          echo "All ES6+ modules passed syntax and import validation."
+          for file in $(find src -name "*.js"); do
+            node --check "$file"
+          done
+          echo "All core and subsystem ES6 modules passed syntax verification."
+
+      - name: Execute Full Automated Test Suite (Phases 1-5 + Arsenal Expansion)
+        run: |
+          node test/phase1_test.js
+          node test/phase2_test.js
+          node test/phase3_test.js
+          node test/phase4_test.js
+          node test/phase5_test.js
+          node test/arsenal_expansion_test.js
+          echo "All 319 automated tests passed cleanly."
 
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: validate
+    needs: test-and-validate
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

@@ -26,6 +26,7 @@ export class Camera2D {
     this.maxLeadDistance = 160;
 
     // Screen shake / trauma system
+    this.traumaMultiplier = 1.0;
     this.trauma = 0;          // Value in [0, 1]
     this.traumaDecay = 1.6;   // Decay rate per second
     this.maxShakeOffset = 24; // Maximum pixel translation at trauma = 1
@@ -64,7 +65,8 @@ export class Camera2D {
    * @param {number} amount
    */
   addTrauma(amount) {
-    this.trauma = clamp(this.trauma + amount, 0, 1.0);
+    const mult = this.traumaMultiplier !== undefined ? this.traumaMultiplier : 1.0;
+    this.trauma = clamp(this.trauma + amount * mult, 0, 1.0);
   }
 
   /**

@@ -17,9 +17,11 @@ export class Player extends Entity {
     super(x, y, PLAYER_CONFIG.RADIUS, COLLISION_LAYER.PLAYER);
 
     // Health & Combat stats
-    this.maxHealth = PLAYER_CONFIG.MAX_HEALTH;
+    this.baseMaxHealth = PLAYER_CONFIG.MAX_HEALTH;
+    this.maxHealth = this.baseMaxHealth;
     this.health = this.maxHealth;
-    this.maxSpeed = PLAYER_CONFIG.MAX_SPEED;
+    this.baseMaxSpeed = PLAYER_CONFIG.MAX_SPEED;
+    this.maxSpeed = this.baseMaxSpeed;
     this.acceleration = PLAYER_CONFIG.ACCELERATION;
     this.friction = PLAYER_CONFIG.FRICTION;
 
@@ -32,7 +34,8 @@ export class Player extends Entity {
     this.xp = 0;
     this.xpToNextLevel = 100;
     this.pendingLevelUps = 0;
-    this.magnetRadius = 180;
+    this.baseMagnetRadius = 180;
+    this.magnetRadius = this.baseMagnetRadius;
 
     // Dash kinematics
     this.dashCooldown = PLAYER_CONFIG.DASH_COOLDOWN;
@@ -75,7 +78,10 @@ export class Player extends Entity {
    * Resets player state for a fresh run
    */
   reset() {
+    this.maxHealth = this.baseMaxHealth;
     this.health = this.maxHealth;
+    this.maxSpeed = this.baseMaxSpeed;
+    this.magnetRadius = this.baseMagnetRadius;
     this.markedForRemoval = false;
     this.level = 1;
     this.xp = 0;

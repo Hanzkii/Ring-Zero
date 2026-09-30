@@ -83,6 +83,10 @@ export class Vec2 {
     return Math.sqrt(this.magSq());
   }
 
+  length() {
+    return this.mag();
+  }
+
   normalize() {
     const m = this.mag();
     if (m > 0.00001) {

@@ -39,6 +39,54 @@ export const RISK_MODIFIERS = {
   },
 };
 
+export const FIRMWARE_NODES = {
+  bufferExpansion: {
+    id: 'bufferExpansion',
+    name: 'BUFFER EXPANSION',
+    desc: 'Amplifies chassis integrity allocation (+20 Max HP per rank).',
+    maxLevel: 5,
+    costs: [80, 160, 280, 450, 700],
+    bonusPerLevel: 20,
+    unit: ' HP',
+  },
+  overclockedBus: {
+    id: 'overclockedBus',
+    name: 'OVERCLOCKED BUS',
+    desc: 'Enhances thruster bus clock frequency (+14 Movement Speed per rank).',
+    maxLevel: 5,
+    costs: [90, 180, 300, 480, 750],
+    bonusPerLevel: 14,
+    unit: ' px/s',
+  },
+  fastDma: {
+    id: 'fastDma',
+    name: 'FAST DMA I/O',
+    desc: 'Accelerates memory transfer cycles during weapon reload (-10% Reload Time per rank).',
+    maxLevel: 5,
+    costs: [100, 200, 340, 520, 800],
+    bonusPerLevel: 0.10,
+    unit: '%',
+  },
+  heuristicSpoofing: {
+    id: 'heuristicSpoofing',
+    name: 'HEURISTIC SPOOFING',
+    desc: 'Injects dummy telemetry to force draft re-rolls (+1 Re-roll Token per rank).',
+    maxLevel: 5,
+    costs: [120, 240, 400, 600, 950],
+    bonusPerLevel: 1,
+    unit: ' Tokens',
+  },
+  cacheMagnet: {
+    id: 'cacheMagnet',
+    name: 'CACHE MAGNET',
+    desc: 'Extends electromagnetic capture coil radius (+40 Magnet Range per rank).',
+    maxLevel: 5,
+    costs: [70, 140, 240, 380, 600],
+    bonusPerLevel: 40,
+    unit: ' px',
+  },
+};
+
 export const DEFAULT_SAVE_STATE = {
   version: 1,
   clearanceRing: RING_TIER.RING_3, // Default starter Ring 3 (Userland)
@@ -48,11 +96,21 @@ export const DEFAULT_SAVE_STATE = {
     integrityShield: false,
     kernelPurge: false,
   },
+  firmware: {
+    bufferExpansion: 0,
+    overclockedBus: 0,
+    fastDma: 0,
+    heuristicSpoofing: 0,
+    cacheMagnet: 0,
+  },
   highScores: [],
   totalKills: 0,
   totalRuns: 0,
   settings: {
     masterVolume: 0.7,
+    sfxVolume: 0.8,
+    screenShake: 1.0,
+    showDebugGrid: false,
     isMuted: false,
   },
 };
@@ -160,6 +218,29 @@ export class StorageService {
     this.save();
   }
 
+  get bounties() {
+    return this.cryptoBounties;
+  }
+
+  set bounties(val) {
+    this.cryptoBounties = val;
+  }
+
+  get settings() {
+    if (!this.state.settings) {
+      this.state.settings = { ...DEFAULT_SAVE_STATE.settings };
+    }
+    return this.state.settings;
+  }
+
+  updateSettings(partial) {
+    this.state.settings = {
+      ...this.settings,
+      ...partial,
+    };
+    this.save();
+  }
+
   get highScore() {
     return this.state.highScores[0]?.score || 0;
   }
@@ -220,6 +301,72 @@ export class StorageService {
       return true;
     }
     return false;
+  }
+
+  _resolveFirmwareNodeId(nodeId) {
+    if (nodeId === 'fastDMA') return 'fastDma';
+    return nodeId;
+  }
+
+  /**
+   * Retrieves current installed level for a firmware node
+   * @param {string} nodeId
+   * @returns {number}
+   */
+  getFirmwareLevel(nodeId) {
+    const id = this._resolveFirmwareNodeId(nodeId);
+    if (!this.state.firmware) return 0;
+    return this.state.firmware[id] || 0;
+  }
+
+  /**
+   * Returns bounty cost to upgrade firmware node to next rank, or null if maxed
+   * @param {string} nodeId
+   * @returns {number|null}
+   */
+  getFirmwareCost(nodeId) {
+    const id = this._resolveFirmwareNodeId(nodeId);
+    const node = FIRMWARE_NODES[id];
+    if (!node) return null;
+    const currentLvl = this.getFirmwareLevel(id);
+    if (currentLvl >= node.maxLevel) return null;
+    return node.costs[currentLvl];
+  }
+
+  /**
+   * Computes cumulative bonus value from installed firmware rank
+   * @param {string} nodeId
+   * @returns {number}
+   */
+  getFirmwareBonus(nodeId) {
+    const id = this._resolveFirmwareNodeId(nodeId);
+    const node = FIRMWARE_NODES[id];
+    if (!node) return 0;
+    return this.getFirmwareLevel(id) * node.bonusPerLevel;
+  }
+
+  /**
+   * Purchases firmware micro-upgrade using crypto bounties
+   * @param {string} nodeId
+   * @returns {{ success: boolean, level?: number, reason?: string }}
+   */
+  upgradeFirmware(nodeId) {
+    const id = this._resolveFirmwareNodeId(nodeId);
+    const cost = this.getFirmwareCost(id);
+    if (cost === null) {
+      return { success: false, reason: 'max_level' };
+    }
+    if (!this.spendBounties(cost)) {
+      return { success: false, reason: 'insufficient_funds' };
+    }
+
+    if (!this.state.firmware) {
+      this.state.firmware = {};
+    }
+    const newLvl = this.getFirmwareLevel(id) + 1;
+    this.state.firmware[id] = newLvl;
+    this.save();
+    return { success: true, level: newLvl };
   }
 
   /**

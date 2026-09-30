@@ -12,6 +12,15 @@ import { DoubleTapCheat } from '../cheats/DoubleTapCheat.js';
 import { SilentAimCheat } from '../cheats/SilentAimCheat.js';
 import { BacktrackCheat } from '../cheats/BacktrackCheat.js';
 import { OverclockDashCheat } from '../cheats/OverclockDashCheat.js';
+import { SpeedhackCheat } from '../cheats/SpeedhackCheat.js';
+import { TriggerbotCheat } from '../cheats/TriggerbotCheat.js';
+import { PacketChokeCheat } from '../cheats/PacketChokeCheat.js';
+import { RadarTelemetryCheat } from '../cheats/RadarTelemetryCheat.js';
+import { PenetrationBuckerCheat } from '../cheats/PenetrationBuckerCheat.js';
+import { RapidFireCheat } from '../cheats/RapidFireCheat.js';
+import { NoclipCheat } from '../cheats/NoclipCheat.js';
+import { LagswitchCheat } from '../cheats/LagswitchCheat.js';
+import { KernelPanicCheat } from '../cheats/KernelPanicCheat.js';
 
 export class CheatManager {
   constructor() {
@@ -57,14 +66,41 @@ export class CheatManager {
       case 'overclock_dash':
         cheat = new OverclockDashCheat();
         break;
+      case 'speedhack':
+        cheat = new SpeedhackCheat();
+        break;
+      case 'triggerbot':
+        cheat = new TriggerbotCheat();
+        break;
       case 'doubletap':
         cheat = new DoubleTapCheat();
+        break;
+      case 'backtrack':
+        cheat = new BacktrackCheat();
+        break;
+      case 'packetchoke':
+        cheat = new PacketChokeCheat();
+        break;
+      case 'radartelemetry':
+        cheat = new RadarTelemetryCheat();
+        break;
+      case 'penetrationbucker':
+        cheat = new PenetrationBuckerCheat();
+        break;
+      case 'rapidfire':
+        cheat = new RapidFireCheat();
         break;
       case 'silentaim':
         cheat = new SilentAimCheat();
         break;
-      case 'backtrack':
-        cheat = new BacktrackCheat();
+      case 'noclip':
+        cheat = new NoclipCheat();
+        break;
+      case 'lagswitch':
+        cheat = new LagswitchCheat();
+        break;
+      case 'kernelpanic':
+        cheat = new KernelPanicCheat();
         break;
       default:
         console.warn(`CheatManager: Unknown cheat id "${cheatId}"`);

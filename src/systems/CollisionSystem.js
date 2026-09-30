@@ -359,8 +359,8 @@ export class CollisionSystem {
    * Push player and enemies out of static walls
    */
   _resolveEntitiesVsWalls(player, enemyList) {
-    // 1. Player vs Walls
-    if (player && !player.markedForRemoval) {
+    // 1. Player vs Walls (phased through if Noclip is active)
+    if (player && !player.markedForRemoval && !this.cheatManager?.hasCheat('noclip')) {
       this.spatialGrid.queryRadius(
         player.x,
         player.y,
@@ -393,7 +393,7 @@ export class CollisionSystem {
    * Push player and enemies out of solid props
    */
   _resolveEntitiesVsProps(player, enemyList, propList) {
-    if (player && !player.markedForRemoval) {
+    if (player && !player.markedForRemoval && !this.cheatManager?.hasCheat('noclip')) {
       this.spatialGrid.queryRadius(
         player.x,
         player.y,
@@ -447,12 +447,20 @@ export class CollisionSystem {
           proj.y >= wall.minY - proj.radius &&
           proj.y <= wall.maxY + proj.radius
         ) {
+          // Check for wall penetration (Wallhack Rank 3, PenetrationBucker, or bullet property)
+          const hasBuck = this.cheatManager && this.cheatManager.hasCheat('penetrationbucker');
+          const isPlayerBullet = proj.layer === COLLISION_LAYER.PROJECTILE_PLAYER;
+          if (isPlayerBullet && (proj.canPierceWalls || proj.penetratesWalls || hasBuck)) {
+            this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 1, COLOR.CYAN);
+            continue;
+          }
+
           let canPierce = false;
           if (this.cheatManager && this.cheatManager.hasCheat('wallhack')) {
             const wallhack = this.cheatManager.getCheat('wallhack');
-            if (wallhack && proj.layer === COLLISION_LAYER.PROJECTILE_PLAYER) {
+            if (wallhack && isPlayerBullet) {
               // Max level Wallhack (Rank 3): bullets shoot completely through walls!
-              if (wallhack.level >= 3 || proj.penetratesWalls) {
+              if (wallhack.level >= 3) {
                 this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 1, COLOR.CYAN);
                 continue;
               }

@@ -11,7 +11,8 @@ export class SynthAudio {
     this.compressor = null;
     this.noiseBuffer = null;
     this.isMuted = false;
-    this.volume = 0.7;
+    this.masterVolume = 0.7;
+    this.sfxVolume = 0.8;
     this.initialized = false;
   }
 
@@ -49,8 +50,13 @@ export class SynthAudio {
 
       // Master Gain
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
       this.masterGain.connect(this.compressor);
+
+      // SFX Bus Gain
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+      this.sfxGain.connect(this.masterGain);
 
       // Pre-synthesize 2-second looped white noise buffer
       this._generateNoiseBuffer();
@@ -81,16 +87,27 @@ export class SynthAudio {
     }
   }
 
-  setVolume(volume) {
-    this.volume = Math.max(0, Math.min(1, volume));
+  setMasterVolume(volume) {
+    this.masterVolume = Math.max(0, Math.min(1, volume));
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.volume, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.ctx.currentTime);
     }
+  }
+
+  setSfxVolume(volume) {
+    this.sfxVolume = Math.max(0, Math.min(1, volume));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+    }
+  }
+
+  setVolume(volume) {
+    this.setMasterVolume(volume);
   }
 
   toggleMute() {
     this.isMuted = !this.isMuted;
-    this.setVolume(this.volume);
+    this.setMasterVolume(this.masterVolume);
     return this.isMuted;
   }
 
@@ -117,7 +134,7 @@ export class SynthAudio {
     gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain || this.masterGain);
 
     osc.start(t);
     osc.stop(t + duration);
@@ -150,7 +167,7 @@ export class SynthAudio {
 
     source.connect(filter);
     filter.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain || this.masterGain);
 
     source.start(t);
     source.stop(t + duration);
@@ -187,7 +204,7 @@ export class SynthAudio {
     outGain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
 
     carrier.connect(outGain);
-    outGain.connect(this.masterGain);
+    outGain.connect(this.sfxGain || this.masterGain);
 
     carrier.start(t);
     modulator.start(t);

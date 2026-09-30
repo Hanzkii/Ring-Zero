@@ -143,7 +143,7 @@ console.log('\n3. Testing Privilege Hierarchy & Clearance Filtering:');
 
   // Test Ring 2 Filtering
   manager.clearanceRing = RING_TIER.RING_2;
-  const ring2Options = manager.generateDraftOptions(10);
+  const ring2Options = manager.generateDraftOptions(30);
   const ring2Ids = ring2Options.map((o) => o.def.id);
   assert(ring2Ids.includes('doubletap'), 'Ring 2 draft pool unlocks DoubleTap');
   assert(ring2Ids.includes('backtrack'), 'Ring 2 draft pool unlocks Backtrack');
@@ -152,14 +152,14 @@ console.log('\n3. Testing Privilege Hierarchy & Clearance Filtering:');
 
   // Test Ring 1 Filtering
   manager.clearanceRing = RING_TIER.RING_1;
-  const ring1Options = manager.generateDraftOptions(10);
+  const ring1Options = manager.generateDraftOptions(30);
   const ring1Ids = ring1Options.map((o) => o.def.id);
   assert(ring1Ids.includes('spinbot'), 'Ring 1 draft pool unlocks Spinbot');
   assert(!ring1Ids.includes('silentaim'), 'Ring 1 draft pool excludes SilentAim (Ring 0)');
 
   // Test Ring 0 Filtering
   manager.clearanceRing = RING_TIER.RING_0;
-  const ring0Options = manager.generateDraftOptions(10);
+  const ring0Options = manager.generateDraftOptions(30);
   const ring0Ids = ring0Options.map((o) => o.def.id);
   assert(ring0Ids.includes('silentaim'), 'Ring 0 draft pool unlocks SilentAim');
 }

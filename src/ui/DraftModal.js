@@ -1,6 +1,7 @@
 /**
  * Ring Zero - In-Run Exploit Injection Draft Modal
  * Interactive vector card draft interface allowing players to weaponize exploits upon level-up.
+ * Supports Heuristic Spoofing draft re-rolls.
  */
 
 import { COLOR } from '../core/Constants.js';
@@ -9,13 +10,16 @@ export class DraftModal {
   /**
    * @param {HTMLElement} rootContainer
    * @param {function(Object): void} onSelectExploit
+   * @param {function(): void} [onRerollExploits=null]
    */
-  constructor(rootContainer, onSelectExploit) {
+  constructor(rootContainer, onSelectExploit, onRerollExploits = null) {
     this.rootContainer = rootContainer;
     this.onSelectExploit = onSelectExploit;
+    this.onRerollExploits = onRerollExploits;
 
     this.isOpen = false;
     this.currentOptions = [];
+    this.rerollTokens = 0;
 
     // Create DOM structure
     this.modalEl = document.createElement('div');
@@ -28,11 +32,19 @@ export class DraftModal {
           <h2 class="draft-title">SELECT EXPLOIT INJECTION</h2>
         </div>
         <div class="draft-cards" id="draft-cards-container"></div>
-        <div class="draft-footer">PRESS [1], [2], OR [3] TO INJECT</div>
+        <div class="draft-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">PRESS [1], [2], OR [3] TO INJECT</div>
+          <button id="btn-reroll-draft" class="btn-vector" style="font-size: 11px; padding: 6px 14px; border-color: ${COLOR.AMBER}; color: ${COLOR.AMBER};">
+            [R] RE-ROLL EXPLOITS (0 TOKENS)
+          </button>
+        </div>
       </div>
     `;
 
     this.rootContainer.appendChild(this.modalEl);
+
+    this.rerollBtn = this.modalEl.querySelector('#btn-reroll-draft');
+    this.rerollBtn?.addEventListener('click', () => this.triggerReroll());
 
     this._onKeyDown = this._onKeyDown.bind(this);
   }
@@ -40,12 +52,27 @@ export class DraftModal {
   /**
    * Opens the draft selection modal with exploit options
    * @param {Array<{ def: Object, isUpgrade: boolean, currentLevel: number, nextLevel: number, nextPerkDescription: string }>} options
+   * @param {number} [rerollTokens=0]
    */
-  open(options) {
-    if (this.isOpen || options.length === 0) return;
+  open(options, rerollTokens = 0) {
+    if (options.length === 0) return;
 
     this.isOpen = true;
     this.currentOptions = options;
+    this.rerollTokens = rerollTokens;
+
+    if (this.rerollBtn) {
+      this.rerollBtn.textContent = `[R] RE-ROLL EXPLOITS (${this.rerollTokens} TOKENS)`;
+      if (this.rerollTokens > 0) {
+        this.rerollBtn.disabled = false;
+        this.rerollBtn.style.opacity = '1';
+        this.rerollBtn.style.cursor = 'pointer';
+      } else {
+        this.rerollBtn.disabled = true;
+        this.rerollBtn.style.opacity = '0.35';
+        this.rerollBtn.style.cursor = 'not-allowed';
+      }
+    }
 
     const cardsContainer = document.getElementById('draft-cards-container');
     if (!cardsContainer) return;
@@ -54,7 +81,7 @@ export class DraftModal {
     options.forEach((opt, idx) => {
       const card = document.createElement('div');
       card.className = `draft-card draft-card-${opt.def.rarity.name.toLowerCase().replace(/\s+/g, '-')}`;
-      
+
       const badgeText = opt.isUpgrade
         ? `UPGRADE &bull; RANK ${opt.nextLevel}/3`
         : `NEW EXPLOIT &bull; RANK 1/3`;
@@ -87,6 +114,14 @@ export class DraftModal {
   }
 
   /**
+   * Triggers draft re-roll if tokens remain
+   */
+  triggerReroll() {
+    if (this.rerollTokens <= 0 || !this.onRerollExploits) return;
+    this.onRerollExploits();
+  }
+
+  /**
    * Closes the modal
    */
   close() {
@@ -114,6 +149,8 @@ export class DraftModal {
       this.selectIndex(1);
     } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
       this.selectIndex(2);
+    } else if (e.code === 'KeyR' && this.rerollTokens > 0) {
+      this.triggerReroll();
     }
   }
 }

@@ -3,7 +3,7 @@
  * State machine, high-DPI canvas orchestration, fixed simulation dispatch, and vector telemetry rendering.
  */
 
-import { SIMULATION, COLOR, WORLD, COLLISION_LAYER } from './Constants.js';
+import { SIMULATION, COLOR, WORLD, COLLISION_LAYER, PLAYER_CONFIG } from './Constants.js';
 import { GameLoop } from './GameLoop.js';
 import { InputManager } from './InputManager.js';
 import { Camera2D } from './Camera2D.js';
@@ -15,6 +15,8 @@ import { WaveManager, WAVE_STATE } from '../systems/WaveManager.js';
 import { CollisionSystem } from '../systems/CollisionSystem.js';
 import { CheatManager } from '../systems/CheatManager.js';
 import { DraftModal } from '../ui/DraftModal.js';
+import { PauseOverlay } from '../ui/PauseOverlay.js';
+import { SettingsModal } from '../ui/SettingsModal.js';
 import { Player } from '../entities/Player.js';
 import { Projectile } from '../entities/Projectile.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -72,7 +74,35 @@ export class GameApp {
     this.cheatManager = new CheatManager();
     this.cheatManager.clearanceRing = this.storage.clearanceRing;
 
-    this.draftModal = new DraftModal(document.body, (chosenDef) => this.onExploitDrafted(chosenDef));
+    this.draftRerollTokens = 0;
+
+    this.draftModal = new DraftModal(
+      document.body,
+      (chosenDef) => this.onExploitDrafted(chosenDef),
+      () => this.onDraftReroll()
+    );
+
+    this.settingsModal = new SettingsModal({
+      storage: this.storage,
+      synth: this.soundBank.synth,
+      soundBank: this.soundBank,
+      camera: this.camera,
+      onGridDebugToggle: (val) => {
+        this.showSpatialGridDebug = val;
+      },
+    });
+
+    // Sync debug grid setting
+    this.showSpatialGridDebug = !!this.storage.settings?.showDebugGrid;
+
+    this.pauseOverlay = new PauseOverlay({
+      cheatManager: this.cheatManager,
+      weaponSystem: this.weaponSystem,
+      soundBank: this.soundBank,
+      onResume: () => this.resumeSimulation(),
+      onOpenSettings: () => this.openSettings(),
+      onAbortRun: () => this.abortRun(),
+    });
 
     this.terminalUI = new TerminalUI({
       storage: this.storage,
@@ -80,6 +110,7 @@ export class GameApp {
       leaderboard: this.leaderboard,
       onStartRun: () => this.start(),
       onRestartRun: () => this.restart(),
+      onOpenSettings: () => this.openSettings(),
     });
 
     // World bounds
@@ -247,9 +278,88 @@ export class GameApp {
   }
 
   /**
+   * Applies permanent firmware upgrades to player cyber-chassis and systems
+   */
+  applyFirmwareBonuses() {
+    const hpBonus = this.storage.getFirmwareBonus('bufferExpansion');
+    this.player.baseMaxHealth = PLAYER_CONFIG.MAX_HEALTH + hpBonus;
+    this.player.maxHealth = this.player.baseMaxHealth;
+    this.player.health = this.player.maxHealth;
+
+    const speedBonus = this.storage.getFirmwareBonus('overclockedBus');
+    this.player.baseMaxSpeed = PLAYER_CONFIG.MAX_SPEED + speedBonus;
+    this.player.maxSpeed = this.player.baseMaxSpeed;
+
+    const magnetBonus = this.storage.getFirmwareBonus('cacheMagnet');
+    this.player.baseMagnetRadius = 180 + magnetBonus;
+    this.player.magnetRadius = this.player.baseMagnetRadius;
+
+    this.draftRerollTokens = this.storage.getFirmwareBonus('heuristicSpoofing');
+  }
+
+  /**
+   * Rerolls available exploit drafting choices using a Heuristic Spoofing token
+   * @returns {boolean}
+   */
+  onDraftReroll() {
+    if (this.draftRerollTokens <= 0) return false;
+    this.draftRerollTokens--;
+    this.soundBank.playGlitchTick();
+    const newOptions = this.cheatManager.generateDraftOptions(3);
+    this.draftModal.open(newOptions, this.draftRerollTokens);
+    return true;
+  }
+
+  pauseSimulation() {
+    if (this.state !== APP_STATE.RUN) return;
+    this.state = APP_STATE.PAUSED;
+    this.pauseOverlay.open();
+  }
+
+  resumeSimulation() {
+    if (this.state !== APP_STATE.PAUSED) return;
+    if (this.settingsModal.isOpen) {
+      this.settingsModal.close();
+    }
+    this.pauseOverlay.close();
+    this.state = APP_STATE.RUN;
+  }
+
+  openSettings() {
+    this.settingsModal.open();
+  }
+
+  abortRun() {
+    this.pauseOverlay.close();
+    this.settingsModal.close();
+    this.player.health = 0;
+    this.player.markedForRemoval = true;
+    this.state = APP_STATE.GAMEOVER;
+    this.soundBank.playExplosion(true);
+
+    const mult = this.storage.getRiskMultiplier();
+    const accuracy = this.stats.shotsFired > 0
+      ? (this.stats.shotsHit / this.stats.shotsFired) * 100
+      : 0;
+
+    const summary = {
+      score: Math.floor(this.score * mult),
+      wavesCleared: Math.max(0, this.waveManager.waveNumber - 1),
+      enemiesKilled: this.stats.enemiesKilled,
+      accuracy: Math.min(100, accuracy),
+      riskMultiplier: mult,
+      bountiesEarned: this.player.bounties || 0,
+      clearanceRing: this.storage.clearanceRing,
+    };
+
+    this.terminalUI.showRunDiagnostic(summary);
+  }
+
+  /**
    * Transitions from BOOT to RUN state and starts game loop
    */
   start() {
+    this.applyFirmwareBonuses();
     this.state = APP_STATE.RUN;
     this.loop.start();
   }
@@ -258,6 +368,7 @@ export class GameApp {
    * Restarts simulation for a new run
    */
   restart() {
+    this.applyFirmwareBonuses();
     this.player.reset();
     this.player.x = 0;
     this.player.y = 0;
@@ -297,7 +408,7 @@ export class GameApp {
     if (this.player.pendingLevelUps > 0) {
       const nextOptions = this.cheatManager.generateDraftOptions(3);
       if (nextOptions.length > 0) {
-        this.draftModal.open(nextOptions);
+        this.draftModal.open(nextOptions, this.draftRerollTokens);
         return;
       }
     }
@@ -311,13 +422,35 @@ export class GameApp {
    * @param {number} dt - Fixed delta time (1/60 s)
    */
   update(dt) {
+    // If paused, handle ESC / KeyP to resume or close settings modal
+    if (this.state === APP_STATE.PAUSED) {
+      if (this.input.isKeyJustPressed('Escape') || this.input.isKeyJustPressed('KeyP')) {
+        if (this.settingsModal.isOpen) {
+          this.settingsModal.close();
+        } else {
+          this.resumeSimulation();
+        }
+      }
+      this.input.postUpdate();
+      return;
+    }
+
+    // Toggle Pause with Escape or KeyP during RUN state
+    if (this.state === APP_STATE.RUN) {
+      if (this.input.isKeyJustPressed('Escape') || this.input.isKeyJustPressed('KeyP')) {
+        this.pauseSimulation();
+        this.input.postUpdate();
+        return;
+      }
+    }
+
     // Check pending level-up draft trigger
     if (this.player.pendingLevelUps > 0 && this.state === APP_STATE.RUN) {
       const options = this.cheatManager.generateDraftOptions(3);
       if (options.length > 0) {
         this.soundBank.playLevelUp();
         this.state = APP_STATE.DRAFT;
-        this.draftModal.open(options);
+        this.draftModal.open(options, this.draftRerollTokens);
         return;
       } else {
         // All clearance cheats maxed
@@ -325,11 +458,25 @@ export class GameApp {
       }
     }
 
-    if (this.state !== APP_STATE.RUN) return;
+    if (this.state !== APP_STATE.RUN) {
+      this.input.postUpdate();
+      return;
+    }
+
+    // Lagswitch KeyF trigger
+    if (this.input.isKeyJustPressed('KeyF')) {
+      const lagswitch = this.cheatManager.getCheat('lagswitch');
+      if (lagswitch && lagswitch.trigger()) {
+        this.soundBank.playGlitchTick();
+        this.camera.addTrauma(0.2);
+        this.particleSystem.emitBurst(this.player.x, this.player.y, 25, COLOR.RED, 300);
+      }
+    }
 
     // Toggle Spatial Grid Debug with 'KeyG'
     if (this.input.isKeyJustPressed('KeyG')) {
       this.showSpatialGridDebug = !this.showSpatialGridDebug;
+      this.storage.updateSettings({ showDebugGrid: this.showSpatialGridDebug });
     }
 
     // Input collection & Aim Interception
@@ -373,7 +520,11 @@ export class GameApp {
 
     // Player Kinematics
     this.player.updateKinematics(dt, moveDir, modifiedAimAngle);
-    this.cheatManager.updatePlayer(this.player, dt, {});
+    this.cheatManager.updatePlayer(this.player, dt, {
+      player: this.player,
+      weapon: this.weaponSystem.activeWeapon,
+      reloadReduction: this.storage.getFirmwareBonus('fastDMA'),
+    });
 
     // Clamp player to arena perimeter
     const halfW = WORLD.DEFAULT_WIDTH * 0.5 - 32;
@@ -403,13 +554,17 @@ export class GameApp {
       }
     }
 
+    const freezeWorld = !!this.cheatManager.getCheat('lagswitch')?.shouldFreezeWorld();
+
     // Enemy AI & Kinematics
     for (let i = 0; i < this.enemies.length; i++) {
       const enemy = this.enemies[i];
-      enemy.updateAI(dt, this.player, this.spatialGrid, (pulseParams) => {
-        const p = this.projectilePool.obtain();
-        if (p) p.spawn(pulseParams);
-      });
+      if (!freezeWorld) {
+        enemy.updateAI(dt, this.player, this.spatialGrid, (pulseParams) => {
+          const p = this.projectilePool.obtain();
+          if (p) p.spawn(pulseParams);
+        });
+      }
       this.cheatManager.updateEnemy(enemy, dt, { player: this.player });
       this.spatialGrid.update(enemy);
     }
@@ -423,6 +578,9 @@ export class GameApp {
 
     // Projectile Ballistics Simulation
     this.projectilePool.forEachActiveReverse((proj) => {
+      if (freezeWorld && proj.layer === COLLISION_LAYER.PROJECTILE_ENEMY) {
+        return;
+      }
       proj.update(dt);
       if (proj.markedForRemoval) {
         this.projectilePool.release(proj);
@@ -776,6 +934,12 @@ export class GameApp {
       const s2Tag = this.weaponSystem.activeSlot === 1 ? `► [2] ${slot2Name}` : `  [2] ${slot2Name}`;
       ctx.fillStyle = COLOR.CYAN;
       ctx.fillText(`${s1Tag}  |  ${s2Tag}  ([Q] SWAP)`, w - 20, h - 18);
+    }
+
+    // Tactical Radar Telemetry Overlay
+    const radar = this.cheatManager.getCheat('radartelemetry');
+    if (radar && radar.enabled) {
+      radar.renderRadar(ctx, w, h, this.player, this.enemies, this.drops, this.props);
     }
 
     ctx.restore();

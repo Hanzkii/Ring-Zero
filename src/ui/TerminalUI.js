@@ -20,14 +20,15 @@ export class TerminalUI {
    * @param {function(): void} options.onStartRun
    * @param {function(): void} options.onRestartRun
    */
-  constructor({ storage, soundBank, leaderboard, onStartRun, onRestartRun }) {
+  constructor({ storage, soundBank, leaderboard, onStartRun, onRestartRun, onOpenSettings = null }) {
     this.storage = storage;
     this.soundBank = soundBank;
     this.leaderboard = leaderboard;
     this.onStartRun = onStartRun;
     this.onRestartRun = onRestartRun;
+    this.onOpenSettings = onOpenSettings;
 
-    this.activeTab = 'briefing'; // 'briefing', 'shop', 'daemons', 'leaderboard'
+    this.activeTab = 'briefing'; // 'briefing', 'shop', 'firmware', 'daemons', 'leaderboard'
     this.bootOverlay = document.getElementById('terminal-overlay');
     this.diagnosticModal = null;
 
@@ -53,11 +54,12 @@ export class TerminalUI {
           <div class="terminal-subtitle">PRIVILEGE ESCALATION // KERNEL MEMORY INTERCEPTOR</div>
           
           <!-- Terminal Tabs -->
-          <div class="terminal-tabs" style="display: flex; gap: 8px; margin-top: 16px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 8px;">
+          <div class="terminal-tabs" style="display: flex; gap: 6px; margin-top: 16px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 8px; flex-wrap: wrap;">
             <button class="term-tab-btn active" data-tab="briefing">[ 1: BRIEFING ]</button>
             <button class="term-tab-btn" data-tab="shop">[ 2: CLEARANCE SHOP ]</button>
-            <button class="term-tab-btn" data-tab="daemons">[ 3: SECURITY DAEMONS ]</button>
-            <button class="term-tab-btn" data-tab="leaderboard">[ 4: LEADERBOARD ]</button>
+            <button class="term-tab-btn" data-tab="firmware">[ 3: FIRMWARE LAB ]</button>
+            <button class="term-tab-btn" data-tab="daemons">[ 4: SECURITY DAEMONS ]</button>
+            <button class="term-tab-btn" data-tab="leaderboard">[ 5: LEADERBOARD ]</button>
           </div>
         </div>
 
@@ -65,12 +67,22 @@ export class TerminalUI {
           <!-- Content populated dynamically -->
         </div>
 
-        <div class="terminal-footer">
-          <button id="btn-init-kernel" class="btn-vector">INITIALIZE KERNEL ACCESS</button>
-          <div class="terminal-prompt">PRESS [ENTER] OR CLICK TO EXECUTE</div>
+        <div class="terminal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <button id="btn-term-settings" class="btn-vector" style="border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); font-size: 11px; padding: 12px 20px;">
+            SETTINGS
+          </button>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="terminal-prompt">PRESS [ENTER] OR CLICK TO EXECUTE</div>
+            <button id="btn-init-kernel" class="btn-vector">INITIALIZE KERNEL ACCESS</button>
+          </div>
         </div>
       </div>
     `;
+
+    // Hook settings button
+    this.bootOverlay.querySelector('#btn-term-settings')?.addEventListener('click', () => {
+      if (this.onOpenSettings) this.onOpenSettings();
+    });
 
     // Hook Tab click handlers
     const tabButtons = this.bootOverlay.querySelectorAll('.term-tab-btn');
@@ -141,11 +153,109 @@ export class TerminalUI {
       this._renderBriefingTab(container);
     } else if (this.activeTab === 'shop') {
       this._renderShopTab(container);
+    } else if (this.activeTab === 'firmware') {
+      this._renderFirmwareTab(container);
     } else if (this.activeTab === 'daemons') {
       this._renderDaemonsTab(container);
     } else if (this.activeTab === 'leaderboard') {
       this._renderLeaderboardTab(container);
     }
+  }
+
+  _renderFirmwareTab(container) {
+    const bounties = this.storage.cryptoBounties;
+    const nodes = [
+      {
+        id: 'bufferExpansion',
+        name: 'BUFFER EXPANSION',
+        desc: 'Amplifies chassis integrity allocation (+20 Max HP per rank).',
+        formatBonus: (lvl) => `+${lvl * 20} HP`,
+      },
+      {
+        id: 'overclockedBus',
+        name: 'OVERCLOCKED BUS',
+        desc: 'Enhances thruster bus clock frequency (+14 Movement Speed per rank).',
+        formatBonus: (lvl) => `+${lvl * 14} px/s`,
+      },
+      {
+        id: 'fastDma',
+        name: 'FAST DMA I/O',
+        desc: 'Accelerates memory transfer cycles during weapon reload (-10% Reload Time per rank).',
+        formatBonus: (lvl) => `-${lvl * 10}% Reload`,
+      },
+      {
+        id: 'heuristicSpoofing',
+        name: 'HEURISTIC SPOOFING',
+        desc: 'Injects dummy telemetry to force draft re-rolls (+1 Re-roll Token per rank).',
+        formatBonus: (lvl) => `+${lvl} Rerolls`,
+      },
+      {
+        id: 'cacheMagnet',
+        name: 'CACHE MAGNET',
+        desc: 'Extends electromagnetic capture coil radius (+40 Magnet Range per rank).',
+        formatBonus: (lvl) => `+${lvl * 40} px`,
+      },
+    ];
+
+    let html = `
+      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN};">
+        PERMANENT FIRMWARE MICRO-UPGRADES // ENHANCES CHASSIS HARDWARE
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 290px; overflow-y: auto;">
+    `;
+
+    nodes.forEach((n) => {
+      const currentLvl = this.storage.getFirmwareLevel(n.id);
+      const cost = this.storage.getFirmwareCost(n.id);
+      const isMax = cost === null;
+      const canAfford = !isMax && bounties >= cost;
+
+      let actionHtml = '';
+      if (isMax) {
+        actionHtml = `<span style="color: ${COLOR.GREEN}; font-size: 11px; font-weight: bold;">[MAX RANK]</span>`;
+      } else {
+        actionHtml = `
+          <button class="btn-firmware-upgrade" data-node="${n.id}" style="
+            background: ${canAfford ? COLOR.CYAN : 'transparent'};
+            color: ${canAfford ? '#070A0F' : 'rgba(255,255,255,0.4)'};
+            border: 1px solid ${canAfford ? COLOR.CYAN : 'rgba(255,255,255,0.2)'};
+            padding: 6px 12px; font-family: monospace; font-size: 11px; font-weight: bold; cursor: ${canAfford ? 'pointer' : 'not-allowed'};
+          ">
+            UPGRADE (${cost} BTC)
+          </button>
+        `;
+      }
+
+      html += `
+        <div style="border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.3); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="max-width: 72%;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="font-weight: bold; font-size: 12px; color: ${COLOR.WHITE};">${n.name}</span>
+              <span style="font-size: 10px; color: ${currentLvl > 0 ? COLOR.CYAN : 'rgba(255,255,255,0.4)'};">RANK ${currentLvl}/5</span>
+              ${currentLvl > 0 ? `<span style="font-size: 10px; color: ${COLOR.GREEN};">[${n.formatBonus(currentLvl)}]</span>` : ''}
+            </div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 3px;">${n.desc}</div>
+          </div>
+          <div>${actionHtml}</div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
+
+    container.querySelectorAll('.btn-firmware-upgrade').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nodeId = btn.getAttribute('data-node');
+        const res = this.storage.upgradeFirmware(nodeId);
+        if (res && res.success) {
+          this.soundBank.playLevelUp();
+          this.renderCurrentTab();
+        } else {
+          this.soundBank.playUIError();
+        }
+      });
+    });
   }
 
   _renderBriefingTab(container) {
