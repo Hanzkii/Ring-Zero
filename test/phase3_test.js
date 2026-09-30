@@ -237,6 +237,66 @@ console.log('\n7. Testing Aimbot & Wallhack Invariants:');
   assert(bullet.pierce === 3, 'Wallhack Rank 3 grants +2 armor piercing (3 total)');
 }
 
+// 8. SilentAim Overriding Aimbot & Auto-Aim / Triggerbot Shooting
+console.log('\n8. Testing SilentAim Overriding Aimbot & Autonomous Shooting:');
+{
+  const manager = new CheatManager();
+  
+  // 1. Install standard Aimbot first
+  const aimbot = manager.addOrUpgradeCheat('aimbot');
+  assert(manager.hasCheat('aimbot'), 'Initial standard Aimbot installed');
+
+  // 2. Draft SilentAim -> Should override and purge normal Aimbot
+  const silentAim = manager.addOrUpgradeCheat('silentaim');
+  assert(manager.hasCheat('silentaim'), 'SilentAim successfully installed');
+  assert(!manager.hasCheat('aimbot'), 'SilentAim overridden and purged normal Aimbot from activeCheats');
+
+  // 3. Trying to add Aimbot when SilentAim is owned returns SilentAim and doesn't add Aimbot
+  const attempt = manager.addOrUpgradeCheat('aimbot');
+  assert(attempt === silentAim, 'Drafting Aimbot when SilentAim is owned returns SilentAim instance');
+  assert(!manager.hasCheat('aimbot'), 'Aimbot was not added to activeCheats');
+
+  // 4. In generateDraftOptions, Aimbot is excluded when SilentAim is owned
+  const draftPool = manager.generateDraftOptions(6);
+  const foundAimbotInDraft = draftPool.some((opt) => opt.def.id === 'aimbot');
+  assert(!foundAimbotInDraft, 'Normal Aimbot is excluded from draft options when SilentAim is owned');
+
+  // 5. SilentAim auto-aim (onAimInput) acquires target and predicts lead
+  const player = new Player(0, 0);
+  const spatialGrid = new SpatialHashGrid(128);
+  const enemy = new Enemy(150, 0, ENEMY_ARCHETYPES.BIT_SCANNER);
+  enemy.vx = 0;
+  enemy.vy = 100; // moving downward at 100 px/s
+  spatialGrid.insert(enemy);
+
+  const rawAim = 0;
+  const context = {
+    player,
+    spatialGrid,
+    enemies: [enemy],
+    dt: 0.016,
+    weapon: { speed: 1000, fireInterval: 0.2 },
+  };
+
+  const modifiedAim = silentAim.onAimInput(rawAim, new Vec2(1, 0), context);
+  assert(silentAim.hasTarget === true, 'SilentAim successfully acquired target');
+  assert(silentAim.currentTarget === enemy, 'SilentAim targeted the enemy');
+  assert(silentAim.targetLeadPos.y > 0, 'SilentAim calculated predictive lead ahead of moving enemy');
+  assert(modifiedAim > 0, 'SilentAim modified aim angle towards predicted lead position');
+
+  // 6. SilentAim auto-shoot (shouldAutoShoot) periodically fires triggerbot
+  silentAim.autoShootTimer = 0;
+  const shouldFire = silentAim.shouldAutoShoot(0.016, context.weapon);
+  assert(shouldFire === true, 'SilentAim shouldAutoShoot triggered autonomous firing');
+
+  // Manager wantsAutoFire delegates to SilentAim
+  const managerAutoFire = manager.wantsAutoFire(0.016, context.weapon);
+  // Timer was reset by previous shouldAutoShoot call, so advance time past interval
+  silentAim.autoShootTimer = 0;
+  const managerAutoFire2 = manager.wantsAutoFire(0.016, context.weapon);
+  assert(managerAutoFire2 === true, 'CheatManager.wantsAutoFire queries SilentAim triggerbot');
+}
+
 console.log(`\n=== TEST SUMMARY: ${passed} PASSED, ${failed} FAILED ===\n`);
 if (failed > 0) {
   process.exit(1);

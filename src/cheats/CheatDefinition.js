@@ -198,11 +198,11 @@ export const CHEAT_REGISTRY = {
     rarity: CHEAT_RARITY.KERNEL,
     color: COLOR.RED,
     maxLevel: 3,
-    description: 'Dynamically curves bullet trajectories toward enemy hitboxes without altering aim crosshair.',
+    description: 'Kernel-tier exploit providing predictive auto-aim, triggerbot auto-firing, and trajectory curvature with critical strikes.',
     rankDescriptions: [
-      'Rank 1: Silently curves fired bullets into target centers within 35° FOV cone',
-      'Rank 2: Expands curvature cone to 55° FOV with guaranteed critical strikes',
-      'Rank 3: Full 90° FOV curvature cone with maximum critical damage strikes',
+      'Rank 1: Predictive auto-aim & triggerbot in 90° FOV cone with critical curved bullets',
+      'Rank 2: Expands targeting cone to 140° FOV with rapid auto-fire and guaranteed critical strikes',
+      'Rank 3: Full 360° omnidirectional kernel auto-lock and hyper-speed triggerbot',
     ],
   },
   BACKTRACK: {

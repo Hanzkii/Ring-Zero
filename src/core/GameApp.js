@@ -501,26 +501,30 @@ export class GameApp {
   _renderTargetingHUD(ctx) {
     const pointer = this.input.worldPointer;
     const weapon = this.weaponSystem.activeWeapon;
-    const aimbot = this.cheatManager.hasCheat('aimbot') ? this.cheatManager.getCheat('aimbot') : null;
+    const activeAim =
+      (this.cheatManager.hasCheat('silentaim') && this.cheatManager.getCheat('silentaim')) ||
+      (this.cheatManager.hasCheat('aimbot') && this.cheatManager.getCheat('aimbot'));
 
-    if (aimbot && aimbot.hasTarget && aimbot.currentTarget && !aimbot.currentTarget.markedForRemoval) {
+    if (activeAim && activeAim.hasTarget && activeAim.currentTarget && !activeAim.currentTarget.markedForRemoval) {
+      const isSilent = activeAim.id === 'silentaim';
+      const lockColor = isSilent ? COLOR.RED : COLOR.CYAN;
       // Laser sight locks straight onto enemy predictive lead position
       VectorRenderer.strokeLine(
         ctx,
         this.player.x,
         this.player.y,
-        aimbot.targetLeadPos.x,
-        aimbot.targetLeadPos.y,
-        COLOR.CYAN,
-        1.5
+        activeAim.targetLeadPos.x,
+        activeAim.targetLeadPos.y,
+        lockColor,
+        isSilent ? 2 : 1.5
       );
       // Targeting brackets around locked enemy
       VectorRenderer.drawTargetBracket(
         ctx,
-        aimbot.targetLeadPos.x,
-        aimbot.targetLeadPos.y,
-        aimbot.currentTarget.radius * 2.4 + 4,
-        COLOR.CYAN,
+        activeAim.targetLeadPos.x,
+        activeAim.targetLeadPos.y,
+        activeAim.currentTarget.radius * 2.4 + 4,
+        lockColor,
         4
       );
     } else {

@@ -1,6 +1,7 @@
 /**
  * Ring Zero - Cheat Exploit Manager & Interceptor Pipeline
  * Orchestrates the exploit lifecycle, hook interception pipeline, and draft selection generator.
+ * SilentAim supersedes and disables/purges normal Aimbot when active.
  */
 
 import { CHEAT_REGISTRY, RING_TIER } from '../cheats/CheatDefinition.js';
@@ -20,15 +21,26 @@ export class CheatManager {
   }
 
   /**
-   * Installs a new cheat or upgrades an existing one (Rank 1 to 3)
+   * Installs a new cheat or upgrades an existing one (Rank 1 to 3).
+   * If SilentAim is acquired, normal Aimbot is purged/overridden.
    * @param {string} cheatId
    * @returns {import('../cheats/CheatDefinition.js').CheatInterceptor|null}
    */
   addOrUpgradeCheat(cheatId) {
+    // SilentAim overrides Aimbot: if SilentAim is active, ignore Aimbot
+    if (cheatId === 'aimbot' && this.hasCheat('silentaim')) {
+      return this.activeCheats.get('silentaim');
+    }
+
     let cheat = this.activeCheats.get(cheatId);
     if (cheat) {
       cheat.upgrade();
       return cheat;
+    }
+
+    // When installing SilentAim, override and purge normal Aimbot
+    if (cheatId === 'silentaim' && this.hasCheat('aimbot')) {
+      this.activeCheats.delete('aimbot');
     }
 
     switch (cheatId) {
@@ -74,6 +86,7 @@ export class CheatManager {
 
   /**
    * Pipeline Hook: Passes aim angles through active interceptors
+   * If SilentAim is active, it takes precedence over normal Aimbot.
    * @param {number} aimAngle
    * @param {import('../core/VectorMath.js').Vec2} aimVector
    * @param {Object} context
@@ -81,8 +94,10 @@ export class CheatManager {
    */
   applyAimInterceptors(aimAngle, aimVector, context) {
     let currentAngle = aimAngle;
+    const hasSilentAim = this.hasCheat('silentaim');
     for (const cheat of this.activeCheats.values()) {
       if (cheat.enabled) {
+        if (hasSilentAim && cheat.id === 'aimbot') continue;
         currentAngle = cheat.onAimInput(currentAngle, aimVector, context);
       }
     }
@@ -143,15 +158,19 @@ export class CheatManager {
   }
 
   /**
-   * Queries if any active exploit requests automatic firing (e.g. Aimbot Triggerbot)
+   * Queries if any active exploit requests automatic firing (e.g. SilentAim or Aimbot Triggerbot)
    * @param {number} dt
    * @param {Object} weapon
    * @returns {boolean}
    */
   wantsAutoFire(dt, weapon) {
+    const hasSilentAim = this.hasCheat('silentaim');
     for (const cheat of this.activeCheats.values()) {
-      if (cheat.enabled && cheat.shouldAutoShoot && cheat.shouldAutoShoot(dt, weapon)) {
-        return true;
+      if (cheat.enabled && cheat.shouldAutoShoot) {
+        if (hasSilentAim && cheat.id === 'aimbot') continue;
+        if (cheat.shouldAutoShoot(dt, weapon)) {
+          return true;
+        }
       }
     }
     return false;
@@ -192,8 +211,10 @@ export class CheatManager {
    * @param {Object} context
    */
   renderWorld(ctx, alpha, context) {
+    const hasSilentAim = this.hasCheat('silentaim');
     for (const cheat of this.activeCheats.values()) {
       if (cheat.enabled) {
+        if (hasSilentAim && cheat.id === 'aimbot') continue;
         cheat.onRenderWorld(ctx, alpha, context);
       }
     }
@@ -207,8 +228,10 @@ export class CheatManager {
    */
   renderHUD(ctx, startX, startY) {
     let curY = startY;
+    const hasSilentAim = this.hasCheat('silentaim');
     for (const cheat of this.activeCheats.values()) {
       if (cheat.enabled) {
+        if (hasSilentAim && cheat.id === 'aimbot') continue;
         cheat.onRenderHUD(ctx, startX, curY);
         curY += 15;
       }
@@ -216,17 +239,24 @@ export class CheatManager {
   }
 
   /**
-   * Generates 3 randomized, non-duplicate exploit cards for mid-run level-up draft.
+   * Generates randomized, non-duplicate exploit cards for mid-run level-up draft.
    * Ensures that drafting an owned cheat upgrades its rank (Rank 1 to 3) rather than duplicating it.
+   * Excludes normal Aimbot if SilentAim is already owned (SilentAim overrides Aimbot).
    * Max-level cheats are excluded from the pool.
    * @param {number} [count=3]
    * @returns {Array<{ def: Object, isUpgrade: boolean, currentLevel: number, nextLevel: number, nextPerkDescription: string }>}
    */
   generateDraftOptions(count = 3) {
     const candidates = [];
+    const hasSilentAim = this.hasCheat('silentaim');
 
     for (const key of Object.keys(CHEAT_REGISTRY)) {
       const def = CHEAT_REGISTRY[key];
+
+      // SilentAim overrides Aimbot: never offer normal Aimbot if SilentAim is active
+      if (def.id === 'aimbot' && hasSilentAim) {
+        continue;
+      }
 
       // Check clearance level
       if (this.clearanceRing !== null && def.tier < this.clearanceRing) {
