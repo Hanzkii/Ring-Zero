@@ -274,7 +274,8 @@ export class CollisionSystem {
           this.particleSystem.emitBurst(drop.x, drop.y, 6, COLOR.CYAN, 160);
           drop.markedForRemoval = true;
         } else if (drop.type === DROP_TYPE.WEAPON && drop.weapon) {
-          this.weaponSystem.equipWeapon(drop.weapon);
+          // Store weapon in secondary/reserve slot without switching active weapon
+          this.weaponSystem.equipWeapon(drop.weapon, false);
           this.particleSystem.emitBurst(drop.x, drop.y, 18, COLOR.AMBER, 260);
           this.camera.addTrauma(0.15);
           drop.markedForRemoval = true;

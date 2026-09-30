@@ -74,14 +74,25 @@ console.log('1. Testing WeaponSystem & Archetypes:');
   weaponSys.activeWeapon.update(1.0);
   assert(weaponSys.activeWeapon.currentAmmo === 12, 'Weapon auto-reload completed back to full clip');
 
-  // Test Multi-pellet weapon (Combat Sweeper)
+  // Test Multi-pellet weapon (Combat Sweeper) - stored in secondary slot without force-switch
   const sweeper = new WeaponInstance(WEAPON_ARCHETYPES.COMBAT_SWEEPER);
-  weaponSys.equipWeapon(sweeper);
-  assert(weaponSys.activeWeapon.id === 'combat_sweeper', 'Equipped Combat Sweeper as secondary');
+  weaponSys.equipWeapon(sweeper, false);
+  assert(weaponSys.slots[1].id === 'combat_sweeper', 'Equipped Combat Sweeper into reserve slot');
+  assert(weaponSys.activeWeapon.id === 'kernel_pistol', 'Does not automatically switch active weapon on pickup');
+  weaponSys.switchWeapon();
+  assert(weaponSys.activeWeapon.id === 'combat_sweeper', 'Manual switch activates Combat Sweeper');
 
   const prevBullets = pool.activeCount;
   weaponSys.update(0.016, mockInput, player, camera);
   assert(pool.activeCount === prevBullets + 8, 'Combat Sweeper spawns 8 spread pellets in a single blast');
+
+  // Test weapon drop despawn lifetime decay
+  const dropWeapon = new Drop(0, 0, DROP_TYPE.WEAPON, { weapon: sweeper, lifetime: 2.0 });
+  assert(dropWeapon.markedForRemoval === false, 'Weapon drop is active initially');
+  dropWeapon.update(1.0, player);
+  assert(dropWeapon.markedForRemoval === false, 'Weapon drop remains active after 1 second');
+  dropWeapon.update(1.5, player); // Expired past 2.0s
+  assert(dropWeapon.markedForRemoval === true, 'Weapon drop automatically despawns after lifetime expires');
 }
 
 // 2. Projectile Piercing & Lifecycle

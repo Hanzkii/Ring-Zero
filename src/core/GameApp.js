@@ -662,12 +662,14 @@ export class GameApp {
         );
       }
 
-      // Slot indicator
+      // Dual Slot indicators with active slot marker
       ctx.font = '10px monospace';
-      ctx.fillStyle = COLOR.CYAN_MUTED;
-      const slot2 = this.weaponSystem.slots[1];
-      const slot2Text = slot2 ? `[2] ${slot2.name}` : '[2] EMPTY';
-      ctx.fillText(`[1] ${this.weaponSystem.slots[0].name}  |  ${slot2Text}  ([Q] SWAP)`, w - 20, h - 18);
+      const slot1Name = this.weaponSystem.slots[0] ? this.weaponSystem.slots[0].name : 'EMPTY';
+      const slot2Name = this.weaponSystem.slots[1] ? this.weaponSystem.slots[1].name : 'EMPTY';
+      const s1Tag = this.weaponSystem.activeSlot === 0 ? `► [1] ${slot1Name}` : `  [1] ${slot1Name}`;
+      const s2Tag = this.weaponSystem.activeSlot === 1 ? `► [2] ${slot2Name}` : `  [2] ${slot2Name}`;
+      ctx.fillStyle = COLOR.CYAN;
+      ctx.fillText(`${s1Tag}  |  ${s2Tag}  ([Q] SWAP)`, w - 20, h - 18);
     }
 
     ctx.restore();

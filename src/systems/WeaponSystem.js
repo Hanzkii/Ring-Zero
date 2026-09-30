@@ -173,15 +173,24 @@ export class WeaponSystem {
   }
 
   /**
-   * Equips a new weapon into the active or alternate slot
+   * Equips a new weapon into reserve slot without auto-switching away from current active weapon
    * @param {WeaponInstance} weapon
+   * @param {boolean} [autoSwitch=false]
    */
-  equipWeapon(weapon) {
+  equipWeapon(weapon, autoSwitch = false) {
     if (!this.slots[1]) {
+      // Secondary slot is empty: place weapon into secondary slot
       this.slots[1] = weapon;
-      this.activeSlot = 1;
+      if (autoSwitch) {
+        this.activeSlot = 1;
+      }
     } else {
-      this.slots[this.activeSlot] = weapon;
+      // Both slots filled: replace the inactive reserve slot so currently held weapon is preserved
+      const reserveSlot = this.activeSlot === 0 ? 1 : 0;
+      this.slots[reserveSlot] = weapon;
+      if (autoSwitch) {
+        this.activeSlot = reserveSlot;
+      }
     }
   }
 

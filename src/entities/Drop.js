@@ -1,6 +1,6 @@
 /**
  * Ring Zero - Drop Entities (Memory Fragment XP & Hardware Weapon Crates)
- * Vacuum magnet dynamics and vector crate rendering.
+ * Vacuum magnet dynamics, vector crate rendering, and timed weapon despawning.
  */
 
 import { Entity } from './Entity.js';
@@ -18,7 +18,7 @@ export class Drop extends Entity {
    * @param {number} x
    * @param {number} y
    * @param {string} type
-   * @param {Object} data - { xpValue } or { weapon }
+   * @param {Object} data - { xpValue, weapon, lifetime }
    */
   constructor(x = 0, y = 0, type = DROP_TYPE.XP, data = {}) {
     super(x, y, type === DROP_TYPE.XP ? 8 : 18, COLLISION_LAYER.DROP);
@@ -29,19 +29,32 @@ export class Drop extends Entity {
     this.xpValue = data.xpValue || 10;
     this.weapon = data.weapon || null;
 
+    // Despawn lifetime: Weapons stay on the ground for 18 seconds before expiring
+    this.lifetime = data.lifetime !== undefined ? data.lifetime : 18.0;
+    this.maxLifetime = this.lifetime;
+
     this.isMagnetized = false;
     this.magnetSpeed = 650;
     this.pulseTimer = Math.random() * Math.PI * 2;
   }
 
   /**
-   * Updates drop position, bobbing pulse, and magnetic pull toward player
+   * Updates drop position, bobbing pulse, magnetic pull toward player, and weapon despawn decay
    * @param {number} dt
    * @param {import('./Player.js').Player} player
    */
   update(dt, player) {
     this.preStep();
     this.pulseTimer += dt * 4;
+
+    // Weapon drops decay and despawn over time
+    if (this.type === DROP_TYPE.WEAPON) {
+      this.lifetime -= dt;
+      if (this.lifetime <= 0) {
+        this.markedForRemoval = true;
+        return;
+      }
+    }
 
     const dx = player.x - this.x;
     const dy = player.y - this.y;
@@ -71,7 +84,7 @@ export class Drop extends Entity {
   }
 
   /**
-   * Renders drop with crisp vector geometry and glowing pulse
+   * Renders drop with crisp vector geometry, glowing pulse, and expiration warning
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} alpha
    */
@@ -99,13 +112,22 @@ export class Drop extends Entity {
       ctx.fillStyle = COLOR.WHITE;
       ctx.fillRect(-1.5, -1.5, 3, 3);
     } else if (this.type === DROP_TYPE.WEAPON) {
+      // If expiring in less than 4 seconds, blink visibility
+      if (this.lifetime < 4.0 && Math.floor(this.lifetime * 8) % 2 === 0) {
+        ctx.restore();
+        return;
+      }
+
+      const isExpiring = this.lifetime < 5.0;
+      const crateColor = isExpiring ? COLOR.RED : COLOR.AMBER;
+
       // Hardware weapon crate: wireframe telemetry crate with corner brackets
       const half = this.radius;
-      ctx.strokeStyle = COLOR.AMBER;
+      ctx.strokeStyle = crateColor;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(-half, -half, half * 2, half * 2);
 
-      VectorRenderer.drawTargetBracket(ctx, 0, 0, half * 2.8, COLOR.AMBER);
+      VectorRenderer.drawTargetBracket(ctx, 0, 0, half * 2.8, crateColor);
 
       // Inner weapon label badge
       ctx.font = '9px monospace';
@@ -114,9 +136,13 @@ export class Drop extends Entity {
       ctx.textBaseline = 'middle';
       ctx.fillText(this.weapon?.name || 'WEAPON', 0, 0);
 
+      // Despawn countdown label
       ctx.font = '8px monospace';
-      ctx.fillStyle = COLOR.AMBER;
-      ctx.fillText('[TOUCH TO EQUIP]', 0, half + 10);
+      ctx.fillStyle = crateColor;
+      const timerText = isExpiring
+        ? `[EXPIRES: ${Math.ceil(this.lifetime)}s]`
+        : `[RESERVE] ${Math.ceil(this.lifetime)}s`;
+      ctx.fillText(timerText, 0, half + 10);
     }
 
     ctx.restore();
