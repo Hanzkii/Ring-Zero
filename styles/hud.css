@@ -62,6 +62,30 @@
   margin-bottom: 24px;
 }
 
+.term-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.term-tab-btn:hover {
+  color: var(--color-cyan);
+  background: rgba(0, 240, 255, 0.05);
+}
+
+.term-tab-btn.active {
+  border-color: var(--color-cyan) !important;
+  color: var(--color-cyan) !important;
+  background: rgba(0, 240, 255, 0.1);
+}
+
 .terminal-title {
   font-size: 26px;
   font-weight: 700;

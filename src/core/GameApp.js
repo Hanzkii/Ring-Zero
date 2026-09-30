@@ -24,6 +24,11 @@ import { Vec2 } from './VectorMath.js';
 import { BSPFacilityMap } from '../world/BSPFacilityMap.js';
 import { CellularCavernMap } from '../world/CellularCavernMap.js';
 import { Raycaster2D } from '../world/Raycaster2D.js';
+import { SoundBank } from '../audio/SoundBank.js';
+import { StorageService } from '../services/StorageService.js';
+import { LeaderboardService } from '../services/LeaderboardService.js';
+import { TerminalUI } from '../ui/TerminalUI.js';
+import { WEAPON_ARCHETYPES, WeaponInstance } from '../systems/WeaponSystem.js';
 
 export const APP_STATE = {
   BOOT: 'BOOT',
@@ -46,12 +51,36 @@ export class GameApp {
     this.state = APP_STATE.BOOT;
     this.showSpatialGridDebug = false;
 
+    // Run Telemetry & Scoring
+    this.score = 0;
+    this.stats = {
+      shotsFired: 0,
+      shotsHit: 0,
+      enemiesKilled: 0,
+    };
+
     // Subsystems
     this.input = new InputManager(canvas);
     this.camera = new Camera2D(window.innerWidth, window.innerHeight);
     this.spatialGrid = new SpatialHashGrid(128);
+
+    // Audio Synthesis, Storage & Terminal UI Subsystems
+    this.soundBank = new SoundBank();
+    this.storage = new StorageService();
+    this.leaderboard = new LeaderboardService();
+
     this.cheatManager = new CheatManager();
+    this.cheatManager.clearanceRing = this.storage.clearanceRing;
+
     this.draftModal = new DraftModal(document.body, (chosenDef) => this.onExploitDrafted(chosenDef));
+
+    this.terminalUI = new TerminalUI({
+      storage: this.storage,
+      soundBank: this.soundBank,
+      leaderboard: this.leaderboard,
+      onStartRun: () => this.start(),
+      onRestartRun: () => this.restart(),
+    });
 
     // World bounds
     this.worldBounds = {
@@ -87,6 +116,18 @@ export class GameApp {
 
     // Weapon & Wave Systems
     this.weaponSystem = new WeaponSystem(this.projectilePool);
+    this.weaponSystem.onFire = (weapon) => {
+      this.stats.shotsFired++;
+      const isCrit = this.cheatManager.hasCheat('silentaim');
+      this.soundBank.playShoot(weapon.id, isCrit);
+    };
+    this.weaponSystem.onReloadStart = () => {
+      this.soundBank.playReloadStart();
+    };
+    this.weaponSystem.onReloadDone = () => {
+      this.soundBank.playReloadDone();
+    };
+
     this.weaponSystem.fireInterceptor = (bulletParams, spawnCb) => {
       this.cheatManager.applyWeaponFireInterceptors(
         bulletParams,
@@ -102,6 +143,12 @@ export class GameApp {
     this.waveManager = new WaveManager({
       onSpawnEnemy: (enemy) => this.spawnEnemy(enemy),
     });
+    this.waveManager.onWaveCleared = (waveNum) => {
+      const bonusBounties = 30 + waveNum * 20;
+      this.player.bounties = (this.player.bounties || 0) + bonusBounties;
+      this.score += 250 * waveNum;
+      this.soundBank.playWallhackPulse();
+    };
 
     // Collision Arbiter
     this.collisionSystem = new CollisionSystem({
@@ -111,6 +158,7 @@ export class GameApp {
       weaponSystem: this.weaponSystem,
       camera: this.camera,
       cheatManager: this.cheatManager,
+      soundBank: this.soundBank,
     });
 
     // Procedural World Architecture & Raycasting
@@ -187,6 +235,13 @@ export class GameApp {
    * @param {Enemy} enemy
    */
   spawnEnemy(enemy) {
+    if (this.storage?.riskModifiers?.watchdogAI) {
+      enemy.speed *= 1.25;
+    }
+    if (this.storage?.riskModifiers?.integrityShield) {
+      enemy.maxHealth = Math.floor(enemy.maxHealth * 1.5);
+      enemy.health = enemy.maxHealth;
+    }
     this.enemies.push(enemy);
     this.spatialGrid.insert(enemy);
   }
@@ -200,10 +255,41 @@ export class GameApp {
   }
 
   /**
+   * Restarts simulation for a new run
+   */
+  restart() {
+    this.player.reset();
+    this.player.x = 0;
+    this.player.y = 0;
+    this.score = 0;
+    this.stats = { shotsFired: 0, shotsHit: 0, enemiesKilled: 0 };
+    this.cheatManager.activeCheats.clear();
+    this.cheatManager.clearanceRing = this.storage.clearanceRing;
+
+    this.weaponSystem.slots[0] = this.weaponSystem._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.KERNEL_PISTOL));
+    this.weaponSystem.slots[1] = null;
+    this.weaponSystem.activeSlot = 0;
+
+    for (const e of this.enemies) this.spatialGrid.remove(e);
+    for (const d of this.drops) this.spatialGrid.remove(d);
+    this.enemies.length = 0;
+    this.drops.length = 0;
+    this.projectilePool.releaseAll();
+    this.particleSystem.clear();
+
+    this.waveManager.reset();
+    this.loadMap('facility', 1337);
+    this.spatialGrid.update(this.player);
+
+    this.state = APP_STATE.RUN;
+  }
+
+  /**
    * Invoked when user selects an exploit card in the draft modal
    * @param {Object} chosenDef
    */
   onExploitDrafted(chosenDef) {
+    this.soundBank.playLevelUp();
     this.cheatManager.addOrUpgradeCheat(chosenDef.id);
     this.player.pendingLevelUps--;
 
@@ -229,6 +315,7 @@ export class GameApp {
     if (this.player.pendingLevelUps > 0 && this.state === APP_STATE.RUN) {
       const options = this.cheatManager.generateDraftOptions(3);
       if (options.length > 0) {
+        this.soundBank.playLevelUp();
         this.state = APP_STATE.DRAFT;
         this.draftModal.open(options);
         return;
@@ -274,6 +361,7 @@ export class GameApp {
       if (this.player.dash(moveDir)) {
         this.camera.addTrauma(0.24);
         this.particleSystem.emitBurst(this.player.x, this.player.y, 8, COLOR.CYAN, 200);
+        this.soundBank.playDash();
       }
     }
 
@@ -378,10 +466,28 @@ export class GameApp {
     }
 
     // Check Player Death
-    if (this.player.health <= 0) {
+    if (this.player.health <= 0 && this.state !== APP_STATE.GAMEOVER) {
       this.state = APP_STATE.GAMEOVER;
       this.camera.addTrauma(0.8);
       this.particleSystem.emitBurst(this.player.x, this.player.y, 40, COLOR.RED, 450);
+      this.soundBank.playExplosion(true);
+
+      const mult = this.storage.getRiskMultiplier();
+      const accuracy = this.stats.shotsFired > 0
+        ? (this.stats.shotsHit / this.stats.shotsFired) * 100
+        : 0;
+
+      const summary = {
+        score: Math.floor(this.score * mult),
+        wavesCleared: Math.max(0, this.waveManager.waveNumber - 1),
+        enemiesKilled: this.stats.enemiesKilled,
+        accuracy: Math.min(100, accuracy),
+        riskMultiplier: mult,
+        bountiesEarned: this.player.bounties || 0,
+        clearanceRing: this.storage.clearanceRing,
+      };
+
+      this.terminalUI.showRunDiagnostic(summary);
     }
 
     // Clear single-frame input states

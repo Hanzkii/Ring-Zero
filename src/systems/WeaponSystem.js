@@ -126,6 +126,7 @@ export class WeaponInstance {
       if (this.reloadTimer <= 0) {
         this.isReloading = false;
         this.currentAmmo = this.clipSize;
+        if (this.onReloadDone) this.onReloadDone();
       }
     } else if (this.currentAmmo <= 0) {
       // Automatically reload when clip is empty
@@ -137,6 +138,7 @@ export class WeaponInstance {
     if (this.isReloading || this.currentAmmo >= this.clipSize) return false;
     this.isReloading = true;
     this.reloadTimer = this.reloadTime;
+    if (this.onReloadStart) this.onReloadStart();
     return true;
   }
 
@@ -157,15 +159,27 @@ export class WeaponSystem {
   constructor(projectilePool) {
     this.projectilePool = projectilePool;
 
+    // Callbacks
+    this.onFire = null;
+    this.onReloadStart = null;
+    this.onReloadDone = null;
+
     // Dual loadout slots
     this.slots = [
-      new WeaponInstance(WEAPON_ARCHETYPES.KERNEL_PISTOL),
+      this._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.KERNEL_PISTOL)),
       null, // Secondary empty initially
     ];
     this.activeSlot = 0;
 
     // Optional fire interceptor hook for Cheats (Phase 3)
     this.fireInterceptor = null;
+  }
+
+  _wireInstance(instance) {
+    if (!instance) return null;
+    instance.onReloadStart = () => this.onReloadStart?.(instance);
+    instance.onReloadDone = () => this.onReloadDone?.(instance);
+    return instance;
   }
 
   get activeWeapon() {
@@ -178,16 +192,17 @@ export class WeaponSystem {
    * @param {boolean} [autoSwitch=false]
    */
   equipWeapon(weapon, autoSwitch = false) {
+    const wired = this._wireInstance(weapon);
     if (!this.slots[1]) {
       // Secondary slot is empty: place weapon into secondary slot
-      this.slots[1] = weapon;
+      this.slots[1] = wired;
       if (autoSwitch) {
         this.activeSlot = 1;
       }
     } else {
       // Both slots filled: replace the inactive reserve slot so currently held weapon is preserved
       const reserveSlot = this.activeSlot === 0 ? 1 : 0;
-      this.slots[reserveSlot] = weapon;
+      this.slots[reserveSlot] = wired;
       if (autoSwitch) {
         this.activeSlot = reserveSlot;
       }
@@ -257,6 +272,7 @@ export class WeaponSystem {
   _fireWeapon(weapon, player, baseAimAngle, camera) {
     weapon.currentAmmo--;
     weapon.cooldownTimer = weapon.fireInterval;
+    if (this.onFire) this.onFire(weapon);
 
     if (weapon.currentAmmo <= 0) {
       weapon.startReload();

@@ -11,6 +11,7 @@ import { VectorRenderer } from '../ui/VectorRenderer.js';
 export const DROP_TYPE = {
   XP: 'XP',
   WEAPON: 'WEAPON',
+  CRYPTO: 'CRYPTO',
 };
 
 export class Drop extends Entity {
@@ -18,15 +19,16 @@ export class Drop extends Entity {
    * @param {number} x
    * @param {number} y
    * @param {string} type
-   * @param {Object} data - { xpValue, weapon, lifetime }
+   * @param {Object} data - { xpValue, weapon, cryptoValue, lifetime }
    */
   constructor(x = 0, y = 0, type = DROP_TYPE.XP, data = {}) {
-    super(x, y, type === DROP_TYPE.XP ? 8 : 18, COLLISION_LAYER.DROP);
+    super(x, y, type === DROP_TYPE.WEAPON ? 18 : 9, COLLISION_LAYER.DROP);
 
     this.type = type;
     this.data = data;
 
     this.xpValue = data.xpValue || 10;
+    this.cryptoValue = data.cryptoValue || 15;
     this.weapon = data.weapon || null;
 
     // Despawn lifetime: Weapons stay on the ground for 18 seconds before expiring
@@ -143,6 +145,28 @@ export class Drop extends Entity {
         ? `[EXPIRES: ${Math.ceil(this.lifetime)}s]`
         : `[RESERVE] ${Math.ceil(this.lifetime)}s`;
       ctx.fillText(timerText, 0, half + 10);
+    } else if (this.type === DROP_TYPE.CRYPTO) {
+      // Golden crypto bounty: wireframe hexagon with pulsing central byte marker
+      const r = this.radius + pulse * 1.2;
+      ctx.strokeStyle = COLOR.AMBER;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const ang = (i * Math.PI) / 3;
+        const hx = Math.cos(ang) * r;
+        const hy = Math.sin(ang) * r;
+        if (i === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      // Central symbol
+      ctx.font = '9px monospace';
+      ctx.fillStyle = COLOR.WHITE;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('₿', 0, 0);
     }
 
     ctx.restore();

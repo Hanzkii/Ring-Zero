@@ -18,14 +18,16 @@ export class CollisionSystem {
    * @param {import('./WeaponSystem.js').WeaponSystem} options.weaponSystem
    * @param {import('../core/Camera2D.js').Camera2D} options.camera
    * @param {import('./CheatManager.js').CheatManager} [options.cheatManager]
+   * @param {import('../audio/SoundBank.js').SoundBank} [options.soundBank]
    */
-  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera, cheatManager = null }) {
+  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera, cheatManager = null, soundBank = null }) {
     this.spatialGrid = spatialGrid;
     this.projectilePool = projectilePool;
     this.particleSystem = particleSystem;
     this.weaponSystem = weaponSystem;
     this.camera = camera;
     this.cheatManager = cheatManager;
+    this.soundBank = soundBank;
 
     // Reusable candidate query arrays
     this._candidateList = [];
@@ -111,13 +113,16 @@ export class CollisionSystem {
 
         const died = enemy.takeDamage(proj.damage, this._knockbackDir, proj.knockback);
         this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 6, isGhostHit ? COLOR.AMBER : proj.color);
+        this.soundBank?.playHit();
 
         if (died) {
           // Destruction explosion
           this.particleSystem.emitBurst(enemy.x, enemy.y, 16, enemy.color, 280);
+          this.soundBank?.playExplosion(false);
 
-          // Generate memory fragments and weapon crates
-          const drops = enemy.generateDrops();
+          // Generate memory fragments, bounties, and weapon crates
+          const clearance = this.cheatManager?.clearanceRing ?? 3;
+          const drops = enemy.generateDrops(clearance);
           for (const d of drops) {
             dropList.push(d);
             this.spatialGrid.insert(d);
@@ -272,12 +277,19 @@ export class CollisionSystem {
         if (drop.type === DROP_TYPE.XP) {
           player.addXP(drop.xpValue);
           this.particleSystem.emitBurst(drop.x, drop.y, 6, COLOR.CYAN, 160);
+          this.soundBank?.playUIClick();
+          drop.markedForRemoval = true;
+        } else if (drop.type === DROP_TYPE.CRYPTO) {
+          player.bounties = (player.bounties || 0) + (drop.cryptoValue || 15);
+          this.particleSystem.emitBurst(drop.x, drop.y, 10, COLOR.AMBER, 220);
+          this.soundBank?.playUIClick();
           drop.markedForRemoval = true;
         } else if (drop.type === DROP_TYPE.WEAPON && drop.weapon) {
           // Store weapon in secondary/reserve slot without switching active weapon
           this.weaponSystem.equipWeapon(drop.weapon, false);
           this.particleSystem.emitBurst(drop.x, drop.y, 18, COLOR.AMBER, 260);
           this.camera.addTrauma(0.15);
+          this.soundBank?.playReloadStart();
           drop.markedForRemoval = true;
         }
       }
@@ -498,8 +510,10 @@ export class CollisionSystem {
             if (prop.propType === PROP_TYPE.EXPLOSIVE_CELL) {
               this.particleSystem.emitBurst(prop.x, prop.y, 22, COLOR.RED, 320);
               this.camera.addTrauma(0.3);
+              this.soundBank?.playExplosion(true);
 
               const blastRadius = 140;
+              const clearance = this.cheatManager?.clearanceRing ?? 3;
               for (const enemy of enemyList) {
                 if (!enemy.active || enemy.markedForRemoval) continue;
                 const d = Math.hypot(enemy.x - prop.x, enemy.y - prop.y);
@@ -508,7 +522,8 @@ export class CollisionSystem {
                   const died = enemy.takeDamage(120, dir, 300);
                   if (died) {
                     this.particleSystem.emitBurst(enemy.x, enemy.y, 14, enemy.color, 240);
-                    const drops = enemy.generateDrops();
+                    this.soundBank?.playExplosion(false);
+                    const drops = enemy.generateDrops(clearance);
                     for (const drop of drops) {
                       dropList.push(drop);
                       this.spatialGrid.insert(drop);

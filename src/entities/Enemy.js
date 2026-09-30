@@ -206,16 +206,32 @@ export class Enemy extends Entity {
    * @param {import('../entities/Player.js').Player} player
    * @returns {Drop[]}
    */
-  generateDrops() {
+  generateDrops(clearanceRing = 3) {
     const drops = [];
 
     // Always drop Memory Fragment XP
     drops.push(new Drop(this.x, this.y, DROP_TYPE.XP, { xpValue: this.xpValue }));
 
-    // Chance to drop hardware weapon crate
+    // Chance to drop Crypto Bounties (45% chance)
+    if (Math.random() < 0.45) {
+      const cryptoValue = Math.floor(randomRange(8, 22));
+      drops.push(
+        new Drop(this.x + randomRange(-12, 12), this.y + randomRange(-12, 12), DROP_TYPE.CRYPTO, {
+          cryptoValue,
+        })
+      );
+    }
+
+    // Chance to drop hardware weapon crate, filtered by clearance ring
     if (Math.random() < this.crateDropChance) {
-      const weaponKeys = Object.keys(WEAPON_ARCHETYPES);
-      const chosenKey = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
+      const allowedKeys = ['KERNEL_PISTOL', 'COMBAT_SWEEPER'];
+      if (clearanceRing <= 2) {
+        allowedKeys.push('FLAK_SUBMACHINE', 'ROTARY_MINIGUN');
+      }
+      if (clearanceRing <= 1) {
+        allowedKeys.push('VECTOR_RAILGUN');
+      }
+      const chosenKey = allowedKeys[Math.floor(Math.random() * allowedKeys.length)];
       const weaponInstance = new WeaponInstance(WEAPON_ARCHETYPES[chosenKey]);
 
       drops.push(

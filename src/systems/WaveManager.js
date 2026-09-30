@@ -77,6 +77,9 @@ export class WaveManager {
         // All spawned enemies defeated -> Wave Cleared
         this.state = WAVE_STATE.CLEARED;
         this.prepTimer = 3.0; // Break between waves
+        if (this.onWaveCleared) {
+          this.onWaveCleared(this.waveNumber);
+        }
       }
     } else if (this.state === WAVE_STATE.CLEARED) {
       this.prepTimer -= dt;
@@ -84,6 +87,14 @@ export class WaveManager {
         this._startWave(this.waveNumber + 1);
       }
     }
+  }
+
+  /**
+   * Resets wave manager to wave 1
+   */
+  reset() {
+    this.waveNumber = 1;
+    this._startWave(1);
   }
 
   /**

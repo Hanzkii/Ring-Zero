@@ -72,6 +72,27 @@ export class Player extends Entity {
   }
 
   /**
+   * Resets player state for a fresh run
+   */
+  reset() {
+    this.health = this.maxHealth;
+    this.markedForRemoval = false;
+    this.level = 1;
+    this.xp = 0;
+    this.xpToNextLevel = 100;
+    this.pendingLevelUps = 0;
+    this.bounties = 0;
+    this.iFramesTimer = 0;
+    this.hitFlashTimer = 0;
+    this.dashTimer = 0;
+    this.dashCooldownTimer = 0;
+    this.isDashing = false;
+    this.dashTrails = [];
+    this.vx = 0;
+    this.vy = 0;
+  }
+
+  /**
    * Grants XP from collected memory fragments
    * @param {number} amount
    */

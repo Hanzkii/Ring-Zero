@@ -11,13 +11,14 @@ import { SpinbotCheat } from '../cheats/SpinbotCheat.js';
 import { DoubleTapCheat } from '../cheats/DoubleTapCheat.js';
 import { SilentAimCheat } from '../cheats/SilentAimCheat.js';
 import { BacktrackCheat } from '../cheats/BacktrackCheat.js';
+import { OverclockDashCheat } from '../cheats/OverclockDashCheat.js';
 
 export class CheatManager {
   constructor() {
     /** @type {Map<string, import('../cheats/CheatDefinition.js').CheatInterceptor>} */
     this.activeCheats = new Map();
-    // Default to Ring 0 clearance so all 6 core exploits are immediately draftable during runs
-    this.clearanceRing = RING_TIER.RING_0;
+    // Default to null (unrestricted). In-game, GameApp syncs it with StorageService.
+    this.clearanceRing = null;
   }
 
   /**
@@ -52,6 +53,9 @@ export class CheatManager {
         break;
       case 'spinbot':
         cheat = new SpinbotCheat();
+        break;
+      case 'overclock_dash':
+        cheat = new OverclockDashCheat();
         break;
       case 'doubletap':
         cheat = new DoubleTapCheat();
