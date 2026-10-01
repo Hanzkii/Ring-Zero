@@ -44,7 +44,7 @@ jobs:
           node test/phase5_5_visual_test.js
           node test/phase6_test.js
           node test/phase7_test.js
-          echo "All 459 automated tests passed cleanly."
+          echo "All 465 automated tests passed cleanly."
 
   deploy:
     environment:

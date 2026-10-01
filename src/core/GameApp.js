@@ -167,6 +167,7 @@ export class GameApp {
       soundBank: this.soundBank,
       onResume: () => this.resumeSimulation(),
       onOpenSettings: () => this.openSettings(),
+      onOpenDebugConsole: () => this.openDebugConsole(),
       onAbortRun: () => this.abortRun(),
     });
 
@@ -344,6 +345,9 @@ export class GameApp {
 
   resumeSimulation() {
     if (this.state !== APP_STATE.PAUSED) return;
+    if (this.debugConsole && this.debugConsole.isOpen) {
+      this.debugConsole.close();
+    }
     if (this.settingsModal.isOpen) {
       this.settingsModal.close();
     }
@@ -356,9 +360,18 @@ export class GameApp {
     this.settingsModal.open();
   }
 
+  openDebugConsole() {
+    if (this.debugConsole) {
+      this.debugConsole.open();
+    }
+  }
+
   abortRun() {
     this.pauseOverlay.close();
     this.settingsModal.close();
+    if (this.debugConsole && this.debugConsole.isOpen) {
+      this.debugConsole.close();
+    }
     this.player.health = 0;
     this.player.markedForRemoval = true;
     this.state = APP_STATE.GAMEOVER;
@@ -521,10 +534,12 @@ export class GameApp {
       return;
     }
 
-    // If paused, handle ESC / KeyP to resume or close settings modal
+    // If paused, handle ESC / KeyP to resume or close settings modal / debug console
     if (this.state === APP_STATE.PAUSED) {
       if (this.input.isKeyJustPressed('Escape') || this.input.isKeyJustPressed('KeyP')) {
-        if (this.settingsModal.isOpen) {
+        if (this.debugConsole && this.debugConsole.isOpen) {
+          this.debugConsole.close();
+        } else if (this.settingsModal.isOpen) {
           this.settingsModal.close();
         } else {
           this.resumeSimulation();

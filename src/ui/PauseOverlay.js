@@ -16,14 +16,16 @@ export class PauseOverlay {
    * @param {function(): void} options.onResume
    * @param {function(): void} options.onOpenSettings
    * @param {function(): void} options.onAbortRun
+   * @param {function(): void} [options.onOpenDebugConsole]
    */
-  constructor({ cheatManager, weaponSystem, soundBank, onResume, onOpenSettings, onAbortRun }) {
+  constructor({ cheatManager, weaponSystem, soundBank, onResume, onOpenSettings, onAbortRun, onOpenDebugConsole = null }) {
     this.cheatManager = cheatManager;
     this.weaponSystem = weaponSystem;
     this.soundBank = soundBank;
     this.onResume = onResume;
     this.onOpenSettings = onOpenSettings;
     this.onAbortRun = onAbortRun;
+    this.onOpenDebugConsole = onOpenDebugConsole;
 
     this.isOpen = false;
     this.overlayEl = document.createElement('div');
@@ -137,9 +139,12 @@ export class PauseOverlay {
           </div>
         </div>
 
-        <div class="terminal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+        <div class="terminal-footer" style="display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
           <button id="btn-pause-abort" class="btn-vector" style="border-color: ${COLOR.RED}; color: ${COLOR.RED};">
             ABORT RUN
+          </button>
+          <button id="btn-pause-debug" class="btn-vector" style="border-color: ${COLOR.CYAN}; color: ${COLOR.CYAN};">
+            DEV CONSOLE
           </button>
           <button id="btn-pause-settings" class="btn-vector" style="border-color: ${COLOR.AMBER}; color: ${COLOR.AMBER};">
             SETTINGS
@@ -155,6 +160,11 @@ export class PauseOverlay {
     this.overlayEl.querySelector('#btn-pause-resume')?.addEventListener('click', () => {
       this.close();
       if (this.onResume) this.onResume();
+    });
+
+    this.overlayEl.querySelector('#btn-pause-debug')?.addEventListener('click', () => {
+      this.soundBank?.playUIClick();
+      if (this.onOpenDebugConsole) this.onOpenDebugConsole();
     });
 
     this.overlayEl.querySelector('#btn-pause-settings')?.addEventListener('click', () => {

@@ -63,7 +63,10 @@ export class DebugConsole {
             <span style="color: ${COLOR.CYAN}; font-weight: bold;">// RING_ZERO KERNEL CONSOLE //</span>
             <span id="dbg-auth-badge" style="color: ${COLOR.RED}; font-size: 11px;">[ACCESS LOCKED: UNAUTHENTICATED]</span>
           </div>
-          <div style="color: rgba(255,255,255,0.5); font-size: 11px;">TOGGLE: [ \` / F1 ] | CLOSE: [ ESC ]</div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="color: rgba(255,255,255,0.5); font-size: 11px;">OPEN: [ ESC &gt; DEV CONSOLE ] | TOGGLE: [ \` / F1 ]</span>
+            <button id="dbg-close-btn" style="background: rgba(255,0,60,0.15); border: 1px solid ${COLOR.RED}; color: ${COLOR.RED}; padding: 2px 8px; font-family: monospace; font-size: 11px; cursor: pointer;">[X] CLOSE</button>
+          </div>
         </div>
         <div id="dbg-log" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 6px; margin-bottom: 6px;">
           <div style="color: rgba(255,255,255,0.6);">Ring Zero Developer Diagnostics initialized. Type 'help' for available commands.</div>
@@ -85,6 +88,7 @@ export class DebugConsole {
       this.logEl = this.container.querySelector('#dbg-log');
       this.inputEl = this.container.querySelector('#dbg-input');
       this.badgeEl = this.container.querySelector('#dbg-auth-badge');
+      this.closeBtn = this.container.querySelector('#dbg-close-btn');
 
       this._bindEvents();
     } else {
@@ -92,10 +96,17 @@ export class DebugConsole {
       this.logEl = null;
       this.inputEl = null;
       this.badgeEl = null;
+      this.closeBtn = null;
     }
   }
 
   _bindEvents() {
+    if (this.closeBtn) {
+      this.closeBtn.addEventListener('click', () => {
+        this.close();
+      });
+    }
+
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', (e) => {
         if (e.code === 'Backquote' || e.key === '`' || e.code === 'F1') {

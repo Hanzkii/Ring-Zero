@@ -46,8 +46,13 @@ if (typeof globalThis.window === 'undefined') {
 
 if (typeof globalThis.document === 'undefined') {
   globalThis.document = {
-    createElement: () => ({
+    createElement: (tag) => ({
+      tagName: tag,
       style: {},
+      width: 32,
+      height: 32,
+      getContext: () => createMockContext(),
+      toDataURL: () => 'data:image/png;base64,mock',
       appendChild: () => {},
       addEventListener: () => {},
       removeEventListener: () => {},
@@ -114,24 +119,33 @@ function createMockContext() {
   return {
     save: () => {},
     restore: () => {},
+    translate: () => {},
+    rotate: () => {},
+    scale: () => {},
     beginPath: () => {},
     closePath: () => {},
     moveTo: () => {},
     lineTo: () => {},
     arc: () => {},
+    ellipse: () => {},
+    rect: () => {},
     stroke: () => {},
     fill: () => {},
     strokeRect: () => {},
     fillRect: () => {},
+    clearRect: () => {},
     fillText: () => {},
+    strokeText: () => {},
     measureText: () => ({ width: 40 }),
     setLineDash: () => {},
+    quadraticCurveTo: () => {},
     strokeStyle: '',
     fillStyle: '',
     lineWidth: 1,
     font: '',
     textAlign: '',
     textBaseline: '',
+    globalAlpha: 1.0,
   };
 }
 
@@ -154,6 +168,7 @@ import { TriggerbotCheat } from '../src/cheats/TriggerbotCheat.js';
 import { GameLoop } from '../src/core/GameLoop.js';
 import { DebugRenderer } from '../src/ui/DebugRenderer.js';
 import { DebugConsole, AUTH_PASSPHRASE } from '../src/ui/DebugConsole.js';
+import { PauseOverlay } from '../src/ui/PauseOverlay.js';
 import { SIMULATION } from '../src/core/Constants.js';
 
 let passed = 0;
@@ -461,6 +476,32 @@ console.log('\n4. Testing Developer Debug Console & Authenticated Commands:');
   assert(consoleInstance.isOpen === true, 'DebugConsole.toggle() toggles isOpen to true');
   consoleInstance.toggle();
   assert(consoleInstance.isOpen === false, 'DebugConsole.toggle() toggles isOpen to false');
+
+  // Test PauseOverlay DEV CONSOLE button integration
+  let consoleOpenedViaPause = false;
+  const pauseOverlay = new PauseOverlay({
+    cheatManager: mockApp.cheatManager,
+    weaponSystem: mockApp.weaponSystem,
+    soundBank: mockApp.soundBank,
+    onResume: () => {},
+    onOpenSettings: () => {},
+    onAbortRun: () => {},
+    onOpenDebugConsole: () => {
+      consoleOpenedViaPause = true;
+      consoleInstance.open();
+    },
+  });
+
+  pauseOverlay.open();
+  assert(pauseOverlay.overlayEl.innerHTML.includes('id="btn-pause-debug"'), 'PauseOverlay renders DEV CONSOLE button in footer');
+  assert(pauseOverlay.overlayEl.innerHTML.includes('DEV CONSOLE'), 'PauseOverlay renders DEV CONSOLE label text');
+  assert(typeof pauseOverlay.onOpenDebugConsole === 'function', 'PauseOverlay stores onOpenDebugConsole callback');
+
+  pauseOverlay.onOpenDebugConsole();
+  assert(consoleOpenedViaPause === true, 'PauseOverlay triggers onOpenDebugConsole callback');
+  assert(consoleInstance.isOpen === true, 'DebugConsole is opened from Pause screen');
+  consoleInstance.close();
+  assert(consoleInstance.isOpen === false, 'DebugConsole closed cleanly');
 }
 
 // =========================================================================

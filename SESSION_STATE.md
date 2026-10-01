@@ -1,7 +1,7 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 12:45 EEST  
-**Test Suite Health:** 459 / 459 passing across 9 test suites (0 failures)
+**Last Updated:** 2026-10-01 12:47 EEST  
+**Test Suite Health:** 465 / 465 passing across 9 test suites (0 failures)
 
 ---
 
@@ -111,10 +111,11 @@
 * **GameLoop Timescale Control (`GameLoop.js`)**:
   - Dynamic `timeScale` parameter [0.05 to 10.0] scaling accumulator step rates without mutating fixed 60Hz physics timestep.
 * **Developer Debug Console (`src/ui/DebugConsole.js`)**:
-  - Toggled via backtick (`` ` ``) or `F1`.
+  - Accessible via in-run ESC / Pause menu (`[DEV CONSOLE]` button) or keybinds (`` ` `` / `F1`).
   - Kernel passphrase authentication gate: `null404` (`auth null404`).
   - Protected privileged command suite: `god`, `unlockall`, `givecrypto <amount>`, `noclip`, `killall`, `nextwave`, `timescale <float>`, `debug <mode>`, `help`, `clear`.
   - Command history navigation via Up/Down arrow keys.
+  - Dedicated `[X] CLOSE` button and ESC key dismiss.
 * **Developer Diagnostic Renderer (`src/ui/DebugRenderer.js`)**:
   - Pure Canvas 2D zero-GC visual diagnostic passes:
     1. Hitbox & Hurtbox wireframe circles & AABBs (Player, Enemies, Projectiles, Drops, Props).
@@ -164,9 +165,9 @@ src/
     ├── VectorIcons.js      # Procedural vector icon synthesizer for 16 exploits
     ├── TerminalUI.js       # Interactive boot terminal, briefing, shop, firmware lab, leaderboard
     ├── DraftModal.js       # Exploit card drafting dialog with procedural vector icon headers
-    ├── PauseOverlay.js     # [ESC]/[P] pause menu with hardware telemetry and exploit icon badges
+    ├── PauseOverlay.js     # [ESC]/[P] pause menu with hardware telemetry, exploit icon badges & DEV CONSOLE launcher
     ├── SettingsModal.js    # Vector sliders for volume, screen shake trauma, and debug grid
-    ├── DebugConsole.js     # Authenticated (`null404`) developer terminal overlay
+    ├── DebugConsole.js     # Authenticated (`null404`) developer terminal overlay with close button
     └── DebugRenderer.js    # Zero-GC Canvas 2D diagnostics for hitboxes, spatial grid, LOS, backtrack trails
 ```
 
@@ -183,6 +184,6 @@ All 9 automated test suites passing cleanly:
 6. `test/phase5_5_visual_test.js`: Vector icons, cyber-chassis, daemons, HUD, firmware UI (50 tests)
 7. `test/arsenal_expansion_test.js`: 16-exploit matrix, settings, firmware, rerolls (89 tests)
 8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
-9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Debug Renderer (62 tests)
+9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, Debug Renderer (68 tests)
 
-**Total: 459 tests passing, 0 failing.**
+**Total: 465 tests passing, 0 failing.**
