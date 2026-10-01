@@ -37,6 +37,7 @@ export class AimbotCheat extends CheatInterceptor {
       wallSegments = [],
       hasWallhack = false,
       backtrackCheat = null,
+      penetrationCheat = null,
     } = context;
 
     if (!player || !spatialGrid) return rawAimAngle;
@@ -45,6 +46,20 @@ export class AimbotCheat extends CheatInterceptor {
     const fovHalfAngle = (45 + this.level * 25) * (Math.PI / 180);
     const maxRange = 450 + this.level * 180;
     const bulletSpeed = weapon?.speed || 1200;
+
+    const maxPierce = hasWallhack
+      ? 999
+      : (penetrationCheat && penetrationCheat.enabled
+          ? (penetrationCheat.extraPierce || 2)
+          : 0);
+
+    const checkLOS = (x1, y1, x2, y2) => {
+      if (hasWallhack || !raycaster || !wallSegments || wallSegments.length === 0) return true;
+      if (maxPierce > 0 && typeof raycaster.countInterveningWalls === 'function') {
+        return raycaster.countInterveningWalls(x1, y1, x2, y2, wallSegments) <= maxPierce;
+      }
+      return raycaster.hasLineOfSight(x1, y1, x2, y2, wallSegments);
+    };
 
     // Query enemies in spatial grid
     const candidates = spatialGrid.queryRadius(
@@ -72,10 +87,7 @@ export class AimbotCheat extends CheatInterceptor {
         const diff = Math.abs(angleDiff(rawAimAngle, angleToEnemy));
 
         if (diff <= fovHalfAngle) {
-          const hasDirectLOS =
-            hasWallhack ||
-            !raycaster ||
-            raycaster.hasLineOfSight(player.x, player.y, enemy.x, enemy.y, wallSegments);
+          const hasDirectLOS = checkLOS(player.x, player.y, enemy.x, enemy.y);
 
           if (hasDirectLOS) {
             const tLead = dist / bulletSpeed;
@@ -109,10 +121,7 @@ export class AimbotCheat extends CheatInterceptor {
             const gDiff = Math.abs(angleDiff(rawAimAngle, gAngle));
 
             if (gDiff <= fovHalfAngle) {
-              const hasGhostLOS =
-                hasWallhack ||
-                !raycaster ||
-                raycaster.hasLineOfSight(player.x, player.y, snap.x, snap.y, wallSegments);
+              const hasGhostLOS = checkLOS(player.x, player.y, snap.x, snap.y);
 
               if (hasGhostLOS) {
                 // Ghost ticks are stationary snapshots; prioritize if closer to crosshair

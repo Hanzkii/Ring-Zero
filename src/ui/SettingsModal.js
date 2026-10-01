@@ -16,14 +16,18 @@ export class SettingsModal {
    * @param {import('../audio/SynthAudio.js').SynthAudio} options.synth
    * @param {import('../audio/SoundBank.js').SoundBank} options.soundBank
    * @param {import('../core/Camera2D.js').Camera2D} options.camera
+   * @param {import('../core/InputManager.js').InputManager} [options.input]
+   * @param {import('../audio/SynthMusic.js').SynthMusic} [options.synthMusic]
    * @param {function(boolean): void} [options.onGridDebugToggle]
    * @param {function(): void} [options.onClose]
    */
-  constructor({ storage, synth, soundBank, camera, onGridDebugToggle = null, onClose = null }) {
+  constructor({ storage, synth, soundBank, camera, input = null, synthMusic = null, onGridDebugToggle = null, onClose = null }) {
     this.storage = storage;
     this.synth = synth;
     this.soundBank = soundBank;
     this.camera = camera;
+    this.input = input;
+    this.synthMusic = synthMusic;
     this.onGridDebugToggle = onGridDebugToggle;
     this.onClose = onClose;
 
@@ -53,6 +57,15 @@ export class SettingsModal {
     if (this.synth) {
       this.synth.setMasterVolume(s.masterVolume !== undefined ? s.masterVolume : 0.7);
       this.synth.setSfxVolume(s.sfxVolume !== undefined ? s.sfxVolume : 0.8);
+      if (typeof this.synth.setMusicVolume === 'function') {
+        this.synth.setMusicVolume(s.musicVolume !== undefined ? s.musicVolume : 0.6);
+      }
+    }
+    if (this.synthMusic && typeof this.synthMusic.setVolume === 'function') {
+      this.synthMusic.setVolume(s.musicVolume !== undefined ? s.musicVolume : 0.6);
+    }
+    if (this.input && typeof this.input.setSensitivity === 'function') {
+      this.input.setSensitivity(s.mouseSensitivity !== undefined ? s.mouseSensitivity : 1.0);
     }
     if (this.camera) {
       this.camera.traumaMultiplier = s.screenShake !== undefined ? s.screenShake : 1.0;
@@ -80,6 +93,8 @@ export class SettingsModal {
     const s = this.storage.settings;
     const masterVal = Math.round((s.masterVolume ?? 0.7) * 100);
     const sfxVal = Math.round((s.sfxVolume ?? 0.8) * 100);
+    const musicVal = Math.round((s.musicVolume ?? 0.6) * 100);
+    const sensVal = Number(s.mouseSensitivity ?? 1.0);
     const shakeVal = Math.round((s.screenShake ?? 1.0) * 100);
     const debugGrid = !!s.showDebugGrid;
 
@@ -116,6 +131,28 @@ export class SettingsModal {
             </div>
             <input type="range" id="rng-sfx-vol" min="0" max="100" value="${sfxVal}" style="
               width: 100%; accent-color: ${COLOR.CYAN}; cursor: pointer;
+            ">
+          </div>
+
+          <!-- Music Volume -->
+          <div style="background: rgba(0,0,0,0.3); padding: 12px 14px; border: 1px solid rgba(0,240,255,0.15);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; color: ${COLOR.WHITE}; font-weight: bold;">MUSIC VOLUME (PROCEDURAL BGM)</span>
+              <span id="txt-music-val" style="font-size: 12px; color: ${COLOR.CYAN}; font-weight: bold;">${musicVal}%</span>
+            </div>
+            <input type="range" id="rng-music-vol" min="0" max="100" value="${musicVal}" style="
+              width: 100%; accent-color: ${COLOR.CYAN}; cursor: pointer;
+            ">
+          </div>
+
+          <!-- Mouse Aim Sensitivity -->
+          <div style="background: rgba(0,0,0,0.3); padding: 12px 14px; border: 1px solid rgba(0,240,255,0.15);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; color: ${COLOR.WHITE}; font-weight: bold;">MOUSE AIM SENSITIVITY</span>
+              <span id="txt-sens-val" style="font-size: 12px; color: ${COLOR.AMBER}; font-weight: bold;">${sensVal.toFixed(1)}x</span>
+            </div>
+            <input type="range" id="rng-mouse-sens" min="20" max="300" step="5" value="${Math.round(sensVal * 100)}" style="
+              width: 100%; accent-color: ${COLOR.AMBER}; cursor: pointer;
             ">
           </div>
 
@@ -171,6 +208,34 @@ export class SettingsModal {
       const ratio = val / 100;
       this.storage.settings.sfxVolume = ratio;
       this.synth?.setSfxVolume(ratio);
+      this.storage.save();
+    });
+
+    const rngMusic = this.modalEl.querySelector('#rng-music-vol');
+    const txtMusic = this.modalEl.querySelector('#txt-music-val');
+    rngMusic?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      txtMusic.textContent = `${val}%`;
+      const ratio = val / 100;
+      this.storage.settings.musicVolume = ratio;
+      if (typeof this.synth?.setMusicVolume === 'function') {
+        this.synth.setMusicVolume(ratio);
+      }
+      if (typeof this.synthMusic?.setVolume === 'function') {
+        this.synthMusic.setVolume(ratio);
+      }
+      this.storage.save();
+    });
+
+    const rngSens = this.modalEl.querySelector('#rng-mouse-sens');
+    const txtSens = this.modalEl.querySelector('#txt-sens-val');
+    rngSens?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10) / 100;
+      txtSens.textContent = `${val.toFixed(1)}x`;
+      this.storage.settings.mouseSensitivity = val;
+      if (typeof this.input?.setSensitivity === 'function') {
+        this.input.setSensitivity(val);
+      }
       this.storage.save();
     });
 

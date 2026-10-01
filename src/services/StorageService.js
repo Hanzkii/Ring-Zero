@@ -109,6 +109,8 @@ export const DEFAULT_SAVE_STATE = {
   settings: {
     masterVolume: 0.7,
     sfxVolume: 0.8,
+    musicVolume: 0.6,
+    mouseSensitivity: 1.0,
     screenShake: 1.0,
     showDebugGrid: false,
     isMuted: false,

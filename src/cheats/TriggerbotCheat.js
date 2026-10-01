@@ -31,7 +31,15 @@ export class TriggerbotCheat extends CheatInterceptor {
       return aimAngle;
     }
 
-    const { player, enemies, backtrackCheat } = context;
+    const {
+      player,
+      enemies,
+      backtrackCheat,
+      raycaster,
+      wallSegments = [],
+      hasWallhack = false,
+      penetrationCheat = null,
+    } = context;
     this.backtrackCheat = backtrackCheat || null;
     if (!player || !enemies) return aimAngle;
 
@@ -39,6 +47,20 @@ export class TriggerbotCheat extends CheatInterceptor {
     const rayDir = new Vec2(Math.cos(aimAngle), Math.sin(aimAngle));
     let hitFound = false;
     const tolerance = 14 + this.level * 10;
+
+    const maxPierce = hasWallhack
+      ? 999
+      : (penetrationCheat && penetrationCheat.enabled
+          ? (penetrationCheat.extraPierce || 2)
+          : 0);
+
+    const isUnblocked = (tx, ty) => {
+      if (hasWallhack || !raycaster || !wallSegments || wallSegments.length === 0) return true;
+      if (maxPierce > 0 && typeof raycaster.countInterveningWalls === 'function') {
+        return raycaster.countInterveningWalls(player.x, player.y, tx, ty, wallSegments) <= maxPierce;
+      }
+      return raycaster.hasLineOfSight(player.x, player.y, tx, ty, wallSegments);
+    };
 
     // Primary active enemy check
     for (let i = 0; i < enemies.length; i++) {
@@ -54,8 +76,10 @@ export class TriggerbotCheat extends CheatInterceptor {
 
       const perpDist = Math.sqrt(Math.max(0, dist * dist - proj * proj));
       if (perpDist <= enemy.radius + tolerance) {
-        hitFound = true;
-        break;
+        if (isUnblocked(enemy.x, enemy.y)) {
+          hitFound = true;
+          break;
+        }
       }
     }
 
@@ -75,9 +99,11 @@ export class TriggerbotCheat extends CheatInterceptor {
           if (projSnap <= 0) continue;
           const perpDistSnap = Math.sqrt(Math.max(0, distSnap * distSnap - projSnap * projSnap));
           if (perpDistSnap <= enemy.radius + tolerance) {
-            hitFound = true;
-            this.backtrackTarget = enemy;
-            break;
+            if (isUnblocked(snap.x, snap.y)) {
+              hitFound = true;
+              this.backtrackTarget = enemy;
+              break;
+            }
           }
         }
         if (hitFound) break;

@@ -49,24 +49,29 @@ export class Raycaster2D {
 
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
+      const sx1 = seg.x1 !== undefined ? seg.x1 : (seg.p1 ? seg.p1.x : 0);
+      const sy1 = seg.y1 !== undefined ? seg.y1 : (seg.p1 ? seg.p1.y : 0);
+      const sx2 = seg.x2 !== undefined ? seg.x2 : (seg.p2 ? seg.p2.x : 0);
+      const sy2 = seg.y2 !== undefined ? seg.y2 : (seg.p2 ? seg.p2.y : 0);
+
       // Fast AABB check
       if (
-        Math.max(seg.x1, seg.x2) < minX ||
-        Math.min(seg.x1, seg.x2) > maxX ||
-        Math.max(seg.y1, seg.y2) < minY ||
-        Math.min(seg.y1, seg.y2) > maxY
+        Math.max(sx1, sx2) < minX ||
+        Math.min(sx1, sx2) > maxX ||
+        Math.max(sy1, sy2) < minY ||
+        Math.min(sy1, sy2) > maxY
       ) {
         continue;
       }
 
       // Check intersection
-      const vx = seg.x2 - seg.x1;
-      const vy = seg.y2 - seg.y1;
+      const vx = sx2 - sx1;
+      const vy = sy2 - sy1;
       const cross = dirX * vy - dirY * vx;
       if (Math.abs(cross) < 1e-8) continue;
 
-      const delX = seg.x1 - x1;
-      const delY = seg.y1 - y1;
+      const delX = sx1 - x1;
+      const delY = sy1 - y1;
       const t = (delX * vy - delY * vx) / cross;
       const u = (delX * dirY - delY * dirX) / cross;
 
@@ -76,6 +81,70 @@ export class Raycaster2D {
     }
 
     return true;
+  }
+
+  /**
+   * Counts the number of static wall segments intersecting the line between (x1, y1) and (x2, y2)
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   * @param {Array<Object>} segments
+   * @returns {number}
+   */
+  static countInterveningWalls(x1, y1, x2, y2, segments) {
+    if (!segments || segments.length === 0) return 0;
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 0.001) return 0;
+
+    const dirX = dx / dist;
+    const dirY = dy / dist;
+
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+
+    let count = 0;
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      const sx1 = seg.x1 !== undefined ? seg.x1 : (seg.p1 ? seg.p1.x : 0);
+      const sy1 = seg.y1 !== undefined ? seg.y1 : (seg.p1 ? seg.p1.y : 0);
+      const sx2 = seg.x2 !== undefined ? seg.x2 : (seg.p2 ? seg.p2.x : 0);
+      const sy2 = seg.y2 !== undefined ? seg.y2 : (seg.p2 ? seg.p2.y : 0);
+
+      if (
+        Math.max(sx1, sx2) < minX ||
+        Math.min(sx1, sx2) > maxX ||
+        Math.max(sy1, sy2) < minY ||
+        Math.min(sy1, sy2) > maxY
+      ) {
+        continue;
+      }
+
+      const vx = sx2 - sx1;
+      const vy = sy2 - sy1;
+      const cross = dirX * vy - dirY * vx;
+      if (Math.abs(cross) < 1e-8) continue;
+
+      const delX = sx1 - x1;
+      const delY = sy1 - y1;
+      const t = (delX * vy - delY * vx) / cross;
+      const u = (delX * dirY - delY * dirX) / cross;
+
+      if (t > 0.001 && t < dist - 0.001 && u >= 0 && u <= 1) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
+  countInterveningWalls(x1, y1, x2, y2, segments) {
+    return Raycaster2D.countInterveningWalls(x1, y1, x2, y2, segments);
   }
 
   /**

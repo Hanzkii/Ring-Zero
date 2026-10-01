@@ -64,22 +64,25 @@ export class Drop extends Entity {
 
     // Check magnet vacuum radius (player magnet radius: default 180px)
     const magnetRadius = player.magnetRadius || 180;
-    if (this.type === DROP_TYPE.XP && distSq < magnetRadius * magnetRadius) {
+    if ((this.type === DROP_TYPE.XP || this.type === DROP_TYPE.CRYPTO) && distSq < magnetRadius * magnetRadius) {
       this.isMagnetized = true;
     }
 
     if (this.isMagnetized) {
       const dist = Math.sqrt(distSq);
       if (dist > 1) {
-        const speed = this.magnetSpeed * (1 + (1 - dist / magnetRadius) * 1.5);
-        this.vx = (dx / dist) * speed;
-        this.vy = (dy / dist) * speed;
+        if (!this._pickupHandled) {
+          const speed = this.magnetSpeed * (1 + (1 - dist / magnetRadius) * 1.5);
+          this.vx = (dx / dist) * speed;
+          this.vy = (dy / dist) * speed;
+        }
       }
     } else {
       // Natural friction
       this.vx *= Math.exp(-6.0 * dt);
       this.vy *= Math.exp(-6.0 * dt);
     }
+    this._pickupHandled = false;
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;

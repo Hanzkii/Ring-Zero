@@ -43,18 +43,36 @@ export class LagswitchCheat extends CheatInterceptor {
     }
 
     if (this.isActive) {
-      this.durationTimer -= dt;
+      this.durationTimer = Math.max(0, this.durationTimer - dt);
       if (this.durationTimer <= 0) {
         this.isActive = false;
+        this.durationTimer = 0;
       }
     }
   }
 
   /**
-   * Freezes enemy update while lagswitch is active
+   * Updates lagswitch timers directly
+   * @param {number} dt
+   */
+  update(dt) {
+    this.onPlayerUpdate(null, dt, null);
+  }
+
+  /**
+   * Entity update gate: when active, hostiles skip movement & firing
+   * @returns {boolean}
+   */
+  shouldFreezeHostiles() {
+    return this.enabled && this.isActive;
+  }
+
+  /**
+   * Backward-compatible alias for world freeze check
+   * @returns {boolean}
    */
   shouldFreezeWorld() {
-    return this.enabled && this.isActive;
+    return this.shouldFreezeHostiles();
   }
 
   onRenderHUD(ctx, x, y) {

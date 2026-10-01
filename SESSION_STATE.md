@@ -1,7 +1,7 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 11:58 EEST  
-**Test Suite Health:** 351 / 351 passing across 7 test suites (0 failures)
+**Last Updated:** 2026-10-01 12:25 EEST  
+**Test Suite Health:** 397 / 397 passing across 8 test suites (0 failures)
 
 ---
 
@@ -73,6 +73,30 @@
   - Interactive stat comparison previews (`CURRENT: +40 HP ► NEXT: +60 HP`).
   - Real-time balance preview calculation showing remaining bounties after purchase.
 
+### Phase 6: Core Systems & Exploit Fixes
+* **Stability & Exploit Hardening**:
+  - `LagswitchCheat.js`: Implemented safe fixed-dt timer decrement and hostile entity gating (`shouldFreezeHostiles()`, `shouldFreezeWorld()`) without loop timestep corruption.
+  - `KernelPanicCheat.js`: Wired `onTakeDamage` retaliation and weapon fire counter to purge and recycle hostile projectiles within camera view while detonating 360° radial piercing lasers.
+  - `Raycaster2D.js`, `AimbotCheat.js`, `TriggerbotCheat.js`: Added intervening wall segment counting; enabled wall-penetration targeting and auto-firing synergy when `interveningWalls <= maxPierce` with `PenetrationBucker.bin`.
+* **Economy & Drop Magnetics (`src/systems/PickupSystem.js`)**:
+  - Quadratic lerp / spring acceleration dynamics for both XP gems and Crypto Bounty fragments.
+  - Attraction radius and acceleration scaling linked directly to `Cache Magnet` firmware rank in `StorageService.js`.
+* **In-Memory Run Lifecycle & Persistence**:
+  - Smooth in-memory `startRun()` and `resetRun()` lifecycle execution without page refresh (`location.reload()` prohibited).
+  - Immediate persistence of harvested crypto bounties upon player death and diagnostic modal display.
+* **Zero-Asset Procedural Cyber BGM (`src/audio/SynthMusic.js`)**:
+  - Real-time 4-channel Web Audio API step-sequencer (130 BPM, D minor pentatonic):
+    1. Rolling 16th-note sub-bass line (Triangle).
+    2. Cyber melodic arpeggio (Square + dynamic lowpass decay).
+    3. Synthesized noise snare + sine pitch-swept kick.
+    4. 16th noise hi-hats.
+  - Adaptive intensity states: `AMBIENT` (menus, pause, draft) vs `COMBAT` (active waves).
+  - Dedicated `musicGain` bus routing and volume controls.
+* **Settings & Input Expansion (`src/ui/SettingsModal.js` & `src/core/InputManager.js`)**:
+  - Independent Music Volume slider (0-100%).
+  - Mouse Aim Sensitivity slider (0.2x-3.0x, default 1.0x) with cursor delta scaling.
+  - Persistent storage in `localStorage`.
+
 ---
 
 ## 2. Subsystem Architecture Map
@@ -82,12 +106,13 @@ src/
 ├── core/
 │   ├── GameApp.js          # Central orchestrator: state machine, vector bounding panels & HUD
 │   ├── GameLoop.js         # 60Hz physics accumulator & render alpha dispatcher
-│   ├── InputManager.js     # Keyboard & mouse tracking, aim vectors, single-frame edge triggers
+│   ├── InputManager.js     # Keyboard & mouse tracking, sensitivity delta scaling, aim vectors
 │   ├── Camera2D.js         # World-to-screen transforms, trauma shake (T^2), mouse leading
 │   ├── ObjectPool.js       # Preallocated zero-GC object recycling
 │   └── VectorMath.js       # 2D vector operations, geometric line intersections, PRNG
 ├── audio/
-│   ├── SynthAudio.js       # Native AudioContext nodes (oscillators, noise buffers, biquad filters)
+│   ├── SynthAudio.js       # Native AudioContext nodes (oscillators, noise buffers, biquad filters, music bus)
+│   ├── SynthMusic.js       # Procedural 4-channel cyber BGM step-sequencer (130 BPM, Dm pentatonic)
 │   └── SoundBank.js        # Procedural sound effects and weapon audio presets
 ├── cheats/
 │   ├── CheatDefinition.js  # CHEAT_REGISTRY (16 exploits), RING_TIER hierarchy, interceptor base
@@ -103,6 +128,7 @@ src/
 ├── systems/
 │   ├── CheatManager.js     # Interceptor pipeline dispatcher, drafting card generator
 │   ├── CollisionSystem.js  # Spatial hash querying, circle-vs-AABB, bullet wall pierce, noclip
+│   ├── PickupSystem.js     # Magnetic attraction dynamics with Cache Magnet firmware scaling
 │   ├── SpatialHashGrid.js  # 128px uniform spatial hash partitioning
 │   ├── WeaponSystem.js     # Dual weapon slots, ammo clips, reloading, firing interceptor hook
 │   ├── WaveManager.js      # Procedural wave director, difficulty scaling, biome switching

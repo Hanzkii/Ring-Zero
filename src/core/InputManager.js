@@ -29,6 +29,12 @@ export class InputManager {
     this.aimAngle = 0;                   // Radians
     this.isPointerInside = false;
 
+    // Mouse Aim Sensitivity
+    this.sensitivity = 1.0;
+    this._prevMouseX = 0;
+    this._prevMouseY = 0;
+    this._hasPrevMouse = false;
+
     // Movement scratchpad
     this._moveVec = new Vec2(0, 0);
 
@@ -88,10 +94,32 @@ export class InputManager {
     this.keysJustReleased.add(e.code);
   }
 
+  /**
+   * Sets mouse aim sensitivity scaling factor [0.1, 5.0]
+   * @param {number} val
+   */
+  setSensitivity(val) {
+    this.sensitivity = Math.max(0.1, Math.min(5.0, Number(val) || 1.0));
+  }
+
   _onMouseMove(e) {
     const rect = this.canvas.getBoundingClientRect();
-    this.screenPointer.x = e.clientX - rect.left;
-    this.screenPointer.y = e.clientY - rect.top;
+    const targetX = e.clientX - rect.left;
+    const targetY = e.clientY - rect.top;
+
+    if (this._hasPrevMouse && this.sensitivity !== 1.0) {
+      const dx = (targetX - this._prevMouseX) * this.sensitivity;
+      const dy = (targetY - this._prevMouseY) * this.sensitivity;
+      this.screenPointer.x = Math.max(0, Math.min(rect.width, this.screenPointer.x + dx));
+      this.screenPointer.y = Math.max(0, Math.min(rect.height, this.screenPointer.y + dy));
+    } else {
+      this.screenPointer.x = targetX;
+      this.screenPointer.y = targetY;
+    }
+
+    this._prevMouseX = targetX;
+    this._prevMouseY = targetY;
+    this._hasPrevMouse = true;
   }
 
   _onMouseDown(e) {
@@ -108,10 +136,12 @@ export class InputManager {
 
   _onMouseEnter() {
     this.isPointerInside = true;
+    this._hasPrevMouse = false;
   }
 
   _onMouseLeave() {
     this.isPointerInside = false;
+    this._hasPrevMouse = false;
   }
 
   _onContextMenu(e) {

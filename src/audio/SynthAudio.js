@@ -29,7 +29,9 @@ export class SynthAudio {
     }
 
     const AudioContextClass =
-      (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) || null;
+      (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) ||
+      (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext)) ||
+      null;
 
     if (!AudioContextClass) {
       // Headless / non-browser environment
@@ -57,6 +59,11 @@ export class SynthAudio {
       this.sfxGain = this.ctx.createGain();
       this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
       this.sfxGain.connect(this.masterGain);
+
+      // Dedicated Music Bus Gain
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.setValueAtTime(this.musicVolume || 0.6, this.ctx.currentTime);
+      this.musicGain.connect(this.masterGain);
 
       // Pre-synthesize 2-second looped white noise buffer
       this._generateNoiseBuffer();
@@ -98,6 +105,13 @@ export class SynthAudio {
     this.sfxVolume = Math.max(0, Math.min(1, volume));
     if (this.sfxGain && this.ctx) {
       this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+    }
+  }
+
+  setMusicVolume(volume) {
+    this.musicVolume = Math.max(0, Math.min(1, volume));
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
     }
   }
 

@@ -173,6 +173,12 @@ export class CollisionSystem {
               player,
               sourceEntity: proj,
               isContact: false,
+              projectilePool: this.projectilePool,
+              camera: this.camera,
+              spawnCallback: (params) => {
+                const p = this.projectilePool.obtain();
+                if (p) p.spawn(params);
+              },
             });
             finalDamage = check.damage;
             evaded = check.evaded;
@@ -228,6 +234,12 @@ export class CollisionSystem {
               player,
               sourceEntity: enemy,
               isContact: true,
+              projectilePool: this.projectilePool,
+              camera: this.camera,
+              spawnCallback: (params) => {
+                const p = this.projectilePool.obtain();
+                if (p) p.spawn(params);
+              },
             });
             finalDamage = check.damage;
             evaded = check.evaded;

@@ -34,42 +34,89 @@ export class KernelPanicCheat extends CheatInterceptor {
     this.shotCounter++;
     if (this.shotCounter >= this.shotsPerBurst) {
       this.shotCounter = 0;
-      this.triggerKernelPanic(context.player, spawnCallback);
+      this.triggerKernelPanic(context.player, spawnCallback, context.projectilePool, context.camera);
     }
   }
 
   /**
-   * Spawns an omnidirectional ring of critical piercing laser beams
+   * Spawns an omnidirectional ring of critical piercing laser beams and purges hostile projectiles
    * @param {import('../entities/Player.js').Player} player
    * @param {function(Object): void} spawnCallback
+   * @param {import('../core/ObjectPool.js').ObjectPool} [projectilePool=null]
+   * @param {import('../core/Camera2D.js').Camera2D} [camera=null]
    */
-  triggerKernelPanic(player, spawnCallback) {
+  triggerKernelPanic(player, spawnCallback, projectilePool = null, camera = null) {
     const count = this.pulseCount;
-    for (let i = 0; i < count; i++) {
-      const angle = (i * Math.PI * 2) / count;
-      spawnCallback({
-        x: player.x,
-        y: player.y,
-        vx: Math.cos(angle) * 1400,
-        vy: Math.sin(angle) * 1400,
-        rotation: angle,
-        damage: 65,
-        knockback: 180,
-        pierce: 5,
-        lifetime: 1.2,
-        color: COLOR.RED,
-        radius: 4,
-        isCrit: true,
-        canPierceWalls: true,
-        layer: COLLISION_LAYER.PROJECTILE_PLAYER,
+    if (typeof spawnCallback === 'function') {
+      for (let i = 0; i < count; i++) {
+        const angle = (i * Math.PI * 2) / count;
+        spawnCallback({
+          x: player.x,
+          y: player.y,
+          vx: Math.cos(angle) * 1400,
+          vy: Math.sin(angle) * 1400,
+          rotation: angle,
+          damage: 65,
+          knockback: 180,
+          pierce: 5,
+          lifetime: 1.2,
+          color: COLOR.RED,
+          radius: 4,
+          isCrit: true,
+          canPierceWalls: true,
+          layer: COLLISION_LAYER.PROJECTILE_PLAYER,
+        });
+      }
+    }
+
+    // Purge/recycle all hostile projectiles within active camera bounds
+    if (projectilePool && typeof projectilePool.forEachActive === 'function') {
+      projectilePool.forEachActive((p) => {
+        if (p.layer === COLLISION_LAYER.PROJECTILE_ENEMY) {
+          if (camera) {
+            const margin = 120;
+            const halfW = (camera.viewportWidth || 1920) * 0.5 + margin;
+            const halfH = (camera.viewportHeight || 1080) * 0.5 + margin;
+            const cx = camera.pos ? camera.pos.x : (camera.x || player.x);
+            const cy = camera.pos ? camera.pos.y : (camera.y || player.y);
+            if (Math.abs(p.x - cx) <= halfW && Math.abs(p.y - cy) <= halfH) {
+              p.markedForRemoval = true;
+              p.active = false;
+            }
+          } else {
+            p.markedForRemoval = true;
+            p.active = false;
+          }
+        }
       });
     }
   }
 
+  /**
+   * Helper alias to trigger retaliation via context object
+   * @param {Object} context
+   */
+  triggerRetaliation(context) {
+    if (!context || !context.player) return;
+    const spawnCb = context.spawnCallback || ((params) => {
+      if (context.projectilePool) {
+        const p = context.projectilePool.obtain();
+        if (p) p.spawn(params);
+      }
+    });
+    this.triggerKernelPanic(context.player, spawnCb, context.projectilePool, context.camera);
+  }
+
   onTakeDamage(incomingDamage, context) {
-    // Also trigger kernel panic retaliation upon taking damage
-    if (this.enabled && context?.player && context?.spawnCallback) {
-      this.triggerKernelPanic(context.player, context.spawnCallback);
+    // Trigger kernel panic retaliation upon taking damage
+    if (this.enabled && context?.player) {
+      const spawnCb = context.spawnCallback || ((params) => {
+        if (context.projectilePool) {
+          const p = context.projectilePool.obtain();
+          if (p) p.spawn(params);
+        }
+      });
+      this.triggerKernelPanic(context.player, spawnCb, context.projectilePool, context.camera);
     }
     return { damage: incomingDamage, evaded: false };
   }

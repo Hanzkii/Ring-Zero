@@ -31,6 +31,8 @@ import { StorageService } from '../services/StorageService.js';
 import { LeaderboardService } from '../services/LeaderboardService.js';
 import { TerminalUI } from '../ui/TerminalUI.js';
 import { WEAPON_ARCHETYPES, WeaponInstance } from '../systems/WeaponSystem.js';
+import { PickupSystem } from '../systems/PickupSystem.js';
+import { SynthMusic, MUSIC_INTENSITY } from '../audio/SynthMusic.js';
 
 export const APP_STATE = {
   BOOT: 'BOOT',
@@ -68,8 +70,13 @@ export class GameApp {
 
     // Audio Synthesis, Storage & Terminal UI Subsystems
     this.soundBank = new SoundBank();
+    this.synthMusic = new SynthMusic({ synth: this.soundBank.synth });
     this.storage = new StorageService();
     this.leaderboard = new LeaderboardService();
+    this.pickupSystem = new PickupSystem({ storage: this.storage });
+
+    // Sync input sensitivity from persistent storage
+    this.input.setSensitivity(this.storage.settings?.mouseSensitivity ?? 1.0);
 
     this.cheatManager = new CheatManager();
     this.cheatManager.clearanceRing = this.storage.clearanceRing;
@@ -87,6 +94,8 @@ export class GameApp {
       synth: this.soundBank.synth,
       soundBank: this.soundBank,
       camera: this.camera,
+      input: this.input,
+      synthMusic: this.synthMusic,
       onGridDebugToggle: (val) => {
         this.showSpatialGridDebug = val;
       },
@@ -166,6 +175,8 @@ export class GameApp {
           player: this.player,
           spatialGrid: this.spatialGrid,
           weapon: this.weaponSystem.activeWeapon,
+          projectilePool: this.projectilePool,
+          camera: this.camera,
         },
         spawnCb
       );
@@ -313,6 +324,7 @@ export class GameApp {
   pauseSimulation() {
     if (this.state !== APP_STATE.RUN) return;
     this.state = APP_STATE.PAUSED;
+    this.synthMusic?.setIntensity(MUSIC_INTENSITY.AMBIENT);
     this.pauseOverlay.open();
   }
 
@@ -323,6 +335,7 @@ export class GameApp {
     }
     this.pauseOverlay.close();
     this.state = APP_STATE.RUN;
+    this.synthMusic?.setIntensity(MUSIC_INTENSITY.COMBAT);
   }
 
   openSettings() {
@@ -335,6 +348,7 @@ export class GameApp {
     this.player.health = 0;
     this.player.markedForRemoval = true;
     this.state = APP_STATE.GAMEOVER;
+    this.synthMusic?.setIntensity(MUSIC_INTENSITY.AMBIENT);
     this.soundBank.playExplosion(true);
 
     const mult = this.storage.getRiskMultiplier();
@@ -353,6 +367,13 @@ export class GameApp {
     };
 
     this.terminalUI.showRunDiagnostic(summary);
+  }
+
+  /**
+   * Resets and starts run
+   */
+  resetRun() {
+    this.restartRun();
   }
 
   /**
@@ -417,8 +438,12 @@ export class GameApp {
     if (this.pauseOverlay && this.pauseOverlay.isOpen) this.pauseOverlay.close();
     if (this.draftModal && this.draftModal.isOpen) this.draftModal.close();
 
-    // 9. Transition state and launch game loop
+    // 9. Transition state, update music, and launch game loop
     this.state = APP_STATE.RUN;
+    if (this.synthMusic) {
+      this.synthMusic.start();
+      this.synthMusic.setIntensity(MUSIC_INTENSITY.COMBAT);
+    }
     if (!this.loop.isRunning) {
       this.loop.start();
     } else {
@@ -453,6 +478,7 @@ export class GameApp {
 
     // Resume simulation
     this.state = APP_STATE.RUN;
+    this.synthMusic?.setIntensity(MUSIC_INTENSITY.COMBAT);
   }
 
   /**
@@ -509,6 +535,7 @@ export class GameApp {
       if (options.length > 0) {
         this.soundBank.playLevelUp();
         this.state = APP_STATE.DRAFT;
+        this.synthMusic?.setIntensity(MUSIC_INTENSITY.AMBIENT);
         this.draftModal.open(options, this.draftRerollTokens);
         return;
       } else {
@@ -559,6 +586,7 @@ export class GameApp {
         wallSegments: this.map ? this.map.getSegments() : [],
         hasWallhack: canShootThroughWalls,
         backtrackCheat: this.cheatManager.getCheat('backtrack'),
+        penetrationCheat: this.cheatManager.getCheat('penetrationbucker'),
       }
     );
 
@@ -629,6 +657,9 @@ export class GameApp {
     }
 
     // Drops Vacuum Magnet & Physics
+    if (this.pickupSystem) {
+      this.pickupSystem.update(this.drops, this.player, dt);
+    }
     for (let i = 0; i < this.drops.length; i++) {
       const drop = this.drops[i];
       drop.update(dt, this.player);
@@ -685,6 +716,7 @@ export class GameApp {
     // Check Player Death
     if (this.player.health <= 0 && this.state !== APP_STATE.GAMEOVER) {
       this.state = APP_STATE.GAMEOVER;
+      this.synthMusic?.setIntensity(MUSIC_INTENSITY.AMBIENT);
       this.camera.addTrauma(0.8);
       this.particleSystem.emitBurst(this.player.x, this.player.y, 40, COLOR.RED, 450);
       this.soundBank.playExplosion(true);
