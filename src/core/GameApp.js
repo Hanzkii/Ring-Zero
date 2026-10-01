@@ -661,17 +661,8 @@ export class GameApp {
 
     // Rootkit Kernel EMP Purge KeyF trigger
     if (this.input.isKeyJustPressed('KeyF')) {
-      const rootkit = this.cheatManager.getCheat('rootkit');
-      if (rootkit && rootkit.trigger({
-        player: this.player,
-        enemies: this.enemies,
-        projectilePool: this.projectilePool,
-        camera: this.camera,
-        particleSystem: this.particleSystem,
-        soundBank: this.soundBank,
-      })) {
-        this.soundBank.playGlitchTick();
-      }
+      // HOTFIX: Temporarily disabled to prevent RAF crash until full refactor
+      console.warn('[SECURITY] Rootkit Screen Purge temporarily offline.');
     }
 
     // Toggle Spatial Grid Debug with 'KeyG'
