@@ -52,6 +52,10 @@ export class RootkitCheat extends CheatInterceptor {
    * @returns {boolean} Whether execution succeeded
    */
   trigger(context = {}) {
+    // HOTFIX: Temporarily disabled to prevent RAF crash until full refactor
+    console.warn('[SECURITY] Rootkit Screen Purge temporarily offline.');
+    return;
+
     if (this.cooldownTimer > 0 || !this.enabled) return false;
 
     this.isActive = true;
