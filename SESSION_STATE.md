@@ -1,7 +1,7 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 12:47 EEST  
-**Test Suite Health:** 465 / 465 passing across 9 test suites (0 failures)
+**Last Updated:** 2026-10-01 12:55 EEST  
+**Test Suite Health:** 486 / 486 passing across 9 test suites (0 failures)
 
 ---
 
@@ -114,6 +114,8 @@
   - Accessible via in-run ESC / Pause menu (`[DEV CONSOLE]` button) or keybinds (`` ` `` / `F1`).
   - Kernel passphrase authentication gate: `null404` (`auth null404`).
   - Protected privileged command suite: `god`, `unlockall`, `givecrypto <amount>`, `noclip`, `killall`, `nextwave`, `timescale <float>`, `debug <mode>`, `help`, `clear`.
+  - Input Event Isolation: stopped propagation on `keydown`/`keyup` within console input, preventing Space and 'P' from triggering player dash or game pause while preserving text typing.
+  - Autocomplete & Real-Time Syntax Hints: `#dbg-hints` banner with `COMMAND_REGISTRY`, Tab completion for commands, and cyclic Tab completion for sub-arguments (e.g. `debug hitboxes` -> `spatial` -> `raycast`).
   - Command history navigation via Up/Down arrow keys.
   - Dedicated `[X] CLOSE` button and ESC key dismiss.
 * **Developer Diagnostic Renderer (`src/ui/DebugRenderer.js`)**:
@@ -184,6 +186,6 @@ All 9 automated test suites passing cleanly:
 6. `test/phase5_5_visual_test.js`: Vector icons, cyber-chassis, daemons, HUD, firmware UI (50 tests)
 7. `test/arsenal_expansion_test.js`: 16-exploit matrix, settings, firmware, rerolls (89 tests)
 8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
-9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, Debug Renderer (68 tests)
+9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer (89 tests)
 
-**Total: 465 tests passing, 0 failing.**
+**Total: 486 tests passing, 0 failing.**

@@ -23,6 +23,64 @@ import { WEAPON_ARCHETYPES, WeaponInstance } from '../systems/WeaponSystem.js';
 
 export const AUTH_PASSPHRASE = 'null404';
 
+export const COMMAND_REGISTRY = {
+  auth: {
+    args: ['null404'],
+    syntax: 'auth <passphrase>',
+    desc: 'Elevate session privileges (auth null404)',
+  },
+  god: {
+    args: [],
+    syntax: 'god',
+    desc: 'Toggle complete player invulnerability',
+  },
+  unlockall: {
+    args: [],
+    syntax: 'unlockall',
+    desc: 'Unlock all 16 exploits, weapons, & max firmware',
+  },
+  givecrypto: {
+    args: ['100', '500', '1000'],
+    syntax: 'givecrypto <amount>',
+    desc: 'Add Bitcoin / crypto bounty funds',
+  },
+  noclip: {
+    args: [],
+    syntax: 'noclip',
+    desc: 'Toggle geometry wall-phasing',
+  },
+  killall: {
+    args: [],
+    syntax: 'killall',
+    desc: 'Purge all active wave daemons',
+  },
+  nextwave: {
+    args: [],
+    syntax: 'nextwave',
+    desc: 'Skip to next wave tier',
+  },
+  timescale: {
+    args: ['0.2', '0.5', '1.0', '2.0'],
+    syntax: 'timescale <float>',
+    desc: 'Adjust fixed game loop simulation speed',
+  },
+  debug: {
+    args: ['hitboxes', 'spatial', 'raycast', 'backtrack', 'all', 'none'],
+    syntax: 'debug <mode>',
+    desc: 'Toggle visual diagnostics [hitboxes|spatial|raycast|backtrack|all|none]',
+  },
+  help: {
+    args: [],
+    syntax: 'help',
+    desc: 'List available commands',
+  },
+  clear: {
+    args: [],
+    syntax: 'clear',
+    desc: 'Clear console display',
+  },
+};
+
 export class DebugConsole {
   /**
    * @param {Object} options
@@ -37,6 +95,11 @@ export class DebugConsole {
     this.isAuthenticated = false;
     this.history = [];
     this.historyIndex = -1;
+
+    this.tabMatches = [];
+    this.tabIndex = 0;
+    this.lastTabQuery = null;
+    this.tabMode = 'command';
 
     if (typeof document !== 'undefined') {
       this.container = document.createElement('div');
@@ -72,6 +135,11 @@ export class DebugConsole {
           <div style="color: rgba(255,255,255,0.6);">Ring Zero Developer Diagnostics initialized. Type 'help' for available commands.</div>
           <div style="color: ${COLOR.AMBER};">Elevated commands require authentication: 'auth null404'</div>
         </div>
+        <div id="dbg-hints" style="
+          display: none; padding: 4px 8px; margin-bottom: 6px;
+          background: rgba(8, 16, 24, 0.95); border: 1px solid rgba(0, 240, 255, 0.3);
+          border-left: 3px solid ${COLOR.CYAN}; color: ${COLOR.CYAN}; font-size: 11px;
+        "></div>
         <div style="display: flex; align-items: center; gap: 6px;">
           <span style="color: ${COLOR.CYAN}; font-weight: bold;">root@ring0:~#</span>
           <input type="text" id="dbg-input" autocomplete="off" spellcheck="false" style="
@@ -89,6 +157,7 @@ export class DebugConsole {
       this.inputEl = this.container.querySelector('#dbg-input');
       this.badgeEl = this.container.querySelector('#dbg-auth-badge');
       this.closeBtn = this.container.querySelector('#dbg-close-btn');
+      this.hintsEl = this.container.querySelector('#dbg-hints');
 
       this._bindEvents();
     } else {
@@ -97,13 +166,28 @@ export class DebugConsole {
       this.inputEl = null;
       this.badgeEl = null;
       this.closeBtn = null;
+      this.hintsEl = null;
     }
   }
 
   _bindEvents() {
     if (this.closeBtn) {
-      this.closeBtn.addEventListener('click', () => {
+      this.closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.close();
+      });
+    }
+
+    if (this.container) {
+      this.container.addEventListener('keydown', (e) => {
+        // Stop propagation of console container key events to prevent engine interference
+        if (e.target !== this.inputEl) {
+          e.stopPropagation();
+          if (e.code === 'Backquote' || e.key === '`' || e.code === 'F1' || e.code === 'Escape') {
+            e.preventDefault();
+            this.close();
+          }
+        }
       });
     }
 
@@ -120,33 +204,249 @@ export class DebugConsole {
     }
 
     if (this.inputEl) {
+      // 1. ISOLATE ALL KEY EVENTS: Stop propagation to prevent window / InputManager / GameApp from intercepting
       this.inputEl.addEventListener('keydown', (e) => {
+        // Stop propagation so Space, P, WASD, Numbers, Escape do not bubble to InputManager or GameApp
+        e.stopPropagation();
+
+        if (e.code === 'Backquote' || e.key === '`' || e.code === 'F1') {
+          e.preventDefault();
+          this.close();
+          return;
+        }
+
+        if (e.code === 'Escape') {
+          e.preventDefault();
+          this.close();
+          return;
+        }
+
+        if (e.code === 'Tab') {
+          e.preventDefault(); // Prevent default browser focus shifts
+          this.handleTab();
+          return;
+        }
+
         if (e.code === 'Enter') {
+          e.preventDefault();
           const cmd = this.inputEl.value.trim();
           if (cmd) {
             this.execute(cmd);
             this.history.push(cmd);
             this.historyIndex = this.history.length;
             this.inputEl.value = '';
+            this.updateHints('');
           }
-        } else if (e.code === 'ArrowUp') {
+          return;
+        }
+
+        if (e.code === 'ArrowUp') {
           e.preventDefault();
           if (this.historyIndex > 0) {
             this.historyIndex--;
             this.inputEl.value = this.history[this.historyIndex] || '';
+            this.updateHints(this.inputEl.value);
           }
-        } else if (e.code === 'ArrowDown') {
+          return;
+        }
+
+        if (e.code === 'ArrowDown') {
           e.preventDefault();
           if (this.historyIndex < this.history.length - 1) {
             this.historyIndex++;
             this.inputEl.value = this.history[this.historyIndex] || '';
+            this.updateHints(this.inputEl.value);
           } else {
             this.historyIndex = this.history.length;
             this.inputEl.value = '';
+            this.updateHints('');
           }
+          return;
+        }
+
+        // Space and all character keys:
+        // Do NOT call e.preventDefault(), allowing Space and typing to append normally into the input.
+        // Invalidate tab cycling when typing new characters.
+        if (e.key.length === 1 || e.code === 'Backspace' || e.code === 'Delete') {
+          this.tabMatches = [];
+          this.tabIndex = 0;
+          this.lastTabQuery = null;
         }
       });
+
+      this.inputEl.addEventListener('keyup', (e) => {
+        e.stopPropagation();
+      });
+
+      this.inputEl.addEventListener('input', () => {
+        this.tabMatches = [];
+        this.tabIndex = 0;
+        this.lastTabQuery = null;
+        this.updateHints(this.inputEl.value);
+      });
     }
+  }
+
+  /**
+   * Generates autocomplete suggestions and syntax information based on current input buffer
+   * @param {string} inputStr
+   * @returns {Object}
+   */
+  getSuggestions(inputStr) {
+    const raw = (inputStr || '').trimStart();
+    if (!raw) {
+      return {
+        mode: 'empty',
+        matches: Object.keys(COMMAND_REGISTRY),
+        syntax: 'Type command or press TAB to view/cycle commands',
+      };
+    }
+
+    const hasTrailingSpace = /\s+$/.test(raw);
+    const parts = raw.split(/\s+/);
+    const cmdInput = parts[0].toLowerCase();
+
+    // If there is only one token and NO trailing space, we are typing the command name
+    if (parts.length === 1 && !hasTrailingSpace) {
+      const matches = Object.keys(COMMAND_REGISTRY).filter((c) => c.startsWith(cmdInput));
+      const exact = COMMAND_REGISTRY[cmdInput];
+      return {
+        mode: 'command',
+        query: cmdInput,
+        matches,
+        exactDef: exact || null,
+        syntax: exact ? `${exact.syntax} — ${exact.desc}` : `Matches: [ ${matches.join(', ')} ]`,
+      };
+    }
+
+    // Otherwise, we are completing arguments for the command
+    const cmdDef = COMMAND_REGISTRY[cmdInput];
+    if (!cmdDef) {
+      return {
+        mode: 'unknown',
+        matches: [],
+        syntax: `Unknown command "${cmdInput}". Type "help" for list.`,
+      };
+    }
+
+    // Argument prefix is what's being typed after the command
+    const argInput = hasTrailingSpace && parts.length === 1 ? '' : (parts[1] || '').toLowerCase();
+    const argMatches = (cmdDef.args || []).filter((arg) => arg.toLowerCase().startsWith(argInput));
+
+    return {
+      mode: 'argument',
+      command: cmdInput,
+      query: argInput,
+      matches: argMatches,
+      allArgs: cmdDef.args,
+      syntax: `${cmdDef.syntax} — ${cmdDef.desc}`,
+    };
+  }
+
+  /**
+   * Renders real-time command syntax and argument suggestions above the prompt
+   * @param {string} value
+   */
+  updateHints(value) {
+    if (!this.hintsEl) return;
+    const info = this.getSuggestions(value);
+
+    if (info.mode === 'empty') {
+      this.hintsEl.style.display = 'none';
+      this.hintsEl.innerHTML = '';
+      return;
+    }
+
+    this.hintsEl.style.display = 'block';
+
+    if (info.mode === 'command') {
+      if (info.exactDef) {
+        this.hintsEl.innerHTML = `
+          <span style="color: ${COLOR.CYAN}; font-weight: bold;">SYNTAX:</span>
+          <span style="color: #FFF;"> ${info.exactDef.syntax}</span>
+          <span style="color: rgba(255,255,255,0.6);"> &bull; ${info.exactDef.desc}</span>
+          ${info.exactDef.args.length > 0 ? `<span style="color: ${COLOR.AMBER};"> (Press TAB for arguments)</span>` : ''}
+        `;
+      } else if (info.matches.length > 0) {
+        const formatted = info.matches
+          .map((m, i) => `<span style="color: ${i === 0 ? COLOR.GREEN : COLOR.CYAN}; font-weight: ${i === 0 ? 'bold' : 'normal'};">[${m}]</span>`)
+          .join(' ');
+        this.hintsEl.innerHTML = `
+          <span style="color: rgba(255,255,255,0.7);">MATCHES: </span>${formatted}
+          <span style="color: ${COLOR.AMBER}; font-size: 10px;"> (Press TAB to complete)</span>
+        `;
+      } else {
+        this.hintsEl.innerHTML = `<span style="color: ${COLOR.RED};">No matching commands. Type 'help' for commands.</span>`;
+      }
+    } else if (info.mode === 'argument') {
+      if (info.allArgs && info.allArgs.length > 0) {
+        const formatted = info.allArgs
+          .map((a) => {
+            const isMatch = info.matches.includes(a);
+            return `<span style="color: ${isMatch ? COLOR.GREEN : 'rgba(255,255,255,0.3)'}; font-weight: ${isMatch ? 'bold' : 'normal'};">[${a}]</span>`;
+          })
+          .join(' ');
+        this.hintsEl.innerHTML = `
+          <span style="color: ${COLOR.CYAN}; font-weight: bold;">${info.syntax}</span>
+          <div style="margin-top: 2px;">
+            <span style="color: rgba(255,255,255,0.7);">OPTIONS: </span>${formatted}
+            <span style="color: ${COLOR.AMBER}; font-size: 10px;"> (Press TAB to cycle)</span>
+          </div>
+        `;
+      } else {
+        this.hintsEl.innerHTML = `<span style="color: ${COLOR.CYAN}; font-weight: bold;">${info.syntax}</span>`;
+      }
+    } else {
+      this.hintsEl.innerHTML = `<span style="color: ${COLOR.RED};">${info.syntax}</span>`;
+    }
+  }
+
+  /**
+   * Handles Tab completion and argument cycling
+   */
+  handleTab() {
+    if (!this.inputEl) return;
+    const currentVal = this.inputEl.value;
+
+    // Check if we need to query new suggestions
+    if (this.lastTabQuery === null || this.lastTabQuery !== currentVal || this.tabMatches.length === 0) {
+      const info = this.getSuggestions(currentVal);
+      if (!info.matches || info.matches.length === 0) return;
+
+      this.tabMatches = info.matches;
+      this.tabIndex = 0;
+      this.tabMode = info.mode;
+      this.tabCommand = info.command || null;
+    }
+
+    if (this.tabMatches.length === 0) return;
+
+    const chosen = this.tabMatches[this.tabIndex % this.tabMatches.length];
+    this.tabIndex++;
+
+    if (this.tabMode === 'command' || this.tabMode === 'empty') {
+      const cmdDef = COMMAND_REGISTRY[chosen];
+      if (cmdDef && cmdDef.args.length > 0) {
+        this.inputEl.value = `${chosen} `;
+      } else {
+        this.inputEl.value = chosen;
+      }
+      // If there was only 1 command match (e.g. "deb" -> "debug "), reset tab query
+      // so the next Tab press immediately starts completing arguments!
+      if (this.tabMatches.length === 1) {
+        this.lastTabQuery = null;
+        this.tabMatches = [];
+      } else {
+        this.lastTabQuery = this.inputEl.value;
+      }
+    } else if (this.tabMode === 'argument') {
+      const parts = currentVal.trimStart().split(/\s+/);
+      const cmd = parts[0];
+      this.inputEl.value = `${cmd} ${chosen}`;
+      this.lastTabQuery = this.inputEl.value;
+    }
+
+    this.updateHints(this.inputEl.value);
   }
 
   toggle() {
@@ -162,6 +462,7 @@ export class DebugConsole {
     if (this.container) {
       this.container.style.display = 'flex';
     }
+    this.updateHints(this.inputEl ? this.inputEl.value : '');
     if (this.inputEl && typeof setTimeout !== 'undefined') {
       setTimeout(() => this.inputEl.focus(), 20);
     }
@@ -172,6 +473,12 @@ export class DebugConsole {
     if (this.container) {
       this.container.style.display = 'none';
     }
+    if (this.hintsEl) {
+      this.hintsEl.style.display = 'none';
+    }
+    this.tabMatches = [];
+    this.tabIndex = 0;
+    this.lastTabQuery = null;
     if (this.inputEl) {
       this.inputEl.blur();
     }

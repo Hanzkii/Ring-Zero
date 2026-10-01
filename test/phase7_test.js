@@ -44,22 +44,56 @@ if (typeof globalThis.window === 'undefined') {
   };
 }
 
+function createMockElement(tag = 'div') {
+  const listeners = new Map();
+  const children = [];
+  const el = {
+    tagName: tag,
+    style: {},
+    width: 32,
+    height: 32,
+    value: '',
+    innerHTML: '',
+    textContent: '',
+    scrollTop: 0,
+    scrollHeight: 100,
+    getContext: () => createMockContext(),
+    toDataURL: () => 'data:image/png;base64,mock',
+    appendChild: (child) => { children.push(child); return child; },
+    addEventListener: (type, handler) => {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push(handler);
+    },
+    removeEventListener: (type, handler) => {
+      const list = listeners.get(type);
+      if (list) {
+        const idx = list.indexOf(handler);
+        if (idx !== -1) list.splice(idx, 1);
+      }
+    },
+    dispatchEvent: (evt) => {
+      const list = listeners.get(evt.type) || [];
+      for (const h of list) h(evt);
+    },
+    querySelector: (sel) => {
+      if (sel === '#dbg-input') return el._inputEl || (el._inputEl = createMockElement('input'));
+      if (sel === '#dbg-hints') return el._hintsEl || (el._hintsEl = createMockElement('div'));
+      if (sel === '#dbg-log') return el._logEl || (el._logEl = createMockElement('div'));
+      if (sel === '#dbg-auth-badge') return el._badgeEl || (el._badgeEl = createMockElement('span'));
+      if (sel === '#dbg-close-btn') return el._closeBtn || (el._closeBtn = createMockElement('button'));
+      return null;
+    },
+    querySelectorAll: () => [],
+    classList: { add: () => {}, remove: () => {}, contains: () => false },
+    focus: () => {},
+    blur: () => {},
+  };
+  return el;
+}
+
 if (typeof globalThis.document === 'undefined') {
   globalThis.document = {
-    createElement: (tag) => ({
-      tagName: tag,
-      style: {},
-      width: 32,
-      height: 32,
-      getContext: () => createMockContext(),
-      toDataURL: () => 'data:image/png;base64,mock',
-      appendChild: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      querySelector: () => null,
-      querySelectorAll: () => [],
-      classList: { add: () => {}, remove: () => {}, contains: () => false },
-    }),
+    createElement: (tag) => createMockElement(tag),
     body: {
       appendChild: () => {},
     },
@@ -167,7 +201,7 @@ import { SpinbotCheat } from '../src/cheats/SpinbotCheat.js';
 import { TriggerbotCheat } from '../src/cheats/TriggerbotCheat.js';
 import { GameLoop } from '../src/core/GameLoop.js';
 import { DebugRenderer } from '../src/ui/DebugRenderer.js';
-import { DebugConsole, AUTH_PASSPHRASE } from '../src/ui/DebugConsole.js';
+import { DebugConsole, AUTH_PASSPHRASE, COMMAND_REGISTRY } from '../src/ui/DebugConsole.js';
 import { PauseOverlay } from '../src/ui/PauseOverlay.js';
 import { SIMULATION } from '../src/core/Constants.js';
 
@@ -502,6 +536,98 @@ console.log('\n4. Testing Developer Debug Console & Authenticated Commands:');
   assert(consoleInstance.isOpen === true, 'DebugConsole is opened from Pause screen');
   consoleInstance.close();
   assert(consoleInstance.isOpen === false, 'DebugConsole closed cleanly');
+
+  // Test Input Event Isolation (Space, P, Escape, keyup)
+  let spaceStopped = false;
+  let spacePrevented = false;
+  consoleInstance.inputEl.dispatchEvent({
+    type: 'keydown',
+    code: 'Space',
+    key: ' ',
+    stopPropagation: () => { spaceStopped = true; },
+    preventDefault: () => { spacePrevented = true; },
+  });
+  assert(spaceStopped === true, 'Console input stops propagation on Space keydown');
+  assert(spacePrevented === false, 'Console input does not preventDefault on Space (allows typing spaces)');
+
+  let pStopped = false;
+  let pPrevented = false;
+  consoleInstance.inputEl.dispatchEvent({
+    type: 'keydown',
+    code: 'KeyP',
+    key: 'p',
+    stopPropagation: () => { pStopped = true; },
+    preventDefault: () => { pPrevented = true; },
+  });
+  assert(pStopped === true, 'Console input stops propagation on "P" keydown');
+  assert(pPrevented === false, 'Console input does not preventDefault on "P" (allows typing letter P)');
+
+  let keyupStopped = false;
+  consoleInstance.inputEl.dispatchEvent({
+    type: 'keyup',
+    code: 'Space',
+    key: ' ',
+    stopPropagation: () => { keyupStopped = true; },
+  });
+  assert(keyupStopped === true, 'Console input stops propagation on keyup');
+
+  // Test COMMAND_REGISTRY structure and completeness
+  assert(Boolean(COMMAND_REGISTRY.auth && COMMAND_REGISTRY.auth.args.includes('null404')),
+    'COMMAND_REGISTRY contains auth command with null404 passphrase hint');
+  assert(Boolean(COMMAND_REGISTRY.debug && COMMAND_REGISTRY.debug.args.length === 6),
+    'COMMAND_REGISTRY contains debug command with all 6 mode arguments');
+  assert(Boolean(COMMAND_REGISTRY.givecrypto && COMMAND_REGISTRY.givecrypto.args.includes('500')),
+    'COMMAND_REGISTRY contains givecrypto command with standard amount presets');
+  assert(Boolean(COMMAND_REGISTRY.timescale && COMMAND_REGISTRY.timescale.args.includes('0.5')),
+    'COMMAND_REGISTRY contains timescale command with speed presets');
+
+  // Test getSuggestions()
+  const emptySuggest = consoleInstance.getSuggestions('');
+  assert(emptySuggest.mode === 'empty' && emptySuggest.matches.length >= 10,
+    'getSuggestions("") returns all commands in empty mode');
+
+  const debSuggest = consoleInstance.getSuggestions('deb');
+  assert(debSuggest.mode === 'command' && debSuggest.matches.length === 1 && debSuggest.matches[0] === 'debug',
+    'getSuggestions("deb") matches ["debug"] command');
+
+  const debugSpaceSuggest = consoleInstance.getSuggestions('debug ');
+  assert(debugSpaceSuggest.mode === 'argument' && debugSpaceSuggest.matches.length === 6,
+    'getSuggestions("debug ") returns all 6 argument options');
+
+  const debugSpSuggest = consoleInstance.getSuggestions('debug sp');
+  assert(debugSpSuggest.mode === 'argument' && debugSpSuggest.matches.length === 1 && debugSpSuggest.matches[0] === 'spatial',
+    'getSuggestions("debug sp") matches ["spatial"] argument');
+
+  // Test updateHints() UI display
+  consoleInstance.updateHints('deb');
+  assert(consoleInstance.hintsEl.style.display === 'block', 'updateHints("deb") displays hints banner');
+  assert(consoleInstance.hintsEl.innerHTML.includes('[debug]'), 'updateHints("deb") renders [debug] match badge');
+
+  consoleInstance.updateHints('');
+  assert(consoleInstance.hintsEl.style.display === 'none', 'updateHints("") hides hints banner');
+
+  // Test handleTab() autocomplete and argument cycling
+  consoleInstance.inputEl.value = 'deb';
+  consoleInstance.lastTabQuery = null;
+  consoleInstance.tabMatches = [];
+  consoleInstance.handleTab();
+  assert(consoleInstance.inputEl.value === 'debug ', 'handleTab() autocompletes "deb" to "debug "');
+
+  consoleInstance.handleTab();
+  assert(consoleInstance.inputEl.value === 'debug hitboxes', 'handleTab() cycles to first argument "debug hitboxes"');
+
+  consoleInstance.handleTab();
+  assert(consoleInstance.inputEl.value === 'debug spatial', 'handleTab() cycles to second argument "debug spatial"');
+
+  consoleInstance.handleTab();
+  assert(consoleInstance.inputEl.value === 'debug raycast', 'handleTab() cycles to third argument "debug raycast"');
+
+  // Test handleTab() for zero-arg command
+  consoleInstance.inputEl.value = 'noc';
+  consoleInstance.lastTabQuery = null;
+  consoleInstance.tabMatches = [];
+  consoleInstance.handleTab();
+  assert(consoleInstance.inputEl.value === 'noclip', 'handleTab() completes zero-arg command "noc" to "noclip" without trailing space');
 }
 
 // =========================================================================
