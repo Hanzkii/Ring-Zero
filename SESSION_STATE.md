@@ -131,35 +131,6 @@ Proceed with Phase 5.5: Visual & UI Polish Overhaul for Ring Zero:
 Ensure pure vanilla ES6+ standards, zero external assets, and verify all 319 existing tests continue passing.
 ```
 
-## 5. Next Session Execution Prompt: Phase 6: Exploit Fixes, Procedural Music, Visual Redesign, and Economy Magnetics.
-
-```text
-Proceed with Phase 6: Exploit Fixes, Procedural Music, Visual Redesign, and Economy Magnetics.
-### 1. Exploit Pipeline & Lifecycle Fixes
-* **Logic Decoupling**: Isolate Aimbot auto-fire into `Triggerbot.cs`. `Aimbot.dll` strictly handles angular snap.
-* **Triggerbot Synergy**: Ensure Triggerbot detects `Backtrack.sys` historical ticks AND `PenetrationBucker.bin` wall limits.
-* **Lagswitch Stability**: Implement freeze as hostile entity update gate. Ensure `GameLoop.js` fixed DT is not modified.
-* **Kernel Panic Hooking**: Ensure `cheatManager.trigger('onTakeDamage', ...)` or shot counters properly invoke radial lasers.
-* **Lifecycle Reset**: Implement clean `resetRun()`/`startRun()` in `GameApp.js` for seamless redeployment from Main Menu/Game Over without location.reload(). Immediate bounty persistence to storage on death.
-
-### 2. Economy & Drop Magnetics (`src/systems/PickupSystem.js`)
-* **Bitcoin Magnet**: Implement quadratic acceleration attraction for dropped Crypto Bounties when player is in range.
-* **Upgrades Integration**: Link pickup magnet radius to `Cache Magnet` firmware rank.
-
-### 3. Controls & Settings Expansion (`src/ui/SettingsModal.js`)
-* **Mouse Aim Sensitivity**: Add sensitivity slider (0.2x to 3.0x) applying scaling to cursor delta in InputManager.js.
-* **Music Volume**: Independent slider routing procedural music through a separate GainNode bus. Persist to localStorage.
-
-### 4. Zero-Asset Procedural Music (`src/audio/SynthMusic.js`)
-* Real-time step sequencer (Web Audio nodes): D-minor pentatonic, 130 BPM.
-* 4 synthesized channels: Triangle bass, square arp, noise snare, sine kick.
-* Adaptive states: AMBIENT (subdued for Draft/Terminal) and COMBAT (full beat).
-
-### 5. Visual & HUD Redesign
-* **Vector Icon Engine (`src/ui/VectorIcons.js`)**: Resolution-independent Canvas path icons for all 16 exploits and key UI glyphs (coin, shield, crosshair). Integrate into DraftModal.js cards.
-* **Entity Art Overhaul**: Upgrade Player.js with multi-layered hulls, glowing reactor core, velocity-scaled thruster trails. Upgrade Enemy.js with unique silhouettes per daemon archetype (rotating hex, pincer delta, octagonal plates).
-* **HUD Polish**: Scale combat fonts (16-20px bold). Wrap radial ammo pips and directional hit markers around the crosshair reticle.
-
 Maintain zero GC per frame, verify all 319 tests pass, and keep commits concise.
 
 ```
