@@ -86,8 +86,12 @@ export class VectorIcons {
         this._drawNoclip(ctx, r, color);
         break;
 
+      case 'rootkit':
+        this._drawRootkit(ctx, r, color);
+        break;
+
       case 'lagswitch':
-        this._drawLagswitch(ctx, r, color);
+        this._drawRootkit(ctx, r, color);
         break;
 
       case 'kernelpanic':
@@ -576,6 +580,54 @@ export class VectorIcons {
     // Freeze pulse crystal at waist
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /** Rootkit: Ring 0 Kernel EMP Screen Purge / Root-access node */
+  static _drawRootkit(ctx, r, color) {
+    // 1. Outer EMP shockwave ring
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 2. EMP radial burst spikes (8 directions)
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4;
+      const x1 = Math.cos(a) * (r * 0.72);
+      const y1 = Math.sin(a) * (r * 0.72);
+      const x2 = Math.cos(a) * (r * 0.98);
+      const y2 = Math.sin(a) * (r * 0.98);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    // 3. Central Kernel Diamond Core
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.55);
+    ctx.lineTo(r * 0.45, 0);
+    ctx.lineTo(0, r * 0.55);
+    ctx.lineTo(-r * 0.45, 0);
+    ctx.closePath();
+    ctx.stroke();
+
+    // 4. Root bus conduits branching downward
+    ctx.beginPath();
+    // Center conduit
+    ctx.moveTo(0, r * 0.55);
+    ctx.lineTo(0, r * 0.85);
+    // Left branch
+    ctx.moveTo(-r * 0.25, r * 0.28);
+    ctx.lineTo(-r * 0.45, r * 0.7);
+    // Right branch
+    ctx.moveTo(r * 0.25, r * 0.28);
+    ctx.lineTo(r * 0.45, r * 0.7);
+    ctx.stroke();
+
+    // 5. High-voltage central spark
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.16, 0, Math.PI * 2);
     ctx.fill();
   }
 

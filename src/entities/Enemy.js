@@ -130,19 +130,6 @@ export class Enemy extends Entity {
     this.isHostile = true;
     this.owner = 'enemy';
 
-    // Lagswitch temporal freeze buffer & stutter ghosts
-    this.isLagswitchFrozen = false;
-    this._bufferedDestX = x;
-    this._bufferedDestY = y;
-    this._ghostTrails = [
-      { x: x, y: y, alpha: 0 },
-      { x: x, y: y, alpha: 0 },
-      { x: x, y: y, alpha: 0 },
-      { x: x, y: y, alpha: 0 },
-    ];
-    this._ghostIndex = 0;
-    this._ghostTimer = 0.05;
-
     // Visual feedback
     this.hitFlashTimer = 0;
     this.pulsePhase = Math.random() * Math.PI * 2;
@@ -186,16 +173,10 @@ export class Enemy extends Entity {
   }
 
   /**
-   * Advances entity kinematics unless frozen by Lagswitch
+   * Advances entity kinematics
    * @param {number} dt
-   * @param {import('../systems/CheatManager.js').CheatManager} [cheatManager=null]
    */
-  update(dt, cheatManager = null) {
-    const isFrozen = !!((cheatManager && (cheatManager.isActive('lagswitch') || cheatManager.getCheat('lagswitch')?.active)) && (this.isHostile || this.owner === 'enemy'));
-    if (isFrozen) {
-      this.isLagswitchFrozen = true;
-      return;
-    }
+  update(dt) {
     super.update(dt);
   }
 
@@ -205,65 +186,8 @@ export class Enemy extends Entity {
    * @param {import('./Player.js').Player} player
    * @param {import('../systems/SpatialHashGrid.js').SpatialHashGrid} spatialGrid
    * @param {function(Object): void} onShootProjectile - Callback for Sentinel projectiles
-   * @param {import('../systems/CheatManager.js').CheatManager} [cheatManager=null]
-   * @param {boolean} [forceFreeze=false]
    */
-  updateAI(dt, player, spatialGrid, onShootProjectile, cheatManager = null, forceFreeze = false) {
-    const isFrozen = Boolean(forceFreeze || (cheatManager && (cheatManager.isActive('lagswitch') || cheatManager.getCheat('lagswitch')?.active) && (this.isHostile || this.owner === 'enemy')));
-
-    if (isFrozen) {
-      this.isLagswitchFrozen = true;
-
-      // Stutter / ghost afterimage trail generation (preallocated zero GC)
-      this._ghostTimer += 0.016;
-      if (this._ghostTimer >= 0.04) {
-        this._ghostTimer = 0;
-        const ghost = this._ghostTrails[this._ghostIndex];
-        ghost.x = this.x + (Math.random() - 0.5) * 8;
-        ghost.y = this.y + (Math.random() - 0.5) * 8;
-        ghost.alpha = 0.7;
-        this._ghostIndex = (this._ghostIndex + 1) % this._ghostTrails.length;
-      }
-
-      // Buffer incoming target trajectory toward player during socket freeze
-      if (player) {
-        const dx = player.x - this.x;
-        const dy = player.y - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 1) {
-          this._bufferedDestX += (dx / dist) * this.speed * 0.016;
-          this._bufferedDestY += (dy / dist) * this.speed * 0.016;
-        }
-      }
-
-      // Fade existing ghost afterimages
-      for (let i = 0; i < this._ghostTrails.length; i++) {
-        if (this._ghostTrails[i].alpha > 0) {
-          this._ghostTrails[i].alpha = Math.max(0, this._ghostTrails[i].alpha - 0.016 * 2.5);
-        }
-      }
-
-      return; // Skip positional integration, attack timers, and firing animations
-    }
-
-    // Unfreezing: smoothly snap/lerp caught up to buffered position
-    if (this.isLagswitchFrozen) {
-      this.isLagswitchFrozen = false;
-      if (this._bufferedDestX !== this.x || this._bufferedDestY !== this.y) {
-        this.x = lerp(this.x, this._bufferedDestX, 0.5);
-        this.y = lerp(this.y, this._bufferedDestY, 0.5);
-      }
-    }
-    this._bufferedDestX = this.x;
-    this._bufferedDestY = this.y;
-
-    // Decay ghost trails when unfreezing
-    for (let i = 0; i < this._ghostTrails.length; i++) {
-      if (this._ghostTrails[i].alpha > 0) {
-        this._ghostTrails[i].alpha = Math.max(0, this._ghostTrails[i].alpha - dt * 3.5);
-      }
-    }
-
+  updateAI(dt, player, spatialGrid, onShootProjectile) {
     this.preStep();
     this.pulsePhase += dt * 3.5;
 
@@ -408,38 +332,9 @@ export class Enemy extends Entity {
     const ry = lerp(this.prevY, this.y, alpha);
     const r = this.radius;
 
-    // Render stutter/ghost afterimage trails if frozen by lagswitch
-    for (let i = 0; i < this._ghostTrails.length; i++) {
-      const g = this._ghostTrails[i];
-      if (g.alpha > 0.05) {
-        ctx.save();
-        ctx.globalAlpha = g.alpha * 0.45;
-        ctx.strokeStyle = COLOR.RED;
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(g.x - r * 0.8, g.y);
-        ctx.lineTo(g.x + r * 0.8, g.y);
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-
     ctx.save();
     ctx.translate(rx, ry);
     ctx.rotate(this.rotation);
-
-    if (this.isLagswitchFrozen) {
-      ctx.save();
-      ctx.font = '8px monospace';
-      ctx.fillStyle = COLOR.RED;
-      ctx.textAlign = 'center';
-      ctx.fillText('[SOCKET_HALT]', 0, -r - 6);
-      ctx.restore();
-    }
 
     const wireColor = this.hitFlashTimer > 0 ? COLOR.WHITE : this.color;
     ctx.strokeStyle = wireColor;

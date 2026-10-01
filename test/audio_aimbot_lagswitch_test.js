@@ -147,27 +147,31 @@ console.log('1. Testing Procedural Dark Synthwave OST (SynthMusic.js):');
 }
 
 // ---------------------------------------------------------------------------
-// 2. DECOUPLE AIMBOT FROM MOVEMENT VELOCITY
+// 2. DECOUPLE AIMBOT FROM MOVEMENT VELOCITY & CLOSET ENEMY SELECTION
 // ---------------------------------------------------------------------------
-console.log('\n2. Testing Aimbot Decoupling from Player Velocity (AimbotCheat.js & Player.js):');
+console.log('\n2. Testing Aimbot Decoupling and Closest Enemy Acquisition (AimbotCheat.js & Player.js):');
 {
   const player = new Player(0, 0);
   const spatialGrid = new SpatialHashGrid(128);
   const aimbot = new AimbotCheat();
   aimbot.enabled = true;
 
-  // Add enemy at (200, 0)
-  const enemy = new Enemy(200, 0, ENEMY_ARCHETYPES.BIT_SCANNER);
-  spatialGrid.insert(enemy);
+  // Add two enemies:
+  // Enemy 1: physically closest at (50, 50) -> distance squared 5000
+  // Enemy 2: farther away at (200, 0) -> distance squared 40000, but perfectly aligned with crosshair angle (0)
+  const enemyClose = new Enemy(50, 50, ENEMY_ARCHETYPES.BIT_SCANNER);
+  const enemyFar = new Enemy(200, 0, ENEMY_ARCHETYPES.BIT_SCANNER);
+  spatialGrid.insert(enemyClose);
+  spatialGrid.insert(enemyFar);
 
-  // Player moving up-right (WASD)
+  // Player moving up-right (WASD), crosshair aiming directly at enemyFar (angle 0)
   const moveDir = new Vec2(1, 0).normalize();
-  const rawAimAngle = 0.3; // crosshair slightly offset from enemy at angle 0
+  const rawAimAngle = 0.0; // pointing right at enemyFar
 
   const modifiedAngle = aimbot.onAimInput(rawAimAngle, new Vec2(0, 1), {
     player,
     spatialGrid,
-    enemies: [enemy],
+    enemies: [enemyFar, enemyClose],
     dt: 0.016,
     weapon: { speed: 1200 },
     raycaster: null,
@@ -175,8 +179,10 @@ console.log('\n2. Testing Aimbot Decoupling from Player Velocity (AimbotCheat.js
     hasWallhack: true,
   });
 
-  // Aimbot snaps aimAngle toward enemy at (200, 0) -> angle ~0
-  assert(Math.abs(modifiedAngle) < 0.1, 'Aimbot successfully acquired and snapped aimAngle to enemy');
+  // Closest enemy is at (50, 50), which is at angle Math.PI / 4 (~0.785)
+  // Aimbot must prioritize the closest enemy over the one aligned with the crosshair!
+  const expectedAngle = Math.atan2(50, 50);
+  assert(Math.abs(modifiedAngle - expectedAngle) < 0.01, 'Aimbot prioritized physically closest enemy over crosshair angle');
 
   // Aimbot must NOT touch player velocity or max speed
   assert.equal(player.vx, 0, 'Aimbot did not alter player.vx');
@@ -200,98 +206,96 @@ console.log('\n2. Testing Aimbot Decoupling from Player Velocity (AimbotCheat.js
   assert(player.vx < vxBeforeRecoil, 'Recoil impulse pushed backwards along firing axis');
   assert(player.vx > 50, 'Strafing velocity preserved; strafe inertia was NOT zeroed out');
 
-  console.log('  [PASS] Aimbot completely decoupled from player velocity & strafing inertia');
+  console.log('  [PASS] Aimbot closest-enemy targeting and movement decoupling verified');
 }
 
 // ---------------------------------------------------------------------------
-// 3. REPAIRED LAGSWITCH TEMPORAL FREEZE
+// 3. ROOTKIT.SYS: TIER 0 KERNEL EMP SCREEN PURGE (REPLACING OBSOLETE LAGSWITCH)
 // ---------------------------------------------------------------------------
-console.log('\n3. Testing Repaired Lagswitch Temporal Freeze (LagswitchCheat.js, Enemy.js, Projectile.js, WaveManager.js):');
+console.log('\n3. Testing Rootkit.sys Tier 0 Kernel Exploit (RootkitCheat.js, CheatManager.js):');
 {
   const cheatManager = new CheatManager();
-  cheatManager.addOrUpgradeCheat('lagswitch');
-  const lagswitch = cheatManager.getCheat('lagswitch');
+  cheatManager.addOrUpgradeCheat('rootkit');
+  const rootkit = cheatManager.getCheat('rootkit');
 
-  assert.ok(lagswitch, 'Lagswitch registered in CheatManager');
-  assert.equal(typeof lagswitch.active, 'boolean', 'Lagswitch supports .active getter');
+  assert.ok(rootkit, 'Rootkit registered in CheatManager');
+  assert.equal(rootkit.tier, 0, 'Rootkit is Tier 0 Ring exploit');
 
-  // Trigger lagswitch
-  const triggered = lagswitch.trigger();
-  assert.equal(triggered, true, 'Lagswitch activated successfully');
-  assert.equal(lagswitch.active, true, 'lagswitch.active is true');
-  assert.equal(cheatManager.isActive('lagswitch'), true, 'cheatManager.isActive("lagswitch") is true');
-  assert.equal(lagswitch.shouldFreezeHostiles(), true, 'shouldFreezeHostiles() returns true');
-  assert.equal(lagswitch.shouldFreezeWorld(), true, 'shouldFreezeWorld() returns true');
-
-  // Enemy freeze & ghost afterimage trail verification
+  // Mock game dependencies
   const player = new Player(0, 0);
-  const enemy = new Enemy(150, 100, ENEMY_ARCHETYPES.BIT_SCANNER);
-  const startX = enemy.x;
-  const startY = enemy.y;
+  player.iFramesTimer = 0;
 
-  // Update enemy AI during freeze
-  enemy.updateAI(0.016, player, null, null, cheatManager);
-  assert.equal(enemy.x, startX, 'Enemy X position completely frozen');
-  assert.equal(enemy.y, startY, 'Enemy Y position completely frozen');
-  assert.equal(enemy.isLagswitchFrozen, true, 'enemy.isLagswitchFrozen is set to true');
+  const enemy1 = new Enemy(100, 100, ENEMY_ARCHETYPES.BIT_SCANNER);
+  const enemy2 = new Enemy(300, 200, ENEMY_ARCHETYPES.SENTINEL);
+  const enemies = [enemy1, enemy2];
 
-  // Verify ghost afterimage slots are populated
-  const activeGhosts = enemy._ghostTrails.filter((g) => g.alpha > 0);
-  assert(activeGhosts.length > 0, 'Stutter ghost afterimages recorded for frozen hostile');
+  const purgedProjectiles = [];
+  const projectilePool = {
+    forEachActive: (fn) => {
+      // Create mock projectiles
+      const pHostile = { isHostile: true, active: true };
+      const pPlayer = { isHostile: false, active: true };
+      fn(pHostile);
+      fn(pPlayer);
+    },
+    release: (proj) => {
+      purgedProjectiles.push(proj);
+    },
+  };
 
-  // Direct enemy.update() also obeys lagswitch
-  enemy.update(0.016, cheatManager);
-  assert.equal(enemy.x, startX, 'Enemy position not advanced in enemy.update()');
+  const camera = {
+    addTrauma: (amt) => {
+      camera.trauma = amt;
+    },
+  };
 
-  // Projectile freeze verification
-  const enemyProj = new Projectile();
-  enemyProj.spawn({
-    x: 100,
-    y: 100,
-    angle: 0,
-    speed: 500,
-    layer: COLLISION_LAYER.PROJECTILE_ENEMY,
+  const particleSystem = {
+    emitted: [],
+    emitRing: (x, y, count, color, speed) => {
+      particleSystem.emitted.push({ x, y, count, color, speed });
+    },
+  };
+
+  const soundBank = {
+    played: [],
+    play: (id) => soundBank.played.push(id),
+  };
+
+  // Trigger Rootkit EMP Screen Purge
+  const triggered = rootkit.trigger({
+    player,
+    enemies,
+    projectilePool,
+    camera,
+    particleSystem,
+    soundBank,
   });
-  assert.equal(enemyProj.isHostile, true, 'Enemy projectile marked as hostile');
 
-  const pStartX = enemyProj.x;
-  enemyProj.update(0.016, cheatManager);
-  assert.equal(enemyProj.x, pStartX, 'Hostile projectile position frozen in mid-air');
-  assert.equal(enemyProj.lifetime, 0, 'Hostile projectile lifetime frozen');
+  assert.equal(triggered, true, 'Rootkit triggered successfully');
+  assert(rootkit.cooldownTimer > 0, 'Cooldown initiated after trigger');
 
-  // Player projectile ticks normally
-  const playerProj = new Projectile();
-  playerProj.spawn({
-    x: 0,
-    y: 0,
-    angle: 0,
-    speed: 1000,
-    layer: COLLISION_LAYER.PROJECTILE_PLAYER,
-  });
-  playerProj.update(0.016, cheatManager);
-  assert(playerProj.x > 0, 'Player projectile moves at full speed during lagswitch freeze');
+  // Verify EMP Screen Purge effects:
+  // 1. Hostile projectiles obliterated
+  assert.equal(purgedProjectiles.length, 1, 'Hostile projectiles purged from arena');
+  assert.equal(purgedProjectiles[0].isHostile, true, 'Purged projectile was hostile');
 
-  // WaveManager spawn timer pause verification
-  let spawnedCount = 0;
-  const waveManager = new WaveManager({
-    onSpawnEnemy: () => spawnedCount++,
-  });
-  waveManager.state = WAVE_STATE.COMBAT;
-  waveManager.spawnTimer = 0.8;
+  // 2. All enemies took Tier 0 shockwave damage (300 damage at level 1)
+  assert(enemy1.health < enemy1.maxHealth, 'Enemy 1 damaged by EMP shockwave');
+  assert(enemy2.health < enemy2.maxHealth, 'Enemy 2 damaged by EMP shockwave');
 
-  // When frozen, waveManager.update must pause
-  waveManager.update(0.016, player, 1, true);
-  assert.equal(waveManager.spawnTimer, 0.8, 'WaveManager spawnTimer paused during lagswitch freeze');
+  // 3. Player granted invulnerability frames
+  assert(player.iFramesTimer >= 2.0, 'Player received invulnerability frames');
 
-  // Unfreeze catchup simulation
-  lagswitch.isActive = false;
-  assert.equal(cheatManager.isActive('lagswitch'), false, 'Lagswitch deactivated');
+  // 4. Camera trauma and FX triggered
+  assert(camera.trauma > 0, 'Camera trauma triggered');
+  assert(particleSystem.emitted.length > 0, 'EMP shockwave particles emitted');
 
-  // Unfreezing enemy updates and clears freeze flag
-  enemy.updateAI(0.016, player, null, null, cheatManager);
-  assert.equal(enemy.isLagswitchFrozen, false, 'enemy.isLagswitchFrozen cleared upon unfreezing');
+  // 5. Backwards-compatibility alias for legacy tests: lagswitch queries route to rootkit
+  cheatManager.addOrUpgradeCheat('lagswitch');
+  const legacyCheat = cheatManager.getCheat('lagswitch');
+  assert.ok(legacyCheat, 'Legacy "lagswitch" query resolved to rootkit cheat instance');
 
-  console.log('  [PASS] Lagswitch execution, enemy freeze, ghost afterimages, and projectile freeze verified');
+  console.log('  [PASS] Rootkit EMP screen purge, projectile obliteration, damage & i-frames verified');
 }
 
-console.log('\n=== ALL AUDIO, AIMBOT & LAGSWITCH TESTS PASSED! ===\n');
+console.log('\n=== ALL AUDIO, AIMBOT & ROOTKIT TESTS PASSED! ===\n');

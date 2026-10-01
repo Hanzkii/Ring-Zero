@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 18:10 EEST  
-**Git Head:** `c73c11d` (origin/main)  
-**Test Suite Health:** 601 / 601 passing across 12 test suites (0 failures)
+**Last Updated:** 2026-10-01 18:30 EEST  
+**Git Head:** Pending Commit (origin/main)  
+**Test Suite Health:** All 12 test suites 100% passing (0 failures across all suites)
 
 ---
 
@@ -326,7 +326,12 @@ Ring Zero is hosted as a static client on GitHub Pages. To deliver a genuine, ze
 * **Cyber-Clearance Achievements**: 8 core achievements with procedural sliding HUD vector toasts, localStorage persistence, and dedicated Terminal tab.
 * **Weapon Recoil & Kinetic Polish**: Angular barrel climb and chassis recoil with exponential decay; 2-frame hit-stop freeze on crits; procedural pitch jitter.
 * **Milestone Bosses & Elites**: Wave 5 KERNEL_WATCHER, Wave 10 ZERO_DAY_COLOSSUS, and Shielded/Overclocked/Cluster-Splitter elite modifiers.
-* **Online Edge Leaderboard**: Cloudflare Worker edge script (`scripts/leaderboard-worker.js`) with Web Crypto SHA-256 HMAC validation and offline fallback in `LeaderboardService.js`.
+* **Online Edge Leaderboard**: Cloudflare Worker edge script (`scripts/leaderboard-worker.js`) with Web Crypto SHA-256 HMAC validation, 30s request throttling, and offline fallback in `LeaderboardService.js`.
+* **Rootkit.sys (Ring 0 Kernel Execution)**: Replaced non-working Lagswitch temporal freeze with `Rootkit.sys` (`[F]` key): Ring 0 Kernel EMP Screen Purge that obliterates hostile projectiles arena-wide, deals massive kernel shockwave damage (300/600/950) to all enemies, grants 2.5s–4.0s invulnerability, camera shake, and particle explosions. Removed obsolete freeze branching from `Enemy.js`, `Projectile.js`, `WaveManager.js`, and `GameApp.js`.
+* **Aimbot Closest Enemy Target Priority**: Refactored `AimbotCheat.js` `acquireTarget`: strictly selects physically closest living enemy using squared Euclidean distance (`dx * dx + dy * dy`), overriding crosshair-angle targeting. Decoupled from movement velocity/strafing inertia, supporting unblocked backtrack ghost ticks with 0 allocations.
+* **Procedural Dark Synthwave OST (`SynthMusic.js`)**: 140–165 BPM high-tempo cyber/darksynth engine with detuned sawtooth bass, resonant lowpass sweeps, 150Hz -> 35Hz kick punch, and 3 procedural tracks (`OVERCLOCK_PULSE`, `CYBER_PURGE`, `KERNEL_BREACH`) dynamically rotating across waves.
+* **Procedural Vector Iconography (`VectorIcons.js`)**: Synthesized custom `_drawRootkit` vector icon with concentric EMP shockwave burst spikes, kernel diamond core, root bus conduits, and central high-voltage spark.
+* **Leaderboard Top 100 & Pinned Personal Rank**: monospaced Cyber-Terminal leaderboard table displaying Rank, Call-Sign, Score, Wave, and Tier with scrollable list and pinned personal rank footer.
 
 ---
 

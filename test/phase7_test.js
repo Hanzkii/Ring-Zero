@@ -760,42 +760,40 @@ console.log('\n6. Testing Exploit Synergies, Tiered Arsenal & Remediation:');
   assert(triggerbot.shouldAutoShoot() === true, 'Triggerbot shouldAutoShoot returns true during SilentAim lock');
 }
 
-// 6.3 Lagswitch Hostile Entity & Projectile Gate
+// 6.3 Rootkit Kernel EMP Screen Purge (Replacing obsolete Lagswitch)
 {
   const cheatManager = new CheatManager();
-  cheatManager.clearanceRing = RING_TIER.RING_1;
-  cheatManager.addOrUpgradeCheat('lagswitch');
-  const lagswitch = cheatManager.getCheat('lagswitch');
+  cheatManager.clearanceRing = RING_TIER.RING_0;
+  cheatManager.addOrUpgradeCheat('rootkit');
+  const rootkit = cheatManager.getCheat('rootkit');
 
-  // Trigger lagswitch
-  lagswitch.trigger();
-  assert(cheatManager.isActive('lagswitch') === true, 'Lagswitch is actively freezing');
+  assert(rootkit !== null, 'Rootkit exploit is registered');
+  assert(rootkit.tier === RING_TIER.RING_0, 'Rootkit is Tier 0 Ring exploit');
 
-  const hostileEnemy = new Enemy(100, 100, ENEMY_ARCHETYPES.PACKET_SNIFFER);
-  assert(hostileEnemy.isHostile === true, 'Enemy isHostile is true');
-  assert(hostileEnemy.owner === 'enemy', 'Enemy owner is "enemy"');
-
+  const hostileEnemy = new Enemy(100, 100, ENEMY_ARCHETYPES.BIT_SCANNER);
   const player = new Player(0, 0);
-  const grid = new SpatialHashGrid(128);
 
-  // Update AI while lagswitch is active
-  hostileEnemy.updateAI(1/60, player, grid, () => {}, cheatManager);
-  assert(hostileEnemy.x === 100 && hostileEnemy.y === 100, 'Hostile enemy did not integrate position during lagswitch freeze');
+  const purgedProjectiles = [];
+  const projectilePool = {
+    forEachActiveReverse: (fn) => {
+      const pHostile = { isHostile: true, active: true };
+      const pPlayer = { isHostile: false, active: true };
+      fn(pHostile);
+      fn(pPlayer);
+    },
+    release: (p) => purgedProjectiles.push(p),
+  };
 
-  // Projectile gate test
-  const hostileProj = new Projectile();
-  hostileProj.spawn({ x: 50, y: 50, angle: 0, speed: 600, layer: COLLISION_LAYER.PROJECTILE_ENEMY });
-  assert(hostileProj.isHostile === true, 'Hostile projectile has isHostile = true');
+  const triggered = rootkit.trigger({
+    player,
+    enemies: [hostileEnemy],
+    projectilePool,
+  });
 
-  hostileProj.update(1/60, cheatManager);
-  assert(hostileProj.x === 50, 'Hostile projectile position is frozen during lagswitch');
-
-  const playerProj = new Projectile();
-  playerProj.spawn({ x: 50, y: 50, angle: 0, speed: 600, layer: COLLISION_LAYER.PROJECTILE_PLAYER });
-  assert(playerProj.isHostile === false, 'Player projectile has isHostile = false');
-
-  playerProj.update(1/60, cheatManager);
-  assert(playerProj.x > 50, 'Player projectile advances normally during lagswitch');
+  assert(triggered === true, 'Rootkit EMP Screen Purge triggered successfully');
+  assert(purgedProjectiles.length === 1, 'Hostile projectiles purged from arena');
+  assert(hostileEnemy.health < hostileEnemy.maxHealth, 'Hostile enemy damaged by kernel shockwave');
+  assert(player.iFramesTimer >= 2.0, 'Player received invulnerability frames');
 }
 
 // 6.4 Kernel Panic Event Hooking & Radial Purge

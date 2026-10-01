@@ -108,13 +108,9 @@ export class Projectile extends Entity {
   /**
    * Advances bullet trajectory
    * @param {number} dt
-   * @param {import('../systems/CheatManager.js').CheatManager} [cheatManager=null]
    */
-  update(dt, cheatManager = null) {
+  update(dt) {
     if (!this.active) return;
-    if (cheatManager && cheatManager.isActive('lagswitch') && (this.isHostile || this.owner === 'enemy')) {
-      return;
-    }
 
     this.preStep();
     this.x += this.vx * dt;
