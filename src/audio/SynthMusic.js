@@ -3,13 +3,15 @@
  * Real-time 4-channel step-sequencer using native Web Audio API nodes.
  * Zero external audio dependencies.
  *
- * Tempo: 130 BPM
- * Key: D Minor Pentatonic
- * Channels:
- *  1. Rolling 16th Sub-bass (Triangle)
- *  2. Cyber Arpeggio (Square + dynamic lowpass decay)
- *  3. Synthesized Kick (Sine pitch sweep) + Snare (Noise + Tone)
- *  4. 16th Hi-hats (Filtered noise)
+ * Procedural Darksynth / Cyberpunk OST:
+ * - Aggressive high-tempo cyber/darksynth (140-165 BPM)
+ * - Minor & Phrygian modes (D Minor, C# Phrygian)
+ * - Detuned sawtooth basslines with resonant lowpass filter sweeps
+ * - 4-on-the-floor punchy kick (150Hz -> 35Hz pitch drop), crisp white-noise snares/claps, open 16th hats
+ * - 3 procedural tracks with dynamic rotation:
+ *    1. OVERCLOCK_PULSE (145 BPM driving industrial techno)
+ *    2. CYBER_PURGE (158 BPM aggressive darksynth / EBM)
+ *    3. KERNEL_BREACH (165 BPM relentless breakbeat / drum & bass for boss encounters)
  *
  * Intensity Modes:
  *  - AMBIENT: Subdued drums, lowpass-filtered lead (menus, pause, draft)
@@ -21,41 +23,192 @@ export const MUSIC_INTENSITY = {
   COMBAT: 'COMBAT',
 };
 
-const NOTE = {
-  D1: 36.71,
-  D2: 73.42,
-  F2: 87.31,
-  G2: 98.00,
-  A2: 110.00,
-  C3: 130.81,
-  D3: 146.83,
-  F3: 174.61,
-  G3: 196.00,
-  A3: 220.00,
-  C4: 261.63,
-  D4: 293.66,
-  F4: 349.23,
-  G4: 392.00,
-  A4: 440.00,
-  C5: 523.25,
-  D5: 587.33,
-  F5: 698.46,
+export const MUSIC_TRACKS = {
+  OVERCLOCK_PULSE: 'OVERCLOCK_PULSE',
+  CYBER_PURGE: 'CYBER_PURGE',
+  KERNEL_BREACH: 'KERNEL_BREACH',
 };
 
-// 32-step patterns (2 bars at 16th notes)
-const BASS_SEQUENCE = [
-  NOTE.D2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2, NOTE.D2, NOTE.G2, NOTE.D2,
-  NOTE.D2, NOTE.D2, NOTE.A2, NOTE.G2, NOTE.F2, NOTE.D2, NOTE.C3, NOTE.D2,
-  NOTE.D2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2, NOTE.D2, NOTE.G2, NOTE.A2,
-  NOTE.C3, NOTE.A2, NOTE.G2, NOTE.F2, NOTE.G2, NOTE.F2, NOTE.C3, NOTE.D2,
-];
+const NOTE = {
+  // Octave 1
+  CS1: 34.65,
+  D1: 36.71,
+  DS1: 38.89,
+  E1: 41.20,
+  F1: 43.65,
+  FS1: 46.25,
+  G1: 49.00,
+  GS1: 51.91,
+  A1: 55.00,
+  AS1: 58.27,
+  B1: 61.74,
 
-const ARP_SEQUENCE = [
-  NOTE.D4, NOTE.A4, NOTE.F4, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F4, NOTE.G4,
-  NOTE.A4, NOTE.F4, NOTE.D4, NOTE.A3, NOTE.C4, NOTE.D4, NOTE.F4, NOTE.A4,
-  NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5,
-  NOTE.F5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.F4, NOTE.D4, NOTE.C4,
-];
+  // Octave 2
+  C2: 65.41,
+  CS2: 69.30,
+  D2: 73.42,
+  DS2: 77.78,
+  E2: 82.41,
+  F2: 87.31,
+  FS2: 92.50,
+  G2: 98.00,
+  GS2: 103.83,
+  A2: 110.00,
+  AS2: 116.54,
+  B2: 123.47,
+
+  // Octave 3
+  C3: 130.81,
+  CS3: 138.59,
+  D3: 146.83,
+  DS3: 155.56,
+  E3: 164.81,
+  F3: 174.61,
+  FS3: 185.00,
+  G3: 196.00,
+  GS3: 207.65,
+  A3: 220.00,
+  AS3: 233.08,
+  B3: 246.94,
+
+  // Octave 4
+  C4: 261.63,
+  CS4: 277.18,
+  D4: 293.66,
+  DS4: 311.13,
+  E4: 329.63,
+  F4: 349.23,
+  FS4: 369.99,
+  G4: 392.00,
+  GS4: 415.30,
+  A4: 440.00,
+  AS4: 466.16,
+  B4: 493.88,
+
+  // Octave 5
+  C5: 523.25,
+  CS5: 554.37,
+  D5: 587.33,
+  DS5: 622.25,
+  E5: 659.25,
+  F5: 698.46,
+  FS5: 739.99,
+  G5: 783.99,
+};
+
+// 32-step patterns for the 3 distinct tracks
+export const TRACK_CONFIGS = {
+  [MUSIC_TRACKS.OVERCLOCK_PULSE]: {
+    id: MUSIC_TRACKS.OVERCLOCK_PULSE,
+    name: 'OVERCLOCK_PULSE',
+    bpm: 145,
+    mode: 'D_MINOR',
+    resonance: 6.5,
+    // Driving 16th industrial techno bassline (D minor)
+    bass: [
+      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2, NOTE.D2, NOTE.G2, NOTE.D2,
+      NOTE.D2, NOTE.D2, NOTE.A2, NOTE.G2, NOTE.F2, NOTE.D2, NOTE.C3, NOTE.D2,
+      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2, NOTE.D2, NOTE.G2, NOTE.A2,
+      NOTE.C3, NOTE.A2, NOTE.G2, NOTE.F2, NOTE.G2, NOTE.F2, NOTE.C3, NOTE.D2,
+    ],
+    // Cyber arpeggio
+    lead: [
+      NOTE.D4, NOTE.A4, NOTE.F4, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F4, NOTE.G4,
+      NOTE.A4, NOTE.F4, NOTE.D4, NOTE.A3, NOTE.C4, NOTE.D4, NOTE.F4, NOTE.A4,
+      NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5,
+      NOTE.F5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.F4, NOTE.D4, NOTE.C4,
+    ],
+    // 4-on-the-floor kick with push on 14 & 30
+    kick: [
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0,
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0,
+    ],
+    // Crisp snare/clap on 4, 12, 20, 28
+    snare: [
+      0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+      0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+    ],
+    // 16th hats: 1=closed, 2=open accent on offbeats
+    hats: [
+      1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1,
+      1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2,
+    ],
+  },
+
+  [MUSIC_TRACKS.CYBER_PURGE]: {
+    id: MUSIC_TRACKS.CYBER_PURGE,
+    name: 'CYBER_PURGE',
+    bpm: 158,
+    mode: 'CSHARP_PHRYGIAN',
+    resonance: 7.5,
+    // Aggressive C# Phrygian EBM chugging bass
+    bass: [
+      NOTE.CS2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.CS2, NOTE.E2, NOTE.D2, NOTE.CS2,
+      NOTE.CS2, NOTE.CS2, NOTE.FS2, NOTE.E2, NOTE.D2, NOTE.CS2, NOTE.B1, NOTE.CS2,
+      NOTE.CS2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.CS2, NOTE.GS2, NOTE.FS2, NOTE.E2,
+      NOTE.D2, NOTE.E2, NOTE.D2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.B1, NOTE.CS2,
+    ],
+    // Menacing synth lead
+    lead: [
+      NOTE.CS4, NOTE.E4, NOTE.D4, NOTE.CS4, NOTE.GS4, NOTE.A4, NOTE.GS4, NOTE.E4,
+      NOTE.D4, NOTE.CS4, NOTE.D4, NOTE.E4, NOTE.FS4, NOTE.E4, NOTE.D4, NOTE.CS4,
+      NOTE.E4, NOTE.FS4, NOTE.GS4, NOTE.A4, NOTE.GS4, NOTE.FS4, NOTE.E4, NOTE.D4,
+      NOTE.CS4, NOTE.D4, NOTE.E4, NOTE.FS4, NOTE.E4, NOTE.D4, NOTE.CS4, NOTE.B3,
+    ],
+    // Relentless 4-on-the-floor kick + double-kick groove
+    kick: [
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
+    ],
+    // Snare/clap on 4, 12, 20, 28 with roll on 30
+    snare: [
+      0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+      0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
+    ],
+    // Fast 16th hats with biting accents
+    hats: [
+      1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
+      1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 2, 2,
+    ],
+  },
+
+  [MUSIC_TRACKS.KERNEL_BREACH]: {
+    id: MUSIC_TRACKS.KERNEL_BREACH,
+    name: 'KERNEL_BREACH',
+    bpm: 165,
+    mode: 'RELENTLESS_BREAKBEAT',
+    resonance: 8.5,
+    // Relentless rolling reese/saw bassline for boss encounters
+    bass: [
+      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.DS2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2,
+      NOTE.D2, NOTE.D2, NOTE.GS2, NOTE.G2, NOTE.F2, NOTE.D2, NOTE.C3, NOTE.DS2,
+      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.DS2, NOTE.D2, NOTE.D2, NOTE.A2, NOTE.GS2,
+      NOTE.F2, NOTE.DS2, NOTE.F2, NOTE.G2, NOTE.GS2, NOTE.A2, NOTE.C3, NOTE.D2,
+    ],
+    // Relentless piercing cyber arp
+    lead: [
+      NOTE.D5, NOTE.A4, NOTE.F5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F5, NOTE.GS4,
+      NOTE.A4, NOTE.F5, NOTE.D5, NOTE.C5, NOTE.DS5, NOTE.D5, NOTE.C5, NOTE.A4,
+      NOTE.D5, NOTE.F5, NOTE.GS5, NOTE.A5, NOTE.F5, NOTE.D5, NOTE.C5, NOTE.DS5,
+      NOTE.F5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.D4,
+    ],
+    // Syncopated breakbeat kick
+    kick: [
+      1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+      1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+    ],
+    // Hard breakbeat snare with ghost hits on 7, 15, 23
+    snare: [
+      0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1,
+      0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1,
+    ],
+    // Intense open 16th hats
+    hats: [
+      2, 1, 2, 1, 2, 1, 2, 2, 2, 1, 2, 1, 2, 1, 2, 2,
+      2, 1, 2, 1, 2, 1, 2, 2, 2, 1, 2, 1, 2, 2, 2, 2,
+    ],
+  },
+};
 
 export class SynthMusic {
   /**
@@ -63,14 +216,24 @@ export class SynthMusic {
    * @param {import('./SynthAudio.js').SynthAudio} [options.synth]
    * @param {AudioContext} [options.ctx]
    * @param {AudioNode} [options.destination]
+   * @param {string} [options.track]
    */
-  constructor({ synth = null, ctx = null, destination = null } = {}) {
+  constructor({ synth = null, ctx = null, destination = null, track = null } = {}) {
     this.synth = synth;
     this.ctx = ctx || synth?.ctx || null;
     this.destination = destination || synth?.musicGain || synth?.masterGain || null;
 
-    this.bpm = 130;
-    this.stepDuration = 60 / (this.bpm * 4); // ~0.11538s per 16th note
+    this.currentTrack = MUSIC_TRACKS.OVERCLOCK_PULSE;
+    this.currentTrackConfig = TRACK_CONFIGS[this.currentTrack];
+
+    // Maintain legacy 130 BPM default if no track was explicitly provided
+    if (track && TRACK_CONFIGS[track]) {
+      this.setTrack(track);
+    } else {
+      this.bpm = 130;
+      this.stepDuration = 60 / (this.bpm * 4); // ~0.11538s per 16th note
+    }
+
     this.scheduleAheadTime = 0.12; // 120ms lookahead
     this.lookaheadIntervalMs = 25;
 
@@ -84,6 +247,37 @@ export class SynthMusic {
 
     this.masterGain = null;
     this.noiseBuffer = null;
+  }
+
+  /**
+   * Switches the active procedural darksynth track
+   * @param {string} trackId - 'OVERCLOCK_PULSE', 'CYBER_PURGE', or 'KERNEL_BREACH'
+   */
+  setTrack(trackId) {
+    const config = TRACK_CONFIGS[trackId];
+    if (!config) return;
+
+    this.currentTrack = trackId;
+    this.currentTrackConfig = config;
+    this.bpm = config.bpm;
+    this.stepDuration = 60 / (this.bpm * 4);
+  }
+
+  /**
+   * Dynamically rotates tracks according to wave progression and milestone boss encounters
+   * @param {number} waveNumber
+   */
+  setTrackForWave(waveNumber) {
+    if (waveNumber === 5 || waveNumber === 10 || waveNumber % 5 === 0) {
+      // Milestone boss waves: relentless breakbeat
+      this.setTrack(MUSIC_TRACKS.KERNEL_BREACH);
+    } else if (waveNumber % 2 === 1) {
+      // Odd waves: industrial techno
+      this.setTrack(MUSIC_TRACKS.OVERCLOCK_PULSE);
+    } else {
+      // Even waves: aggressive EBM / darksynth
+      this.setTrack(MUSIC_TRACKS.CYBER_PURGE);
+    }
   }
 
   /**
@@ -128,7 +322,7 @@ export class SynthMusic {
   _generateNoiseBuffer() {
     if (!this.ctx) return;
     const sampleRate = this.ctx.sampleRate;
-    const bufferSize = sampleRate * 1; // 1-second noise
+    const bufferSize = sampleRate * 1; // 1-second preallocated noise
     this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, sampleRate);
     const data = this.noiseBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -222,69 +416,79 @@ export class SynthMusic {
     if (!this.ctx || !this.masterGain) return;
 
     const isCombat = this.intensity === MUSIC_INTENSITY.COMBAT;
+    const track = this.currentTrackConfig || TRACK_CONFIGS[MUSIC_TRACKS.OVERCLOCK_PULSE];
 
-    // 1. Channel 1: Sub-Bass Line (Triangle)
-    const bassFreq = BASS_SEQUENCE[step % BASS_SEQUENCE.length];
+    // 1. Channel 1: Driving 16th Sawtooth Bass with resonant lowpass sweep
+    const bassFreq = track.bass[step % track.bass.length];
     if (bassFreq) {
-      this._playBassNote(bassFreq, time, isCombat ? 0.35 : 0.22);
+      this._playBassNote(bassFreq, time, isCombat ? 0.38 : 0.22, track.resonance || 6.5);
     }
 
-    // 2. Channel 2: Cyber Arp (Square with dynamic lowpass decay)
-    const arpFreq = ARP_SEQUENCE[step % ARP_SEQUENCE.length];
+    // 2. Channel 2: Cyber / Darksynth Arp (Square with dynamic lowpass decay)
+    const arpFreq = track.lead[step % track.lead.length];
     if (arpFreq) {
-      // In ambient, play every other 16th to create breathing space
       if (isCombat || step % 2 === 0) {
         this._playArpNote(arpFreq, time, isCombat);
       }
     }
 
-    // 3. Channel 3: Synthesized Kick & Snare
-    // Kick: 4-on-the-floor in combat (0, 4, 8, 12, ...), 1 and 3 in ambient (0, 8, 16, 24)
-    const isKickStep = isCombat
-      ? step % 4 === 0
-      : step % 8 === 0;
-
-    if (isKickStep) {
-      this._playKick(time, isCombat ? 0.55 : 0.3);
-    }
-
-    // Snare: steps 4, 12, 20, 28 (beats 2 and 4)
-    if (step % 8 === 4) {
-      if (isCombat) {
-        this._playSnare(time, 0.35);
-      } else {
-        this._playSnare(time, 0.12);
+    // 3. Channel 3: Synthesized 4-on-the-Floor Kick Punch & Snare/Clap
+    const kickHit = track.kick[step % track.kick.length];
+    if (kickHit) {
+      const isDownbeat = step % 8 === 0;
+      if (isCombat || isDownbeat) {
+        this._playKick(time, isCombat ? 0.58 : 0.32);
       }
     }
 
-    // 4. Channel 4: 16th Hi-Hats
-    if (isCombat) {
-      // Accent off-beats (step % 4 === 2)
-      const isAccent = step % 4 === 2;
-      this._playHiHat(time, isAccent ? 0.15 : 0.08, isAccent ? 0.04 : 0.02);
-    } else if (step % 4 === 2) {
-      // Subdued 8th-note hats in ambient
-      this._playHiHat(time, 0.06, 0.02);
+    const snareHit = track.snare[step % track.snare.length];
+    if (snareHit) {
+      this._playSnare(time, isCombat ? 0.38 : 0.14);
+    }
+
+    // 4. Channel 4: 16th Hi-Hats with open accents on offbeats
+    const hatType = track.hats[step % track.hats.length];
+    if (hatType) {
+      const isOpen = hatType === 2;
+      if (isCombat) {
+        this._playHiHat(time, isOpen ? 0.16 : 0.08, isOpen);
+      } else if (isOpen) {
+        this._playHiHat(time, 0.06, false);
+      }
     }
   }
 
   /**
-   * Channel 1: Triangle sub-bass note
+   * Channel 1: Detuned sawtooth bass note with resonant lowpass filter sweep
    * @private
    */
-  _playBassNote(freq, time, gainLevel) {
+  _playBassNote(freq, time, gainLevel, resonance = 6.5) {
     const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
     const gain = this.ctx.createGain();
 
-    osc.type = 'triangle';
+    osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(freq, time);
+    // Detune by -6 cents for dark synth fullness
+    osc.detune.setValueAtTime(-6, time);
 
-    const dur = this.stepDuration * 0.9;
+    filter.type = 'lowpass';
+    filter.Q.setValueAtTime(resonance, time);
+
+    const dur = this.stepDuration * 0.92;
+    const isCombat = this.intensity === MUSIC_INTENSITY.COMBAT;
+    const cutoffPeak = isCombat ? 2200 : 800;
+    const cutoffBase = isCombat ? 220 : 120;
+
+    filter.frequency.setValueAtTime(cutoffPeak, time);
+    filter.frequency.exponentialRampToValueAtTime(cutoffBase, time + dur * 0.7);
+
     gain.gain.setValueAtTime(0.001, time);
-    gain.gain.linearRampToValueAtTime(gainLevel, time + 0.01);
+    gain.gain.linearRampToValueAtTime(gainLevel, time + 0.006);
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
 
-    osc.connect(gain);
+    osc.connect(filter);
+    filter.connect(gain);
     gain.connect(this.masterGain);
 
     osc.start(time);
@@ -292,7 +496,7 @@ export class SynthMusic {
   }
 
   /**
-   * Channel 2: Square wave arp with dynamic lowpass sweep
+   * Channel 2: Cyber square wave arp with dynamic lowpass sweep
    * @private
    */
   _playArpNote(freq, time, isCombat) {
@@ -306,8 +510,8 @@ export class SynthMusic {
     filter.type = 'lowpass';
     filter.Q.setValueAtTime(isCombat ? 5 : 2, time);
 
-    const cutoffPeak = isCombat ? 2400 : 700;
-    const cutoffBase = isCombat ? 400 : 250;
+    const cutoffPeak = isCombat ? 2600 : 750;
+    const cutoffBase = isCombat ? 420 : 250;
     const dur = this.stepDuration * 0.85;
 
     filter.frequency.setValueAtTime(cutoffPeak, time);
@@ -327,7 +531,7 @@ export class SynthMusic {
   }
 
   /**
-   * Channel 3a: Sine pitch-swept kick drum
+   * Channel 3a: 4-on-the-floor kick punch (pitch drop from 150Hz to 35Hz)
    * @private
    */
   _playKick(time, gainLevel) {
@@ -335,7 +539,7 @@ export class SynthMusic {
     const gain = this.ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(140, time);
+    osc.frequency.setValueAtTime(150, time);
     osc.frequency.exponentialRampToValueAtTime(35, time + 0.08);
 
     const dur = 0.12;
@@ -350,7 +554,7 @@ export class SynthMusic {
   }
 
   /**
-   * Channel 3b: Noise + tone snare drum
+   * Channel 3b: Noise + tone crisp snare/clap
    * @private
    */
   _playSnare(time, gainLevel) {
@@ -362,11 +566,11 @@ export class SynthMusic {
 
     const noiseFilter = this.ctx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
-    noiseFilter.frequency.setValueAtTime(1200, time);
-    noiseFilter.Q.setValueAtTime(1.5, time);
+    noiseFilter.frequency.setValueAtTime(1400, time);
+    noiseFilter.Q.setValueAtTime(1.8, time);
 
     const noiseGain = this.ctx.createGain();
-    const dur = 0.1;
+    const dur = 0.11;
     noiseGain.gain.setValueAtTime(gainLevel, time);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, time + dur);
 
@@ -377,15 +581,15 @@ export class SynthMusic {
     noiseSource.start(time);
     noiseSource.stop(time + dur);
 
-    // Subtle tone body
+    // Subtle tone punch
     const toneOsc = this.ctx.createOscillator();
     const toneGain = this.ctx.createGain();
 
     toneOsc.type = 'triangle';
-    toneOsc.frequency.setValueAtTime(180, time);
-    toneOsc.frequency.exponentialRampToValueAtTime(70, time + 0.05);
+    toneOsc.frequency.setValueAtTime(190, time);
+    toneOsc.frequency.exponentialRampToValueAtTime(65, time + 0.05);
 
-    toneGain.gain.setValueAtTime(gainLevel * 0.6, time);
+    toneGain.gain.setValueAtTime(gainLevel * 0.65, time);
     toneGain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
 
     toneOsc.connect(toneGain);
@@ -396,10 +600,10 @@ export class SynthMusic {
   }
 
   /**
-   * Channel 4: Highpass filtered noise hi-hat
+   * Channel 4: Highpass filtered noise hi-hat (closed vs open 16th hats)
    * @private
    */
-  _playHiHat(time, gainLevel, dur = 0.03) {
+  _playHiHat(time, gainLevel, isOpen = false) {
     if (!this.noiseBuffer) return;
 
     const noiseSource = this.ctx.createBufferSource();
@@ -407,9 +611,10 @@ export class SynthMusic {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'highpass';
-    filter.frequency.setValueAtTime(7500, time);
+    filter.frequency.setValueAtTime(isOpen ? 6500 : 8000, time);
 
     const gain = this.ctx.createGain();
+    const dur = isOpen ? 0.09 : 0.025;
     gain.gain.setValueAtTime(gainLevel, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
 

@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 18:00 EEST  
-**Git Head:** `734be68` (origin/main)  
-**Test Suite Health:** 564 / 564 passing across 11 test suites (0 failures)
+**Last Updated:** 2026-10-01 18:10 EEST  
+**Git Head:** `c73c11d` (origin/main)  
+**Test Suite Health:** 601 / 601 passing across 12 test suites (0 failures)
 
 ---
 
@@ -185,6 +185,25 @@
   - `getPlayerBestRun()` helper retrieving the local player's best verified run and cryptographic signature.
   - Monospace cyber-terminal Top 100 leaderboard table in `TerminalUI.js` with active player cyan row highlighting (`[YOU]`).
   - Pinned Personal Rank footer separated by dashed border when player is outside the top 100 (`#??? | <TAG> [YOU] | <SCORE> | WAVE <X> | [LOCAL BEST / UNRANKED]`), or unranked fallback (`-- | <TAG> [YOU] | NO TELEMETRY RECORDED`).
+* **Procedural Dark Synthwave OST & Audio Pacing** (`SynthMusic.js`, `GameApp.js`):
+  - Aggressive, high-tempo cyber/darksynth engine (140-165 BPM) utilizing D Minor and C# Phrygian modes.
+  - Driving 16th-note detuned sawtooth basslines routed through resonant lowpass filters (`Q = 6.5 - 8.5`) with rhythmic cutoff frequency sweeps.
+  - Procedural 4-on-the-floor kick punch (150Hz -> 35Hz exponential pitch drop), crisp bandpass noise snares/claps, and 16th open/closed hi-hats.
+  - 3 procedural tracks with automatic wave escalation rotation:
+    1. `OVERCLOCK_PULSE` (145 BPM driving industrial techno for odd waves).
+    2. `CYBER_PURGE` (158 BPM aggressive darksynth / EBM for even waves).
+    3. `KERNEL_BREACH` (165 BPM relentless breakbeat / drum & bass for boss waves 5 and 10).
+* **True Aimbot Velocity & Inertia Decoupling** (`AimbotCheat.js`, `Player.js`, `WeaponSystem.js`):
+  - Aimbot exclusively calculates and steers `aimAngle` toward hostile targets; never touches, damps, or zeroes `player.vx`, `player.vy`, or WASD movement velocity.
+  - Tactical weapon recoil kick imparts physical impulse strictly along the firing vector, preserving 100% of player strafing inertia and full movement speed during target lock-on.
+  - Added universal `Player.update(dt, moveDir, aimAngle)` and `AimbotCheat.update()` decoupling verification.
+* **Repaired Lagswitch Temporal Freeze & Visual Feedback** (`LagswitchCheat.js`, `Enemy.js`, `Projectile.js`, `WaveManager.js`, `GameApp.js`):
+  - Added `.active` getter/setter and synchronized `cheatManager.isActive('lagswitch')` across all hostile simulation loops.
+  - Freezes hostile positions, pathfinding, and attack cooldowns completely (`dt = 0` for enemies).
+  - Freezes hostile projectile ballistics in place while player projectiles advance at full 60Hz.
+  - Pauses hostile spawn timers in `WaveManager.js` during active freeze duration.
+  - Preallocated stutter / ghost afterimage trail visual indicator with red scanlines behind frozen security daemons (`[SOCKET_HALT]`).
+  - Buffers target positions during socket freeze and smoothly blends / snaps catch-up kinematics upon unfreezing.
 
 ---
 
@@ -255,8 +274,9 @@ All 11 automated test suites passing cleanly:
 9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
 10. `test/phase8_test.js`: True silent aim decoupling, screen flash elimination, tier 2 arsenal UX, achievements engine & toasts, weapon recoil & hit-stop, boss encounters & elite modifiers, cloudflare worker leaderboard integration (19 tests)
 11. `test/leaderboard_integration_test.js`: Cloudflare Worker HMAC signing, submitRun offline queueing under ring0_pending_submissions, fetchTopScores caching under ring0_leaderboard_cache, worker handler, live UI status, 30-second client-side throttling with immediate submitRun invalidation, and Top 100 display with getPlayerBestRun & pinned personal rank footer verification (8 tests)
+12. `test/audio_aimbot_lagswitch_test.js`: Procedural darksynth OST tracks, tempo, and wave rotation; aimbot velocity decoupling; lagswitch enemy dt=0 freeze, ghost trails, projectile freeze, wave timer pause, and unfreeze catchup (37 tests)
 
-**Total: 564 tests passing, 0 failing.**
+**Total: 601 tests passing, 0 failing across 12 test suites.**
 
 ---
 

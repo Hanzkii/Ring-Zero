@@ -147,6 +147,7 @@ export class CheatManager {
     const cheat = this.activeCheats.get(cheatId.toLowerCase());
     if (!cheat || !cheat.enabled) return false;
     if (typeof cheat.isActive === 'boolean') return cheat.isActive;
+    if (typeof cheat.active === 'boolean') return cheat.active;
     return true;
   }
 

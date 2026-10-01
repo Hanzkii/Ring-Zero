@@ -21,6 +21,18 @@ export class AimbotCheat extends CheatInterceptor {
   }
 
   /**
+   * Cheat lifecycle update.
+   * Aimbot strictly operates on aimAngle and targeting lead.
+   * It is decoupled from player movement and never overwrites or damps player velocity (vx, vy),
+   * moveSpeed, or the WASD directional movement vector.
+   * @param {number} [dt=0.016]
+   * @param {Object} [context={}]
+   */
+  update(dt = 0.016, context = {}) {
+    // Strictly no-op for player movement velocity.
+  }
+
+  /**
    * Snaps or lerps aim angle towards the optimal target (enemy body or backtrack ghost) in FOV
    * @param {number} rawAimAngle
    * @param {Vec2} aimVector

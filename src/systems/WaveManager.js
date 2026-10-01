@@ -54,9 +54,15 @@ export class WaveManager {
    * @param {number} dt
    * @param {import('../entities/Player.js').Player} player
    * @param {number} activeEnemyCount
+   * @param {boolean} [isFrozen=false] - Whether hostile spawns are frozen by lagswitch
    */
-  update(dt, player, activeEnemyCount) {
+  update(dt, player, activeEnemyCount, isFrozen = false) {
     this.enemiesRemaining = activeEnemyCount;
+
+    if (isFrozen) {
+      // Hostile spawn timers in WaveManager.js must pause while Lagswitch is active
+      return;
+    }
 
     if (this.state === WAVE_STATE.PREPARING) {
       this.prepTimer -= dt;

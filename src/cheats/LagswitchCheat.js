@@ -26,6 +26,14 @@ export class LagswitchCheat extends CheatInterceptor {
     this.reset();
   }
 
+  get active() {
+    return this.isActive;
+  }
+
+  set active(val) {
+    this.isActive = Boolean(val);
+  }
+
   get maxDuration() {
     // Rank 1: 2.5s freeze
     // Rank 2: 4.0s freeze
@@ -74,7 +82,7 @@ export class LagswitchCheat extends CheatInterceptor {
    * @returns {boolean}
    */
   shouldFreezeHostiles() {
-    return this.enabled && this.isActive;
+    return this.enabled && Boolean(this.isActive || this.active);
   }
 
   /**

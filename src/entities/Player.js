@@ -130,12 +130,21 @@ export class Player extends Entity {
   }
 
   /**
-   * Applies tactile weapon recoil kick and barrel muzzle climb
+   * Applies tactile weapon recoil kick and barrel muzzle climb.
+   * Only pushes along the camera/aim axis and does not zero out player strafing inertia.
    * @param {number} [trauma=0.1]
+   * @param {number} [aimAngle=null]
    */
-  applyRecoil(trauma = 0.1) {
+  applyRecoil(trauma = 0.1, aimAngle = null) {
     this.recoilKickOffset = Math.min(8, this.recoilKickOffset + trauma * 16);
     this.recoilClimbAngle += (Math.random() - 0.5) * trauma * 0.25;
+
+    // Recoil impulse along the aim axis without zeroing or damping player strafe inertia
+    if (aimAngle !== null && typeof aimAngle === 'number') {
+      const impulse = trauma * 8.0;
+      this.vx -= Math.cos(aimAngle) * impulse;
+      this.vy -= Math.sin(aimAngle) * impulse;
+    }
   }
 
   /**
@@ -176,6 +185,16 @@ export class Player extends Entity {
     this.vy = this.dashDirection.y * PLAYER_CONFIG.DASH_IMPULSE;
 
     return true;
+  }
+
+  /**
+   * Universal update method for Player kinematics and orientation
+   * @param {number} dt
+   * @param {Vec2} moveDir
+   * @param {number} aimAngle
+   */
+  update(dt, moveDir, aimAngle) {
+    return this.updateKinematics(dt, moveDir, aimAngle);
   }
 
   /**

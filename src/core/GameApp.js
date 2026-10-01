@@ -198,6 +198,7 @@ export class GameApp {
       );
     };
 
+    this._lastMusicWave = 0;
     this.waveManager = new WaveManager({
       onSpawnEnemy: (enemy) => this.spawnEnemy(enemy),
     });
@@ -536,7 +537,9 @@ export class GameApp {
     this.state = APP_STATE.RUN;
     if (this.synthMusic) {
       this.synthMusic.start();
+      this.synthMusic.setTrackForWave(this.waveManager.waveNumber || 1);
       this.synthMusic.setIntensity(MUSIC_INTENSITY.COMBAT);
+      this._lastMusicWave = this.waveManager.waveNumber || 1;
     }
     if (!this.loop.isRunning) {
       this.loop.start();
@@ -724,8 +727,18 @@ export class GameApp {
     this.player.y = Math.max(-halfH, Math.min(halfH, this.player.y));
     this.spatialGrid.update(this.player);
 
-    // Wave Director Update
-    this.waveManager.update(dt, this.player, this.enemies.length);
+    // Lagswitch temporal freeze check across all hostile loops
+    const lagswitchCheat = this.cheatManager.getCheat('lagswitch');
+    const isLagswitchFrozen = !!(this.cheatManager.isActive('lagswitch') || lagswitchCheat?.active || lagswitchCheat?.shouldFreezeHostiles());
+
+    // Dynamic music track rotation per wave progression
+    if (this.waveManager.waveNumber !== this._lastMusicWave) {
+      this._lastMusicWave = this.waveManager.waveNumber;
+      this.synthMusic?.setTrackForWave(this.waveManager.waveNumber);
+    }
+
+    // Wave Director Update (pauses enemy spawn timers during lagswitch freeze)
+    this.waveManager.update(dt, this.player, this.enemies.length, isLagswitchFrozen);
 
     // Dynamic Biome Progression: Waves 1-5 Facility, Wave 6+ Decrypted Caverns
     const targetBiome = this.waveManager.currentWave >= 6 ? 'cavern' : 'facility';
@@ -745,18 +758,15 @@ export class GameApp {
       }
     }
 
-    const freezeWorld = !!this.cheatManager.getCheat('lagswitch')?.shouldFreezeWorld();
-
-    // Enemy AI & Kinematics
+    // Enemy AI & Kinematics (freezes enemy dt=0 during lagswitch while updating stutter trails)
     for (let i = 0; i < this.enemies.length; i++) {
       const enemy = this.enemies[i];
-      if (!freezeWorld) {
-        enemy.updateAI(dt, this.player, this.spatialGrid, (pulseParams) => {
-          const p = this.projectilePool.obtain();
-          if (p) p.spawn(pulseParams);
-        }, this.cheatManager);
-      }
-      this.cheatManager.updateEnemy(enemy, dt, { player: this.player });
+      const enemyDt = isLagswitchFrozen ? 0 : dt;
+      enemy.updateAI(enemyDt, this.player, this.spatialGrid, (pulseParams) => {
+        const p = this.projectilePool.obtain();
+        if (p) p.spawn(pulseParams);
+      }, this.cheatManager, isLagswitchFrozen);
+      this.cheatManager.updateEnemy(enemy, enemyDt, { player: this.player, isFrozen: isLagswitchFrozen });
       this.spatialGrid.update(enemy);
     }
 
@@ -770,9 +780,9 @@ export class GameApp {
       this.spatialGrid.update(drop);
     }
 
-    // Projectile Ballistics Simulation
+    // Projectile Ballistics Simulation (freezes hostile projectiles in place)
     this.projectilePool.forEachActiveReverse((proj) => {
-      if (freezeWorld && proj.layer === COLLISION_LAYER.PROJECTILE_ENEMY) {
+      if (isLagswitchFrozen && (proj.isHostile || proj.owner === 'enemy' || proj.layer === COLLISION_LAYER.PROJECTILE_ENEMY)) {
         return;
       }
       proj.update(dt, this.cheatManager);
