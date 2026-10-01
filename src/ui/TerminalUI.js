@@ -614,6 +614,7 @@ export class TerminalUI {
 
     container.querySelector('#btn-refresh-leaderboard')?.addEventListener('click', () => {
       this.soundBank.playUIClick();
+      this.leaderboard.lastFetch = 0;
       this._renderLeaderboardTab(container);
     });
   }

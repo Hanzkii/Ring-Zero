@@ -257,5 +257,61 @@ if (typeof window === 'undefined') {
     console.log('  [PASS] Terminal UI status indicators and table columns verified');
   }
 
+  // 7. Client-Side Throttling (30s TTL) & Submission Invalidation
+  console.log('\n7. Testing Client-Side Request Throttling & Submission Invalidation:');
+  {
+    global.localStorage.clear();
+    let leaderboardFetchCount = 0;
+    const originalFetch = global.fetch;
+    global.fetch = async (url) => {
+      if (String(url).includes('/api/leaderboard')) {
+        leaderboardFetchCount++;
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          scores: [
+            { player_name: 'THROTTLE_OP', score: 77700, wave_number: 14, clearance_ring: 'RING_0' }
+          ]
+        })
+      };
+    };
+
+    const lb = new LeaderboardService();
+    assert.equal(lb.lastFetch, 0, 'lastFetch is initially 0');
+    assert.equal(lb.cachedScores, null, 'cachedScores is initially null');
+
+    // First fetch should hit network
+    const scores1 = await lb.fetchTopScores(10);
+    assert.equal(leaderboardFetchCount, 1, 'First fetch triggers network call');
+    assert.equal(scores1.length, 1, 'Fetched 1 record');
+    assert(lb.lastFetch > 0, 'lastFetch timestamp recorded');
+    assert(Array.isArray(lb.cachedScores), 'cachedScores populated in memory');
+
+    // Immediate second fetch should be throttled (30s cooldown active)
+    const scores2 = await lb.fetchTopScores(10);
+    assert.equal(leaderboardFetchCount, 1, 'Second fetch within 30s is throttled (no network call)');
+    assert.equal(scores2[0].playerName, 'THROTTLE_OP', 'Throttled fetch returns cached data');
+
+    // submitRun must immediately invalidate the cooldown
+    await lb.submitRun({
+      playerName: 'BYPASS_OP',
+      score: 88800,
+      waveNumber: 16,
+      clearanceRing: 0,
+      durationSeconds: 320,
+    });
+    assert.equal(lb.lastFetch, 0, 'submitRun resets lastFetch to 0');
+    assert.equal(lb.cachedScores, null, 'submitRun clears cachedScores to null');
+
+    // Subsequent fetch immediately hits network without waiting 30 seconds
+    const scores3 = await lb.fetchTopScores(10);
+    assert.equal(leaderboardFetchCount, 2, 'Post-submit fetch bypasses 30s timer and hits network immediately');
+
+    global.fetch = originalFetch;
+    console.log('  [PASS] 30s client-side cooldown and submission invalidation verified');
+  }
+
   console.log('\n=== ALL CLOUDFLARE WORKER LEADERBOARD TESTS PASSED! ===\n');
 })();

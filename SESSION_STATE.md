@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 17:45 EEST  
-**Git Head:** `33253a9` (origin/main)  
-**Test Suite Health:** 562 / 562 passing across 11 test suites (0 failures)
+**Last Updated:** 2026-10-01 17:55 EEST  
+**Git Head:** `15e9f9c` (origin/main)  
+**Test Suite Health:** 563 / 563 passing across 11 test suites (0 failures)
 
 ---
 
@@ -251,9 +251,9 @@ All 11 automated test suites passing cleanly:
 8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
 9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
 10. `test/phase8_test.js`: True silent aim decoupling, screen flash elimination, tier 2 arsenal UX, achievements engine & toasts, weapon recoil & hit-stop, boss encounters & elite modifiers, cloudflare worker leaderboard integration (19 tests)
-11. `test/leaderboard_integration_test.js`: Cloudflare Worker HMAC signing, submitRun offline queueing under ring0_pending_submissions, fetchTopScores caching under ring0_leaderboard_cache, worker handler, and live UI status (6 tests)
+11. `test/leaderboard_integration_test.js`: Cloudflare Worker HMAC signing, submitRun offline queueing under ring0_pending_submissions, fetchTopScores caching under ring0_leaderboard_cache, worker handler, live UI status, and 30-second client-side throttling with immediate submitRun invalidation (7 tests)
 
-**Total: 562 tests passing, 0 failing.**
+**Total: 563 tests passing, 0 failing.**
 
 ---
 

@@ -26,6 +26,8 @@ export class LeaderboardService {
     this.hmacSecret = options.hmacSecret || HMAC_SECRET;
     this.enableRemote = options.enableRemote ?? true;
     this.isOnline = true;
+    this.lastFetch = 0;
+    this.cachedScores = null;
   }
 
   /**
@@ -173,6 +175,10 @@ export class LeaderboardService {
     riskMultiplier = 1.0,
     bountiesEarned = 0,
   }) {
+    // Invalidate local cooldown on run submission to guarantee fresh telemetry
+    this.lastFetch = 0;
+    this.cachedScores = null;
+
     const finalPlayerName = (playerName || callsign || 'OPERATOR_0').toUpperCase().slice(0, 14);
     const finalScore = Math.floor(score || 0);
     const finalWave = Math.floor(waveNumber !== undefined ? waveNumber : (wavesCleared || 0));
@@ -284,15 +290,62 @@ export class LeaderboardService {
   }
 
   /**
+   * Retrieves locally cached leaderboard records without dispatching a network request
+   * @param {number} [limit=100]
+   * @returns {Array<Object>}
+   */
+  getLocalScores(limit = 100) {
+    if (this.cachedScores && Array.isArray(this.cachedScores) && this.cachedScores.length > 0) {
+      return this.cachedScores.slice(0, limit);
+    }
+
+    const cached = this.loadCachedScores();
+    if (cached && cached.length > 0) {
+      this.cachedScores = cached;
+      return cached.slice(0, limit);
+    }
+
+    const local = this.loadLocalScores();
+    const combined = [...SEEDED_RECORDS, ...local];
+    const unique = [];
+    const seen = new Set();
+    for (const item of combined) {
+      const key = item.signature || item.checksum || `${item.playerName || item.callsign}_${item.score}_${item.timestamp}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(item);
+      }
+    }
+
+    unique.sort((a, b) => b.score - a.score);
+
+    return unique.slice(0, limit).map((entry, idx) => ({
+      ...entry,
+      rank: idx + 1,
+      callsign: (entry.callsign || entry.playerName || 'OPERATOR_0').toUpperCase(),
+      playerName: (entry.playerName || entry.callsign || 'OPERATOR_0').toUpperCase(),
+      waveNumber: entry.waveNumber !== undefined ? entry.waveNumber : (entry.wavesCleared !== undefined ? entry.wavesCleared : 0),
+      wavesCleared: entry.wavesCleared !== undefined ? entry.wavesCleared : (entry.waveNumber !== undefined ? entry.waveNumber : 0),
+      clearanceRing: entry.clearanceRing !== undefined ? entry.clearanceRing : (entry.clearanceTier !== undefined ? entry.clearanceTier : 3),
+    }));
+  }
+
+  /**
    * Fetches top rankings from Cloudflare Worker or local cache
    * Performs GET /api/leaderboard?limit=100
    * On success: caches array in localStorage under ring0_leaderboard_cache
    * On error/offline: returns cached scores gracefully
+   * Throttles network requests to at most once per 30 seconds
    * @param {number} [limit=100]
    * @param {boolean} [tryRemote=true]
    * @returns {Promise<Array<Object>>}
    */
   async fetchTopScores(limit = 100, tryRemote = true) {
+    // 1. Client-Side Cooldown (30-second TTL): return local scores if within 30s
+    if (this.lastFetch && Date.now() - this.lastFetch < 30000) {
+      return this.getLocalScores(limit);
+    }
+
     if (tryRemote && this.enableRemote && typeof fetch === 'function') {
       try {
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -310,6 +363,7 @@ export class LeaderboardService {
 
           if (remoteRecords !== null) {
             this.isOnline = true;
+            this.lastFetch = Date.now();
             const mapped = remoteRecords.slice(0, limit).map((r, i) => {
               const name = (r.player_name || r.playerName || r.callsign || 'OPERATOR_0').toUpperCase().slice(0, 14);
               const wave = r.wave_number !== undefined ? r.wave_number : (r.waveNumber !== undefined ? r.waveNumber : (r.wavesCleared !== undefined ? r.wavesCleared : 0));
@@ -334,6 +388,7 @@ export class LeaderboardService {
               };
             });
 
+            this.cachedScores = mapped;
             this.saveCachedScores(mapped);
             this.flushPendingSubmissions().catch(() => {});
             return mapped;
@@ -346,57 +401,7 @@ export class LeaderboardService {
       this.isOnline = false;
     }
 
-    // Network error / offline fallback: load cached scores from ring0_leaderboard_cache
-    const cached = this.loadCachedScores();
-    if (cached && cached.length > 0) {
-      return cached.slice(0, limit).map((r, i) => {
-        const name = (r.player_name || r.playerName || r.callsign || 'OPERATOR_0').toUpperCase().slice(0, 14);
-        const wave = r.wave_number !== undefined ? r.wave_number : (r.waveNumber !== undefined ? r.waveNumber : (r.wavesCleared !== undefined ? r.wavesCleared : 0));
-        let ring = r.clearance_ring !== undefined ? r.clearance_ring : (r.clearanceRing !== undefined ? r.clearanceRing : (r.clearanceTier !== undefined ? r.clearanceTier : 3));
-        if (typeof ring === 'string') {
-          if (ring.includes('0')) ring = 0;
-          else if (ring.includes('1')) ring = 1;
-          else if (ring.includes('2')) ring = 2;
-          else if (ring.includes('3')) ring = 3;
-        }
-        return {
-          ...r,
-          rank: r.rank || i + 1,
-          callsign: name,
-          playerName: name,
-          score: Math.floor(r.score || 0),
-          waveNumber: wave,
-          wavesCleared: wave,
-          clearanceRing: ring,
-        };
-      });
-    }
-
-    // Default fallback: combine seeded records and local player scores
-    const local = this.loadLocalScores();
-    const combined = [...SEEDED_RECORDS, ...local];
-
-    const unique = [];
-    const seen = new Set();
-    for (const item of combined) {
-      const key = item.signature || item.checksum || `${item.playerName || item.callsign}_${item.score}_${item.timestamp}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(item);
-      }
-    }
-
-    unique.sort((a, b) => b.score - a.score);
-
-    return unique.slice(0, limit).map((entry, idx) => ({
-      ...entry,
-      rank: idx + 1,
-      callsign: (entry.callsign || entry.playerName || 'OPERATOR_0').toUpperCase(),
-      playerName: (entry.playerName || entry.callsign || 'OPERATOR_0').toUpperCase(),
-      waveNumber: entry.waveNumber !== undefined ? entry.waveNumber : (entry.wavesCleared !== undefined ? entry.wavesCleared : 0),
-      wavesCleared: entry.wavesCleared !== undefined ? entry.wavesCleared : (entry.waveNumber !== undefined ? entry.waveNumber : 0),
-      clearanceRing: entry.clearanceRing !== undefined ? entry.clearanceRing : (entry.clearanceTier !== undefined ? entry.clearanceTier : 3),
-    }));
+    return this.getLocalScores(limit);
   }
 
   /**
@@ -525,6 +530,8 @@ export class LeaderboardService {
    * Clears local record storage (for debug / tests)
    */
   clearLocalScores() {
+    this.lastFetch = 0;
+    this.cachedScores = null;
     if (typeof localStorage === 'undefined') return;
     try {
       localStorage.removeItem(this.storageKey);
