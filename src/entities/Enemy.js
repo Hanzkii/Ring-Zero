@@ -264,36 +264,96 @@ export class Enemy extends Entity {
 
     switch (this.type) {
       case 'BIT_SCANNER': {
-        // Fast dual chevron hull
+        // 1. Outer dual razor chevron hull
         ctx.beginPath();
-        ctx.moveTo(r, 0);
-        ctx.lineTo(-r, -r * 0.7);
-        ctx.lineTo(-r * 0.4, 0);
-        ctx.lineTo(-r, r * 0.7);
+        ctx.moveTo(r * 1.1, 0);
+        ctx.lineTo(-r, -r * 0.75);
+        ctx.lineTo(-r * 0.45, 0);
+        ctx.lineTo(-r, r * 0.75);
         ctx.closePath();
         ctx.stroke();
+
+        // 2. Inner secondary chevron
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = wireColor === COLOR.WHITE ? COLOR.WHITE : 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.moveTo(r * 0.5, 0);
+        ctx.lineTo(-r * 0.4, -r * 0.4);
+        ctx.lineTo(-r * 0.15, 0);
+        ctx.lineTo(-r * 0.4, r * 0.4);
+        ctx.closePath();
+        ctx.stroke();
+
+        // 3. Rotating inner bit core
+        ctx.save();
+        ctx.rotate(this.pulsePhase * 2.5);
+        ctx.strokeStyle = wireColor;
+        ctx.strokeRect(-2.5, -2.5, 5, 5);
+        ctx.restore();
+
+        // 4. Forward scanning telemetry ray
+        const scanPulse = (Math.sin(this.pulsePhase * 4) + 1) * 0.5;
+        ctx.strokeStyle = wireColor;
+        ctx.globalAlpha = 0.4 + scanPulse * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(r * 1.1, 0);
+        ctx.lineTo(r * 1.8 + scanPulse * 4, 0);
+        ctx.stroke();
+
+        // Scanning tip bracket
+        VectorRenderer.strokeLine(ctx, r * 1.8 + scanPulse * 4, -3, r * 1.8 + scanPulse * 4, 3, wireColor, 1);
+        ctx.globalAlpha = 1.0;
         break;
       }
 
       case 'WATCHDOG': {
-        // Jagged combat hound hull with forward jaws
+        // 1. Jagged combat hound chassis
         ctx.beginPath();
-        ctx.moveTo(r * 1.2, 0);
-        ctx.lineTo(r * 0.3, -r);
-        ctx.lineTo(-r, -r * 0.6);
-        ctx.lineTo(-r * 0.5, 0);
-        ctx.lineTo(-r, r * 0.6);
-        ctx.lineTo(r * 0.3, r);
+        ctx.moveTo(r * 1.3, 0);          // Predatory nose tip
+        ctx.lineTo(r * 0.4, -r * 0.9);   // Upper jaw crest
+        ctx.lineTo(-r * 0.8, -r * 0.7);  // Upper shoulder
+        ctx.lineTo(-r * 1.1, -r * 0.3);  // Rear armor plate
+        ctx.lineTo(-r * 0.6, 0);         // Spine center
+        ctx.lineTo(-r * 1.1, r * 0.3);   // Lower rear armor
+        ctx.lineTo(-r * 0.8, r * 0.7);   // Lower shoulder
+        ctx.lineTo(r * 0.4, r * 0.9);    // Lower jaw crest
         ctx.closePath();
         ctx.stroke();
 
+        // 2. Articulated forward jaws
+        const jawOffset = Math.sin(this.pulsePhase * 5) * 2;
+        ctx.lineWidth = 1;
         ctx.strokeStyle = COLOR.WHITE;
-        ctx.strokeRect(-2, -2, 4, 4);
+        ctx.beginPath();
+        // Upper mandible
+        ctx.moveTo(r * 0.4, -r * 0.5 + jawOffset);
+        ctx.lineTo(r * 1.1, -r * 0.2);
+        // Lower mandible
+        ctx.moveTo(r * 0.4, r * 0.5 - jawOffset);
+        ctx.lineTo(r * 1.1, r * 0.2);
+        ctx.stroke();
+
+        // 3. Glowing optic scanner lens
+        ctx.fillStyle = COLOR.RED;
+        ctx.beginPath();
+        ctx.arc(r * 0.2, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Rear stabilization combat struts
+        ctx.strokeStyle = wireColor;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.8, -r * 0.7);
+        ctx.lineTo(-r * 1.3, -r * 0.9);
+        ctx.moveTo(-r * 0.8, r * 0.7);
+        ctx.lineTo(-r * 1.3, r * 0.9);
+        ctx.stroke();
         break;
       }
 
       case 'MEMORY_LEAK': {
-        // Concentric hexagon core
+        // 1. Outer rotating hexagon
+        ctx.save();
+        ctx.rotate(this.pulsePhase * 0.6);
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
           const a = (i / 6) * Math.PI * 2;
@@ -304,15 +364,44 @@ export class Enemy extends Entity {
         }
         ctx.closePath();
         ctx.stroke();
+        ctx.restore();
 
-        // Pulsing inner memory ring
-        const innerR = r * 0.5 + Math.sin(this.pulsePhase) * 2;
-        VectorRenderer.strokeCircle(ctx, 0, 0, Math.max(2, innerR), wireColor, 1);
+        // 2. Inner counter-rotating hexagon
+        ctx.save();
+        ctx.rotate(-this.pulsePhase * 0.9);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = COLOR.WHITE;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const px = Math.cos(a) * (r * 0.65);
+          const py = Math.sin(a) * (r * 0.65);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. Pulsing corrupted memory core
+        const coreR = Math.max(2, r * 0.35 + Math.sin(this.pulsePhase * 3) * 2.5);
+        ctx.strokeStyle = wireColor;
+        VectorRenderer.strokeCircle(ctx, 0, 0, coreR, wireColor, 1.2);
+
+        // 4. Orbiting leaking memory fragment shards
+        for (let i = 0; i < 3; i++) {
+          const shardAngle = this.pulsePhase * 1.5 + (i * Math.PI * 2) / 3;
+          const dist = r * 1.25 + Math.sin(this.pulsePhase * 2 + i) * 3;
+          const sx = Math.cos(shardAngle) * dist;
+          const sy = Math.sin(shardAngle) * dist;
+          ctx.strokeStyle = wireColor;
+          ctx.strokeRect(sx - 1.5, sy - 1.5, 3, 3);
+        }
         break;
       }
 
       case 'SENTINEL': {
-        // Octagonal defense turret with targeting reticle
+        // 1. Heavy octagonal armored chassis
         ctx.beginPath();
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2;
@@ -324,10 +413,46 @@ export class Enemy extends Entity {
         ctx.closePath();
         ctx.stroke();
 
-        // Directional laser barrel
+        // 2. Reinforced internal armored ring
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = COLOR.CYAN_DIM;
+        VectorRenderer.strokeCircle(ctx, 0, 0, r * 0.7, wireColor, 1);
+
+        // 3. Rotating secondary radar ring with tick marks
+        ctx.save();
+        ctx.rotate(this.pulsePhase * 1.2);
+        ctx.strokeStyle = COLOR.WHITE;
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(r * 1.5, 0);
+        ctx.arc(0, 0, r * 0.45, 0, Math.PI * 2);
+        ctx.stroke();
+        // Radar radial ticks
+        for (let i = 0; i < 4; i++) {
+          const a = (i * Math.PI) / 2;
+          ctx.moveTo(Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.35);
+          ctx.lineTo(Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. Heavy segmented railgun barrel
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = wireColor;
+        ctx.beginPath();
+        ctx.moveTo(0, -2.5);
+        ctx.lineTo(r * 1.7, -2.5);
+        ctx.lineTo(r * 1.7, 2.5);
+        ctx.lineTo(0, 2.5);
+        ctx.stroke();
+
+        // Barrel muzzle charge ticks
+        const chargeOffset = (Math.sin(this.pulsePhase * 6) + 1) * 0.5;
+        ctx.strokeStyle = COLOR.RED;
+        ctx.beginPath();
+        ctx.moveTo(r * 1.7, -4);
+        ctx.lineTo(r * 1.7, 4);
+        // Forward targeting laser line
+        ctx.moveTo(r * 1.7, 0);
+        ctx.lineTo(r * 2.6 + chargeOffset * 6, 0);
         ctx.stroke();
         break;
       }

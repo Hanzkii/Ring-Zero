@@ -5,6 +5,7 @@
  */
 
 import { COLOR } from '../core/Constants.js';
+import { VectorIcons } from './VectorIcons.js';
 
 export class PauseOverlay {
   /**
@@ -75,13 +76,20 @@ export class PauseOverlay {
     } else {
       exploitsHtml = activeCheats
         .map((c) => {
+          const cheatColor = c.color || COLOR.CYAN;
+          const iconUrl = VectorIcons.renderToDataURL(c.id, 32, cheatColor);
           return `
-            <div style="background: rgba(0,0,0,0.3); border: 1px solid ${c.color || COLOR.CYAN}; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-weight: bold; font-size: 11px; color: ${c.color || COLOR.CYAN};">${c.filename} &bull; ${c.name}</div>
-                <div style="font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px;">${c.getPerkDescription()}</div>
+            <div style="background: rgba(0,0,0,0.35); border: 1px solid ${cheatColor}; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 32px; height: 32px; flex-shrink: 0; border: 1px solid ${cheatColor}80; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+                  <img src="${iconUrl}" width="26" height="26" style="filter: drop-shadow(0 0 4px ${cheatColor});" alt="${c.name}" />
+                </div>
+                <div>
+                  <div style="font-weight: bold; font-size: 11px; color: ${cheatColor};">${c.filename} &bull; ${c.name}</div>
+                  <div style="font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px;">${c.getPerkDescription()}</div>
+                </div>
               </div>
-              <div style="font-size: 10px; font-weight: bold; color: ${COLOR.WHITE};">RANK ${c.level}/${c.maxLevel}</div>
+              <div style="font-size: 10px; font-weight: bold; color: ${COLOR.WHITE}; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); padding: 3px 6px;">RANK ${c.level}/${c.maxLevel}</div>
             </div>
           `;
         })

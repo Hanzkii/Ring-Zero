@@ -29,11 +29,13 @@ export class TerminalUI {
     this.onOpenSettings = onOpenSettings;
 
     this.activeTab = 'briefing'; // 'briefing', 'shop', 'firmware', 'daemons', 'leaderboard'
-    this.bootOverlay = document.getElementById('terminal-overlay');
+    this.bootOverlay = typeof document !== 'undefined' ? document.getElementById('terminal-overlay') : null;
     this.diagnosticModal = null;
 
-    this._initBootTerminal();
-    this._createDiagnosticModal();
+    if (typeof document !== 'undefined') {
+      this._initBootTerminal();
+      this._createDiagnosticModal();
+    }
   }
 
   /**
@@ -198,8 +200,13 @@ export class TerminalUI {
     ];
 
     let html = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN};">
-        PERMANENT FIRMWARE MICRO-UPGRADES // ENHANCES CHASSIS HARDWARE
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 8px;">
+        <div style="font-size: 11px; letter-spacing: 1px; color: ${COLOR.CYAN}; font-weight: bold;">
+          // PERMANENT FIRMWARE MICRO-UPGRADES // HARDWARE RE-FLASHING //
+        </div>
+        <div style="font-size: 12px; color: ${COLOR.WHITE};">
+          CRYPTO BALANCE: <span style="color: ${COLOR.AMBER}; font-weight: bold; text-shadow: 0 0 6px ${COLOR.AMBER}80;">${bounties} BTC</span>
+        </div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px; max-height: 290px; overflow-y: auto;">
     `;
@@ -210,31 +217,66 @@ export class TerminalUI {
       const isMax = cost === null;
       const canAfford = !isMax && bounties >= cost;
 
+      // Generate animated rank meter pips e.g. [■■■□□]
+      let pipsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= currentLvl) {
+          pipsHtml += `<span style="color: ${COLOR.CYAN}; text-shadow: 0 0 6px ${COLOR.CYAN}; margin-right: 2px;">■</span>`;
+        } else {
+          pipsHtml += `<span style="color: rgba(255, 255, 255, 0.2); margin-right: 2px;">□</span>`;
+        }
+      }
+
+      // Stat comparison preview: CURRENT ► NEXT
+      let statCompareHtml = '';
+      if (isMax) {
+        statCompareHtml = `<span style="color: ${COLOR.GREEN};">[MAX ALLOCATION: ${n.formatBonus(currentLvl)}]</span>`;
+      } else {
+        const curStr = currentLvl > 0 ? n.formatBonus(currentLvl) : '0';
+        const nextStr = n.formatBonus(currentLvl + 1);
+        statCompareHtml = `<span style="color: rgba(255,255,255,0.7);">${curStr}</span> <span style="color: ${COLOR.CYAN};">►</span> <span style="color: ${COLOR.GREEN}; font-weight: bold;">${nextStr}</span>`;
+      }
+
       let actionHtml = '';
       if (isMax) {
-        actionHtml = `<span style="color: ${COLOR.GREEN}; font-size: 11px; font-weight: bold;">[MAX RANK]</span>`;
-      } else {
         actionHtml = `
-          <button class="btn-firmware-upgrade" data-node="${n.id}" style="
-            background: ${canAfford ? COLOR.CYAN : 'transparent'};
-            color: ${canAfford ? '#070A0F' : 'rgba(255,255,255,0.4)'};
-            border: 1px solid ${canAfford ? COLOR.CYAN : 'rgba(255,255,255,0.2)'};
-            padding: 6px 12px; font-family: monospace; font-size: 11px; font-weight: bold; cursor: ${canAfford ? 'pointer' : 'not-allowed'};
-          ">
-            UPGRADE (${cost} BTC)
-          </button>
+          <div style="text-align: right;">
+            <span style="color: ${COLOR.GREEN}; font-size: 11px; font-weight: bold; border: 1px solid ${COLOR.GREEN}; padding: 6px 12px; background: rgba(0, 255, 102, 0.08); display: inline-block;">
+              [MAX RANK]
+            </span>
+          </div>
+        `;
+      } else {
+        const balanceAfter = bounties - cost;
+        actionHtml = `
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+            <button class="btn-firmware-upgrade" data-node="${n.id}" style="
+              background: ${canAfford ? COLOR.CYAN : 'transparent'};
+              color: ${canAfford ? '#070A0F' : 'rgba(255,255,255,0.4)'};
+              border: 1px solid ${canAfford ? COLOR.CYAN : 'rgba(255,255,255,0.2)'};
+              padding: 6px 12px; font-family: monospace; font-size: 11px; font-weight: bold;
+              cursor: ${canAfford ? 'pointer' : 'not-allowed'};
+              box-shadow: ${canAfford ? `0 0 10px ${COLOR.CYAN}40` : 'none'};
+              transition: all 0.2s ease;
+            ">
+              UPGRADE (${cost} BTC)
+            </button>
+            <div style="font-size: 9px; color: ${canAfford ? 'rgba(255,255,255,0.5)' : COLOR.RED};">
+              ${canAfford ? `REM: ${balanceAfter} BTC` : `NEED +${cost - bounties} BTC`}
+            </div>
+          </div>
         `;
       }
 
       html += `
-        <div style="border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.3); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
-          <div style="max-width: 72%;">
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span style="font-weight: bold; font-size: 12px; color: ${COLOR.WHITE};">${n.name}</span>
-              <span style="font-size: 10px; color: ${currentLvl > 0 ? COLOR.CYAN : 'rgba(255,255,255,0.4)'};">RANK ${currentLvl}/5</span>
-              ${currentLvl > 0 ? `<span style="font-size: 10px; color: ${COLOR.GREEN};">[${n.formatBonus(currentLvl)}]</span>` : ''}
+        <div style="border: 1px solid ${currentLvl > 0 ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.12)'}; background: rgba(0,0,0,0.35); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s ease;">
+          <div style="max-width: 68%;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <span style="font-weight: bold; font-size: 12px; color: ${COLOR.WHITE}; letter-spacing: 0.5px;">${n.name}</span>
+              <span style="font-size: 11px; font-family: monospace;">[${pipsHtml}]</span>
+              <span style="font-size: 10px;">${statCompareHtml}</span>
             </div>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 3px;">${n.desc}</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.65); margin-top: 4px;">${n.desc}</div>
           </div>
           <div>${actionHtml}</div>
         </div>

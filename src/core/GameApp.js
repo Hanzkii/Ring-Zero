@@ -876,6 +876,34 @@ export class GameApp {
     VectorRenderer.drawCrosshair(ctx, pointer.x, pointer.y, spreadPx, COLOR.CYAN);
   }
 
+  _renderVectorPanel(ctx, x, y, width, height, borderColor = COLOR.CYAN_DIM, bracketSize = 8) {
+    ctx.save();
+    // Translucent background
+    ctx.fillStyle = 'rgba(7, 10, 15, 0.78)';
+    ctx.fillRect(x, y, width, height);
+
+    // Frame
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, width, height);
+
+    // Corner brackets
+    ctx.strokeStyle = COLOR.CYAN;
+    const b = bracketSize;
+    ctx.beginPath();
+    // Top-left
+    ctx.moveTo(x, y + b); ctx.lineTo(x, y); ctx.lineTo(x + b, y);
+    // Top-right
+    ctx.moveTo(x + width - b, y); ctx.lineTo(x + width, y); ctx.lineTo(x + width, y + b);
+    // Bottom-right
+    ctx.moveTo(x + width, y + height - b); ctx.lineTo(x + width, y + height); ctx.lineTo(x + width - b, y + height);
+    // Bottom-left
+    ctx.moveTo(x + b, y + height); ctx.lineTo(x, y + height); ctx.lineTo(x, y + height - b);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
   _renderScreenHUD(ctx) {
     const dpr = this.camera.dpr;
     const w = this.camera.viewportWidth;
@@ -884,70 +912,103 @@ export class GameApp {
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    // Top-Left: System Telemetry
-    ctx.font = '12px monospace';
+    // 1. Top-Left: System Telemetry Card
+    const tlW = 280;
+    const tlH = 58;
+    this._renderVectorPanel(ctx, 16, 16, tlW, tlH, 'rgba(0, 240, 255, 0.25)');
+
+    ctx.font = 'bold 12px monospace';
     ctx.fillStyle = COLOR.CYAN;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('RING ZERO // KERNEL RUNTIME', 20, 20);
+    ctx.fillText('RING ZERO // KERNEL RUNTIME', 26, 23);
 
-    ctx.font = '11px monospace';
+    ctx.font = '10px monospace';
     ctx.fillStyle = COLOR.WHITE_DIM;
-    ctx.fillText(`FPS: ${this.loop.fps} | TPS: ${this.loop.tps} | FRAME: ${this.loop.frameTimeMs.toFixed(1)}ms`, 20, 38);
-    ctx.fillText(`SECTOR: ${this.currentBiome.toUpperCase()} [SEED:${this.currentSeed}] | PROPS: ${this.props.length} | DAEMONS: ${this.enemies.length}`, 20, 54);
+    ctx.fillText(`FPS: ${this.loop.fps} | TPS: ${this.loop.tps} | FRAME: ${this.loop.frameTimeMs.toFixed(1)}ms`, 26, 40);
+    ctx.fillText(`SECTOR: ${this.currentBiome.toUpperCase()} [SEED:${this.currentSeed}] | DAEMONS: ${this.enemies.length}`, 26, 54);
 
-    // Active Exploit Badges
-    this.cheatManager.renderHUD(ctx, 20, 74);
+    // Active Exploit Badges list below telemetry panel
+    this.cheatManager.renderHUD(ctx, 18, 88);
 
-    // Top-Center: Wave Director Telemetry
+    // 2. Top-Center: Wave Director Banner Card
+    const waveColor = this.waveManager.state === WAVE_STATE.PREPARING ? COLOR.AMBER : COLOR.CYAN;
+    const tcW = 320;
+    const tcH = 54;
+    const tcX = Math.round(w * 0.5 - tcW * 0.5);
+    this._renderVectorPanel(ctx, tcX, 16, tcW, tcH, waveColor);
+
     ctx.textAlign = 'center';
-    ctx.font = '14px monospace';
-    ctx.fillStyle = this.waveManager.state === WAVE_STATE.PREPARING ? COLOR.AMBER : COLOR.CYAN;
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = waveColor;
     const waveText =
       this.waveManager.state === WAVE_STATE.PREPARING
         ? `// INCOMING SECURITY WAVE ${this.waveManager.waveNumber} //`
         : `// PURGING SECURITY DAEMONS // WAVE ${this.waveManager.waveNumber} //`;
-    ctx.fillText(waveText, w * 0.5, 20);
+    ctx.fillText(waveText, w * 0.5, 24);
 
-    // Wave progress gauge
-    const waveBarW = 240;
+    // Wave progress vector gauge
+    const waveBarW = 270;
     VectorRenderer.drawVectorBar(
       ctx,
       w * 0.5 - waveBarW * 0.5,
-      40,
+      43,
       waveBarW,
-      6,
+      7,
       this.waveManager.progressPercent,
-      COLOR.CYAN,
+      waveColor,
       ''
     );
 
-    // Top-Right: Coordinates & Level
-    ctx.textAlign = 'right';
-    ctx.fillStyle = COLOR.CYAN;
-    ctx.fillText(`LEVEL ${this.player.level} // XP: ${this.player.xp} / ${this.player.xpToNextLevel}`, w - 20, 20);
-    ctx.fillStyle = COLOR.WHITE_DIM;
-    ctx.fillText(`COORDS: [${Math.round(this.player.x)}, ${Math.round(this.player.y)}]`, w - 20, 38);
-    ctx.fillText(`SPATIAL CELLS: ${this.spatialGrid.totalOccupiedCells} [G] DEBUG`, w - 20, 54);
+    // 3. Top-Right: Spatial Coordinates & Level Card
+    const trW = 260;
+    const trH = 58;
+    const trX = w - trW - 16;
+    this._renderVectorPanel(ctx, trX, 16, trW, trH, 'rgba(0, 240, 255, 0.25)');
 
-    // Bottom-Left: Integrity & Dash Meters
-    const barWidth = 190;
-    const barHeight = 12;
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = COLOR.CYAN;
+    ctx.fillText(`LEVEL ${this.player.level} // XP: ${this.player.xp} / ${this.player.xpToNextLevel}`, w - 26, 23);
+
+    // XP mini progress line
+    const xpPercent = Math.min(1.0, this.player.xp / Math.max(1, this.player.xpToNextLevel));
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
+    ctx.fillRect(trX + 10, 39, trW - 20, 2);
+    ctx.fillStyle = COLOR.CYAN;
+    ctx.fillRect(trX + 10, 39, (trW - 20) * xpPercent, 2);
+
+    ctx.font = '10px monospace';
+    ctx.fillStyle = COLOR.WHITE_DIM;
+    ctx.fillText(`COORDS: [${Math.round(this.player.x)}, ${Math.round(this.player.y)}]`, w - 26, 45);
+    ctx.fillText(`SPATIAL CELLS: ${this.spatialGrid.totalOccupiedCells} [G] DEBUG`, w - 26, 57);
+
+    // 4. Bottom-Left: Integrity & Dash Agility Card
+    const blW = 250;
+    const blH = 84;
+    const blY = h - blH - 16;
+    this._renderVectorPanel(ctx, 16, blY, blW, blH, 'rgba(0, 240, 255, 0.3)');
+
+    // Chassis Health Meter
+    const barWidth = 226;
+    const barHeight = 13;
+    const hpRatio = Math.max(0, this.player.health / this.player.maxHealth);
     VectorRenderer.drawVectorBar(
       ctx,
-      20,
-      h - 75,
+      28,
+      blY + 16,
       barWidth,
       barHeight,
-      this.player.health / this.player.maxHealth,
+      hpRatio,
       this.player.health < 30 ? COLOR.RED : COLOR.GREEN,
       `INTEGRITY // ${Math.max(0, Math.round(this.player.health))} / ${this.player.maxHealth}`
     );
 
+    // Dash Boost Meter
     VectorRenderer.drawVectorBar(
       ctx,
-      20,
-      h - 45,
+      28,
+      blY + 48,
       barWidth,
       barHeight,
       this.player.dashCooldownPercent,
@@ -955,30 +1016,50 @@ export class GameApp {
       this.player.dashReady ? 'DASH BOOST // READY [SPACE / RMB]' : 'DASH BOOST // RECHARGING'
     );
 
-    // Bottom-Right: Active Weapon & Ammo Telemetry
+    // 5. Bottom-Right: Active Weapon & Cartridge Pip Counter Card
     const weapon = this.weaponSystem.activeWeapon;
     if (weapon) {
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.font = '14px monospace';
-      ctx.fillStyle = weapon.color;
-      ctx.fillText(`${weapon.name}`, w - 20, h - 55);
+      const brW = 280;
+      const brH = 96;
+      const brX = w - brW - 16;
+      const brY = h - brH - 16;
+      this._renderVectorPanel(ctx, brX, brY, brW, brH, weapon.color || COLOR.CYAN);
 
-      ctx.font = '12px monospace';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.font = 'bold 15px monospace';
+      ctx.fillStyle = weapon.color || COLOR.CYAN;
+      ctx.fillText(`${weapon.name}`, w - 26, brY + 10);
+
+      // Numeric ammo label
+      ctx.font = '11px monospace';
       ctx.fillStyle = COLOR.WHITE;
       const ammoStr = weapon.isReloading
         ? `RELOADING... (${(weapon.reloadTime - weapon.reloadTimer).toFixed(1)}s)`
         : `AMMO: ${weapon.currentAmmo} / ${weapon.clipSize}`;
-      ctx.fillText(ammoStr, w - 20, h - 38);
+      ctx.fillText(ammoStr, w - 26, brY + 30);
 
-      // Reload progress mini bar
-      if (weapon.isReloading) {
+      // Cartridge Bullet Pips
+      if (!weapon.isReloading) {
+        const maxDisplayPips = Math.min(24, weapon.clipSize);
+        const pipW = Math.max(3, Math.floor((brW - 40) / maxDisplayPips) - 2);
+        const pipH = 8;
+        const startX = brX + 20;
+        const pipY = brY + 46;
+
+        for (let i = 0; i < maxDisplayPips; i++) {
+          const isLoaded = i < weapon.currentAmmo;
+          ctx.fillStyle = isLoaded ? (weapon.color || COLOR.CYAN) : 'rgba(255,255,255,0.15)';
+          ctx.fillRect(startX + i * (pipW + 2), pipY, pipW, pipH);
+        }
+      } else {
+        // Reload progress vector bar
         VectorRenderer.drawVectorBar(
           ctx,
-          w - 180,
-          h - 32,
-          160,
-          5,
+          brX + 20,
+          brY + 48,
+          brW - 40,
+          6,
           weapon.reloadProgress,
           COLOR.AMBER,
           ''
@@ -992,10 +1073,10 @@ export class GameApp {
       const s1Tag = this.weaponSystem.activeSlot === 0 ? `► [1] ${slot1Name}` : `  [1] ${slot1Name}`;
       const s2Tag = this.weaponSystem.activeSlot === 1 ? `► [2] ${slot2Name}` : `  [2] ${slot2Name}`;
       ctx.fillStyle = COLOR.CYAN;
-      ctx.fillText(`${s1Tag}  |  ${s2Tag}  ([Q] SWAP)`, w - 20, h - 18);
+      ctx.fillText(`${s1Tag}  |  ${s2Tag}  ([Q] SWAP)`, w - 26, brY + 72);
     }
 
-    // Tactical Radar Telemetry Overlay
+    // 6. Tactical Radar Telemetry Overlay
     const radar = this.cheatManager.getCheat('radartelemetry');
     if (radar && radar.enabled) {
       radar.renderRadar(ctx, w, h, this.player, this.enemies, this.drops, this.props);

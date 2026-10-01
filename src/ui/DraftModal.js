@@ -5,6 +5,7 @@
  */
 
 import { COLOR } from '../core/Constants.js';
+import { VectorIcons } from './VectorIcons.js';
 
 export class DraftModal {
   /**
@@ -88,14 +89,28 @@ export class DraftModal {
 
       const rarityColor = opt.def.color;
       const btnText = opt.isUpgrade ? `UPGRADE TO RANK ${opt.nextLevel}` : 'INJECT SCRIPT';
+      const iconDataUrl = VectorIcons.renderToDataURL(opt.def.id, 48, rarityColor);
 
       card.innerHTML = `
         <div class="card-hotkey">[ ${idx + 1} ]</div>
         <div class="card-badge" style="color: ${rarityColor}; border-color: ${rarityColor}">
           ${opt.def.rarity.name} &bull; ${badgeText}
         </div>
-        <div class="card-filename">${opt.def.filename}</div>
-        <div class="card-name">${opt.def.name}</div>
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+          <div style="
+            width: 48px; height: 48px; flex-shrink: 0;
+            border: 1px solid ${rarityColor};
+            background: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 14px ${rarityColor}40;
+          ">
+            <img src="${iconDataUrl}" width="38" height="38" alt="${opt.def.name}" style="filter: drop-shadow(0 0 6px ${rarityColor});" />
+          </div>
+          <div>
+            <div class="card-filename" style="margin-bottom: 2px;">${opt.def.filename}</div>
+            <div class="card-name" style="margin-bottom: 0; font-size: 16px;">${opt.def.name}</div>
+          </div>
+        </div>
         <div class="card-desc">${opt.def.description}</div>
         <div class="card-perk" style="border-left: 2px solid ${rarityColor}; padding-left: 8px; margin-bottom: 16px; font-size: 11px; color: ${COLOR.WHITE};">
           <strong>TARGET PERK:</strong> ${opt.nextPerkDescription}
