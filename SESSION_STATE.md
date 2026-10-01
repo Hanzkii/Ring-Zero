@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 17:55 EEST  
+**Last Updated:** 2026-10-01 18:00 EEST  
 **Git Head:** `15e9f9c` (origin/main)  
-**Test Suite Health:** 563 / 563 passing across 11 test suites (0 failures)
+**Test Suite Health:** 564 / 564 passing across 11 test suites (0 failures)
 
 ---
 
@@ -181,7 +181,10 @@
   - Elite Modifiers (Wave 3+): `SHIELDED` (cyan rotating energy barrier absorbing damage before hull), `OVERCLOCKED` (+45% movement speed with amber thruster glow), `CLUSTER_SPLITTER` (splits into 3 mini-daemons on purge).
 * **Global Leaderboard Serverless Edge Service** (`LeaderboardService.js`, `scripts/leaderboard-worker.js`):
   - Cloudflare Worker edge script with Web Crypto SHA-256 HMAC run verification and KV persistence.
-  - Client REST API integration in `LeaderboardService.js` with graceful offline fallback to local records.
+  - Client REST API integration in `LeaderboardService.js` with 30s request throttling, offline fallback, and queueing.
+  - `getPlayerBestRun()` helper retrieving the local player's best verified run and cryptographic signature.
+  - Monospace cyber-terminal Top 100 leaderboard table in `TerminalUI.js` with active player cyan row highlighting (`[YOU]`).
+  - Pinned Personal Rank footer separated by dashed border when player is outside the top 100 (`#??? | <TAG> [YOU] | <SCORE> | WAVE <X> | [LOCAL BEST / UNRANKED]`), or unranked fallback (`-- | <TAG> [YOU] | NO TELEMETRY RECORDED`).
 
 ---
 
@@ -251,9 +254,9 @@ All 11 automated test suites passing cleanly:
 8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
 9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
 10. `test/phase8_test.js`: True silent aim decoupling, screen flash elimination, tier 2 arsenal UX, achievements engine & toasts, weapon recoil & hit-stop, boss encounters & elite modifiers, cloudflare worker leaderboard integration (19 tests)
-11. `test/leaderboard_integration_test.js`: Cloudflare Worker HMAC signing, submitRun offline queueing under ring0_pending_submissions, fetchTopScores caching under ring0_leaderboard_cache, worker handler, live UI status, and 30-second client-side throttling with immediate submitRun invalidation (7 tests)
+11. `test/leaderboard_integration_test.js`: Cloudflare Worker HMAC signing, submitRun offline queueing under ring0_pending_submissions, fetchTopScores caching under ring0_leaderboard_cache, worker handler, live UI status, 30-second client-side throttling with immediate submitRun invalidation, and Top 100 display with getPlayerBestRun & pinned personal rank footer verification (8 tests)
 
-**Total: 563 tests passing, 0 failing.**
+**Total: 564 tests passing, 0 failing.**
 
 ---
 

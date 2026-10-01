@@ -13,6 +13,7 @@ import {
   LEADERBOARD_CACHE_KEY,
 } from '../src/services/LeaderboardService.js';
 import workerScript from '../scripts/leaderboard-worker.js';
+import { TerminalUI } from '../src/ui/TerminalUI.js';
 
 // Setup Mock DOM environment for Node.js
 class MockLocalStorage {
@@ -311,6 +312,105 @@ if (typeof window === 'undefined') {
 
     global.fetch = originalFetch;
     console.log('  [PASS] 30s client-side cooldown and submission invalidation verified');
+  }
+
+  // 8. Testing Top 100 Display, getPlayerBestRun & Pinned Personal Rank
+  console.log('\n8. Testing Top 100 Display, getPlayerBestRun & Pinned Personal Rank:');
+  {
+    global.localStorage.clear();
+    const lb = new LeaderboardService({ enableRemote: false });
+
+    // 8.1 getPlayerBestRun when empty
+    assert.equal(lb.getPlayerBestRun('KRNL_ONE'), null, 'getPlayerBestRun returns null when no runs exist');
+
+    // Seed local scores
+    const localRuns = [
+      { playerName: 'KRNL_ONE', score: 12000, waveNumber: 4, clearanceRing: 3, signature: 'sig1' },
+      { playerName: 'KRNL_ONE', score: 45000, waveNumber: 10, clearanceRing: 1, signature: 'sig2' },
+      { playerName: 'KRNL_TWO', score: 98000, waveNumber: 18, clearanceRing: 0, signature: 'sig3' },
+    ];
+    lb.saveLocalScores(localRuns);
+
+    // 8.2 getPlayerBestRun with callsign filter
+    const bestOne = lb.getPlayerBestRun('KRNL_ONE');
+    assert.ok(bestOne, 'Found best run for KRNL_ONE');
+    assert.equal(bestOne.playerName, 'KRNL_ONE', 'Player tag matches KRNL_ONE');
+    assert.equal(bestOne.score, 45000, 'KRNL_ONE best score is 45,000');
+    assert.equal(bestOne.waveNumber, 10, 'KRNL_ONE best wave is 10');
+    assert.equal(bestOne.clearanceRing, 1, 'KRNL_ONE best clearance ring is 1');
+    assert.equal(bestOne.signature, 'sig2', 'KRNL_ONE signature matches best run');
+
+    // 8.3 getPlayerBestRun with localStorage fallback
+    global.localStorage.setItem('ring0_callsign', 'KRNL_TWO');
+    const bestTwo = lb.getPlayerBestRun();
+    assert.ok(bestTwo, 'Found best run for KRNL_TWO from localStorage callsign');
+    assert.equal(bestTwo.playerName, 'KRNL_TWO', 'Player tag matches KRNL_TWO');
+    assert.equal(bestTwo.score, 98000, 'KRNL_TWO best score is 98,000');
+
+    // 8.4 TerminalUI Top 100 Leaderboard & Pinned Personal Rank rendering
+    const mockStorage = {
+      cryptoBounties: 500,
+      purchasedRings: [3],
+      unlockedRings: [3],
+      unlockedWeapons: ['PISTOL_SYS'],
+      firmware: {},
+      riskModifiers: {},
+      stats: {},
+    };
+    const mockSoundBank = {
+      playUIClick: () => {},
+      playTone: () => {},
+    };
+
+    const terminal = new TerminalUI({
+      storage: mockStorage,
+      soundBank: mockSoundBank,
+      leaderboard: lb,
+      onStartRun: () => {},
+      onRestartRun: () => {},
+    });
+
+    // Scenario A: Player is inside the top 100
+    lb.fetchTopScores = async () => [
+      { rank: 1, player_name: 'KRNL_TWO', score: 98000, wave_number: 18, clearance_ring: 'RING_0' },
+      { rank: 2, player_name: 'RIVAL_99', score: 75000, wave_number: 14, clearance_ring: 'RING_1' },
+    ];
+    global.localStorage.setItem('ring0_callsign', 'KRNL_TWO');
+
+    const containerA = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+    await terminal._renderLeaderboardTab(containerA);
+
+    assert(containerA.innerHTML.includes('TOP 100 KERNEL LEADERBOARD'), 'Rendered Top 100 title header');
+    assert(containerA.innerHTML.includes('CALL-SIGN'), 'Table contains CALL-SIGN column');
+    assert(containerA.innerHTML.includes('[YOU]'), 'Active player highlighted with [YOU] badge');
+    assert(!containerA.innerHTML.includes('[LOCAL BEST / UNRANKED]'), 'No unranked footer rendered when player is in top 100');
+
+    // Scenario B: Player is OUTSIDE top 100, but has a local best run
+    lb.fetchTopScores = async () => [
+      { rank: 1, player_name: 'PRO_PILOT', score: 150000, wave_number: 25, clearance_ring: 'RING_0' },
+      { rank: 2, player_name: 'RIVAL_99', score: 75000, wave_number: 14, clearance_ring: 'RING_1' },
+    ];
+    global.localStorage.setItem('ring0_callsign', 'KRNL_ONE');
+
+    const containerB = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+    await terminal._renderLeaderboardTab(containerB);
+
+    assert(containerB.innerHTML.includes('#???'), 'Rendered #??? rank in pinned footer for unranked player');
+    assert(containerB.innerHTML.includes('KRNL_ONE'), 'Pinned footer contains active player tag');
+    assert(containerB.innerHTML.includes((45000).toLocaleString()), 'Pinned footer displays player best score');
+    assert(containerB.innerHTML.includes('WAVE 10'), 'Pinned footer displays player best wave');
+    assert(containerB.innerHTML.includes('[LOCAL BEST / UNRANKED]'), 'Pinned footer contains [LOCAL BEST / UNRANKED] badge');
+
+    // Scenario C: Player is OUTSIDE top 100, and has NO recorded runs
+    global.localStorage.setItem('ring0_callsign', 'FRESH_OPERATOR');
+    const containerC = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+    await terminal._renderLeaderboardTab(containerC);
+
+    assert(containerC.innerHTML.includes('--'), 'Rendered -- rank for player with no recorded telemetry');
+    assert(containerC.innerHTML.includes('FRESH_OPERATOR'), 'Pinned footer contains fresh operator tag');
+    assert(containerC.innerHTML.includes('NO TELEMETRY RECORDED'), 'Pinned footer displays NO TELEMETRY RECORDED message');
+
+    console.log('  [PASS] Top 100 display, getPlayerBestRun, and pinned personal rank verified');
   }
 
   console.log('\n=== ALL CLOUDFLARE WORKER LEADERBOARD TESTS PASSED! ===\n');

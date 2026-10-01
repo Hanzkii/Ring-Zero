@@ -539,18 +539,26 @@ export class TerminalUI {
   }
 
   async _renderLeaderboardTab(container) {
-    container.innerHTML = `<div style="text-align: center; padding: 24px; color: ${COLOR.CYAN};">QUERYING CLOUDFLARE EDGE LEDGER...</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 24px; color: ${COLOR.CYAN}; font-family: monospace;">// QUERYING CLOUDFLARE EDGE LEDGER...</div>`;
 
     const scores = await this.leaderboard.fetchTopScores(100);
+
+    const activePlayerTag = ((typeof localStorage !== 'undefined' && localStorage.getItem('ring0_callsign')) || 'OPERATOR_0').toUpperCase().trim();
+    const playerBestRun = this.leaderboard.getPlayerBestRun(activePlayerTag);
+
+    const isPlayerInTop100 = scores.some((s) => {
+      const name = (s.player_name || s.playerName || s.callsign || '').toUpperCase().trim();
+      return name === activePlayerTag;
+    });
 
     const statusBadge = this.leaderboard.isOnline
       ? `<span style="color: ${COLOR.CYAN}; font-weight: bold; font-family: monospace;">[STATUS: EDGE LINK ACTIVE]</span>`
       : `<span style="color: ${COLOR.AMBER}; font-weight: bold; font-family: monospace;">[STATUS: LOCAL BUFFER / OFFLINE]</span>`;
 
     let html = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div style="margin-bottom: 10px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-weight: bold; letter-spacing: 1px;">GLOBAL KERNEL LEADERBOARD</span>
+          <span style="font-weight: bold; letter-spacing: 1px;">TOP 100 KERNEL LEADERBOARD</span>
           ${statusBadge}
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -560,16 +568,15 @@ export class TerminalUI {
           </button>
         </div>
       </div>
-      <div style="max-height: 290px; overflow-y: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+      <div style="max-height: 240px; overflow-y: auto; border: 1px solid rgba(0, 240, 255, 0.15); background: rgba(0,0,0,0.35);">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; font-family: monospace;">
           <thead>
-            <tr style="border-bottom: 1px solid rgba(0,240,255,0.3); color: rgba(255,255,255,0.6); position: sticky; top: 0; background: #070A0F;">
-              <th style="padding: 8px 6px;">RANK</th>
-              <th style="padding: 8px 6px;">CALL-SIGN / TAG</th>
-              <th style="padding: 8px 6px;">SCORE</th>
-              <th style="padding: 8px 6px;">WAVE</th>
-              <th style="padding: 8px 6px;">CLEARANCE TIER</th>
-              <th style="padding: 8px 6px;">STATUS</th>
+            <tr style="border-bottom: 1px solid rgba(0,240,255,0.3); color: rgba(255,255,255,0.6); position: sticky; top: 0; background: #070A0F; z-index: 2;">
+              <th style="padding: 8px 6px; width: 12%;">RANK</th>
+              <th style="padding: 8px 6px; width: 28%;">CALL-SIGN</th>
+              <th style="padding: 8px 6px; width: 22%;">SCORE</th>
+              <th style="padding: 8px 6px; width: 16%;">WAVE</th>
+              <th style="padding: 8px 6px; width: 22%;">TIER</th>
             </tr>
           </thead>
           <tbody>
@@ -578,27 +585,40 @@ export class TerminalUI {
     if (scores.length === 0) {
       html += `
         <tr>
-          <td colspan="6" style="padding: 28px 12px; text-align: center; color: rgba(255,255,255,0.45); font-family: monospace; font-size: 11px; letter-spacing: 1px;">
+          <td colspan="5" style="padding: 28px 12px; text-align: center; color: rgba(255,255,255,0.45); font-family: monospace; font-size: 11px; letter-spacing: 1px;">
             // NO RECORDS IN KERNEL LEDGER // COMPLETE A RUN TO LOG SCORE //
           </td>
         </tr>
       `;
     } else {
       scores.forEach((s) => {
-        const tag = (s.playerName || s.callsign || 'OPERATOR_0').toUpperCase();
-        const wave = s.waveNumber !== undefined ? s.waveNumber : (s.wavesCleared !== undefined ? s.wavesCleared : 0);
-        const ring = s.clearanceRing !== undefined ? s.clearanceRing : (s.clearanceTier !== undefined ? s.clearanceTier : 3);
-        const ringText = ring === 0 ? 'RING 0 [KERNEL]' : `RING ${ring}`;
-        const color = s.rank === 1 ? COLOR.AMBER : s.rank <= 3 ? COLOR.CYAN : COLOR.WHITE;
+        const tag = (s.player_name || s.playerName || s.callsign || 'OPERATOR_0').toUpperCase().trim();
+        const isSelf = tag === activePlayerTag;
+        const wave = s.wave_number !== undefined ? s.wave_number : (s.waveNumber !== undefined ? s.waveNumber : (s.wavesCleared !== undefined ? s.wavesCleared : 0));
+        let ring = s.clearance_ring !== undefined ? s.clearance_ring : (s.clearanceRing !== undefined ? s.clearanceRing : (s.clearanceTier !== undefined ? s.clearanceTier : 3));
+        if (typeof ring === 'string') {
+          if (ring.includes('0')) ring = 0;
+          else if (ring.includes('1')) ring = 1;
+          else if (ring.includes('2')) ring = 2;
+          else if (ring.includes('3')) ring = 3;
+        }
+        const ringText = ring === 0 ? 'RING 0' : `RING ${ring}`;
+        const rowColor = isSelf
+          ? COLOR.CYAN
+          : (s.rank === 1 ? COLOR.AMBER : s.rank <= 3 ? COLOR.CYAN : COLOR.WHITE);
+        const rowBg = isSelf
+          ? 'background: rgba(0, 240, 255, 0.12); border-left: 2px solid ' + COLOR.CYAN + ';'
+          : '';
 
         html += `
-          <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); color: ${color};">
-            <td style="padding: 8px 6px; font-weight: bold;">#${s.rank}</td>
-            <td style="padding: 8px 6px; font-weight: bold; letter-spacing: 0.5px;">${tag}</td>
-            <td style="padding: 8px 6px;">${(s.score || 0).toLocaleString()}</td>
-            <td style="padding: 8px 6px;">W${wave}</td>
-            <td style="padding: 8px 6px;">${ringText}</td>
-            <td style="padding: 8px 6px; color: ${COLOR.GREEN};">✓ SECURE</td>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); color: ${rowColor}; ${rowBg}">
+            <td style="padding: 7px 6px; font-weight: bold;">#${s.rank}</td>
+            <td style="padding: 7px 6px; font-weight: bold; letter-spacing: 0.5px;">
+              ${tag}${isSelf ? ' <span style="font-size: 9px; color: ' + COLOR.CYAN + '; font-weight: bold;">[YOU]</span>' : ''}
+            </td>
+            <td style="padding: 7px 6px;">${(s.score || 0).toLocaleString()}</td>
+            <td style="padding: 7px 6px;">W${wave}</td>
+            <td style="padding: 7px 6px;">${ringText}</td>
           </tr>
         `;
       });
@@ -609,6 +629,48 @@ export class TerminalUI {
         </table>
       </div>
     `;
+
+    // 3. Pinned Personal Rank Pinning Logic
+    if (!isPlayerInTop100) {
+      if (playerBestRun) {
+        const ring = playerBestRun.clearanceRing === 0 ? 'RING 0' : `RING ${playerBestRun.clearanceRing}`;
+        html += `
+          <div style="margin-top: 8px; border-top: 1px dashed rgba(0, 240, 255, 0.4); padding-top: 6px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; font-family: monospace;">
+              <tbody>
+                <tr style="background: rgba(255, 176, 0, 0.08); border-left: 2px solid ${COLOR.AMBER}; color: ${COLOR.AMBER};">
+                  <td style="padding: 7px 6px; font-weight: bold; width: 12%;">#???</td>
+                  <td style="padding: 7px 6px; font-weight: bold; letter-spacing: 0.5px; width: 28%;">
+                    ${activePlayerTag} <span style="font-size: 9px; color: ${COLOR.AMBER};">[YOU]</span>
+                  </td>
+                  <td style="padding: 7px 6px; width: 22%;">${playerBestRun.score.toLocaleString()}</td>
+                  <td style="padding: 7px 6px; width: 16%;">WAVE ${playerBestRun.waveNumber}</td>
+                  <td style="padding: 7px 6px; width: 22%; font-size: 10px;">[LOCAL BEST / UNRANKED]</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else {
+        html += `
+          <div style="margin-top: 8px; border-top: 1px dashed rgba(0, 240, 255, 0.4); padding-top: 6px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; font-family: monospace;">
+              <tbody>
+                <tr style="background: rgba(255, 255, 255, 0.03); border-left: 2px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.5);">
+                  <td style="padding: 7px 6px; font-weight: bold; width: 12%;">--</td>
+                  <td style="padding: 7px 6px; font-weight: bold; letter-spacing: 0.5px; width: 28%;">
+                    ${activePlayerTag} <span style="font-size: 9px; color: rgba(255, 255, 255, 0.4);">[YOU]</span>
+                  </td>
+                  <td colspan="3" style="padding: 7px 6px; color: rgba(255, 255, 255, 0.4);">
+                    NO TELEMETRY RECORDED
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+    }
 
     container.innerHTML = html;
 

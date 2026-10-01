@@ -331,6 +331,55 @@ export class LeaderboardService {
   }
 
   /**
+   * Reads the local player's best recorded run and verified signature from localStorage
+   * @param {string} [callsign]
+   * @returns {Object|null}
+   */
+  getPlayerBestRun(callsign = null) {
+    const local = this.loadLocalScores();
+    if (!local || local.length === 0) return null;
+
+    const tag = (callsign || (typeof localStorage !== 'undefined' && localStorage.getItem('ring0_callsign')) || null);
+    let pool = local;
+    if (tag) {
+      const targetTag = String(tag).trim().toUpperCase();
+      const filtered = local.filter((r) => {
+        const entryTag = (r.playerName || r.player_name || r.callsign || '').trim().toUpperCase();
+        return entryTag === targetTag;
+      });
+      if (filtered.length > 0) {
+        pool = filtered;
+      } else {
+        return null;
+      }
+    }
+
+    const sorted = [...pool].sort((a, b) => (b.score || 0) - (a.score || 0));
+    const best = sorted[0];
+    if (!best) return null;
+
+    const wave = best.wave_number !== undefined ? best.wave_number : (best.waveNumber !== undefined ? best.waveNumber : (best.wavesCleared !== undefined ? best.wavesCleared : 0));
+    let ring = best.clearance_ring !== undefined ? best.clearance_ring : (best.clearanceRing !== undefined ? best.clearanceRing : (best.clearanceTier !== undefined ? best.clearanceTier : 3));
+    if (typeof ring === 'string') {
+      if (ring.includes('0')) ring = 0;
+      else if (ring.includes('1')) ring = 1;
+      else if (ring.includes('2')) ring = 2;
+      else if (ring.includes('3')) ring = 3;
+    }
+
+    return {
+      ...best,
+      playerName: (best.playerName || best.player_name || best.callsign || 'OPERATOR_0').toUpperCase(),
+      callsign: (best.callsign || best.playerName || best.player_name || 'OPERATOR_0').toUpperCase(),
+      score: Math.floor(best.score || 0),
+      waveNumber: wave,
+      wavesCleared: wave,
+      clearanceRing: ring,
+      signature: best.signature || best.checksum || null,
+    };
+  }
+
+  /**
    * Fetches top rankings from Cloudflare Worker or local cache
    * Performs GET /api/leaderboard?limit=100
    * On success: caches array in localStorage under ring0_leaderboard_cache
