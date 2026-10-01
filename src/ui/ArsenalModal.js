@@ -104,6 +104,9 @@ export class ArsenalModal {
    * @param {function(Object, Object): void} [onConfirm=null]
    */
   open(milestoneWave, unlockedWeapons, currentSlots, onConfirm = null) {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._onKeyDown);
+    }
     this.isOpen = true;
     this.milestoneWave = milestoneWave;
     this.unlockedWeapons = unlockedWeapons && unlockedWeapons.length > 0 ? unlockedWeapons : getUnlockedWeaponsForWave(milestoneWave);

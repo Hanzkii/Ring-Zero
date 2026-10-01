@@ -73,7 +73,8 @@ export class SilentAimCheat extends CheatInterceptor {
 
     let bestTarget = null;
     let bestScore = Infinity;
-    const bestTargetPos = new Vec2();
+    let bestTargetX = 0;
+    let bestTargetY = 0;
     let isBacktrack = false;
 
     for (const enemy of candidates) {
@@ -103,7 +104,8 @@ export class SilentAimCheat extends CheatInterceptor {
             if (score < bestScore) {
               bestScore = score;
               bestTarget = enemy;
-              bestTargetPos.set(lx, ly);
+              bestTargetX = lx;
+              bestTargetY = ly;
               isBacktrack = false;
             }
           }
@@ -137,7 +139,8 @@ export class SilentAimCheat extends CheatInterceptor {
                 if (gScore < bestScore) {
                   bestScore = gScore;
                   bestTarget = enemy;
-                  bestTargetPos.set(snap.x, snap.y);
+                  bestTargetX = snap.x;
+                  bestTargetY = snap.y;
                   isBacktrack = true;
                 }
               }
@@ -152,8 +155,8 @@ export class SilentAimCheat extends CheatInterceptor {
     this.isBacktrackTarget = isBacktrack;
 
     if (bestTarget) {
-      this.targetLeadPos.copy(bestTargetPos);
-      const desiredAngle = Math.atan2(bestTargetPos.y - player.y, bestTargetPos.x - player.x);
+      this.targetLeadPos.set(bestTargetX, bestTargetY);
+      const desiredAngle = Math.atan2(bestTargetY - player.y, bestTargetX - player.x);
       this.currentLockedAngle = desiredAngle;
       return desiredAngle;
     }

@@ -1,6 +1,7 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 13:25 EEST  
+**Last Updated:** 2026-10-01 17:05 EEST  
+**Git Head:** `85fdd9b` (origin/main)  
 **Test Suite Health:** 537 / 537 passing across 9 test suites (0 failures)
 
 ---
@@ -139,6 +140,20 @@
     - Tier 2: `Vector Railgun`, `Memory Corruptor`.
   - **Zero World Weapon Crates**: Enemies exclusively drop Crypto Bounties, XP Frags, and Nanite Repair packs.
   - **Milestone Arsenal Modal** (`ArsenalModal.js`): Interactive vector modal triggered at milestone waves (Waves 3, 6, 10) to choose and equip unlocked weapons in Slot 1 and Slot 2.
+* **Codebase Integrity & Zero-GC Hot Path Audit**:
+  - **Eliminated All Dynamic `new Vec2` Allocations in 60Hz Loop**:
+    - `GameApp.js`: Replaced per-frame `new Vec2()` in camera mouse lead tracking with `Math.hypot(pointer.x - cx, pointer.y - cy)`.
+    - `TriggerbotCheat.js`: Replaced per-candidate `new Vec2()` vectors with scalar dot-product and perpendicular distance calculations.
+    - `AimbotCheat.js` & `SilentAimCheat.js`: Replaced candidate `new Vec2()` allocations with scalar `bestTargetX` and `bestTargetY` trackers.
+    - `CollisionSystem.js`: Replaced `new Vec2(player.vx, player.vy)` in dash ram and `new Vec2(enemy.x - prop.x, ...)` in explosive prop detonations with reusable instance scratch vector `this._knockbackDir`.
+  - **Event Listener Lifecycle & Memory Leak Audit**:
+    - Guarded `DraftModal.js` and `ArsenalModal.js` with idempotent listener teardown (`removeEventListener` prior to `addEventListener` on re-open and draft re-rolls).
+    - Verified `SettingsModal.js` and `PauseOverlay.js` button hooks and `DebugConsole.js` keyboard isolation listeners.
+  - **Edge Case Hardening**:
+    - Health clamping `Math.max(0, ...)` and atomic `state !== APP_STATE.GAMEOVER` death lock preventing duplicate game-over triggers.
+    - Uninterrupted wave progression in `WaveManager.js` even when active daemons simultaneously reach zero or budget depletes.
+    - Clean browser profile resilience in `StorageService.js` by deep-merging defaults for `firmware`, `riskModifiers`, and `settings`.
+    - Boundary-safe spatial partitioning across negative and positive world space in `SpatialHashGrid.js`.
 
 ---
 
@@ -205,3 +220,77 @@ All 9 automated test suites passing cleanly:
 9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
 
 **Total: 537 tests passing, 0 failing.**
+
+---
+
+## 4. GitHub Pages Online Leaderboard Architecture Analysis
+
+Ring Zero is hosted as a static client on GitHub Pages. To deliver a genuine, zero-cost, persistent global leaderboard without recurring infrastructure fees, we evaluated three architectures:
+
+### Option 1: Cloudflare Worker + KV / D1 (Recommended)
+* **Architecture**: A free-tier serverless Cloudflare Worker proxy (`https://api.ring-zero.workers.dev/scores`) backed by Cloudflare KV or D1 (SQL).
+* **Cost & Limits**: 100% free (Cloudflare allows up to 100,000 requests/day and 1GB storage on the free tier).
+* **Payload Schema**:
+  ```json
+  {
+    "callsign": "KRNL_GHOST",
+    "score": 68400,
+    "wavesCleared": 18,
+    "clearanceRing": 0,
+    "accuracy": 92.4,
+    "riskMultiplier": 1.75,
+    "bountiesEarned": 420,
+    "timestamp": "2026-10-01T14:10:00Z",
+    "checksum": "a7b3c99..."
+  }
+  ```
+* **Security & Verification**:
+  - The client signs the run tuple using the native Web Crypto API (`SHA-256` digest of `score:wavesCleared:clearanceRing:bountiesEarned:SALT`).
+  - Worker validates payload schema, verifies SHA-256 signature, validates statistical plausibility (e.g. `score <= wavesCleared * maxPossibleScorePerWave * riskMultiplier`), and inserts into the sorted Top 100 table.
+  - Serves `GET /scores` with global edge caching (Cloudflare Cache API, 60s TTL) and CORS headers.
+  - **Fault Tolerance**: If the worker endpoint is unreachable, `LeaderboardService.js` automatically falls back to local storage and seeded historical records with zero user interruption.
+
+### Option 2: GitHub Repository Dispatch / Discussions API
+* **Architecture**: Uses GitHub's REST/GraphQL API to post run reports as GitHub Discussions or Repository Dispatch events.
+* **Mechanism**: A scheduled GitHub Actions workflow parses incoming runs, validates checksums, re-indexes the Top 100, and writes `leaderboard.json` directly into the `gh-pages` branch. The game client reads `https://hanzkii.github.io/Ring-Zero/leaderboard.json` as a static asset.
+* **Pros & Cons**: Zero external services outside GitHub; however, updates are asynchronous (delayed by 1–5 minutes) and GitHub API rate limits apply.
+
+### Option 3: Deterministic Seeded Ladder + Cryptographic Run Passport
+* **Architecture**: Zero-backend serverless model.
+* **Mechanism**: Every run generates an encrypted base64 "Run Passport" containing the run telemetry, random seed, inputs, and SHA-256 signature.
+* **Feature**: Players can copy their Run Passport string directly from the game-over screen. The Terminal UI Leaderboard tab includes an `[IMPORT PASSPORT]` button where players can paste passports from friends or community posts; the client cryptographically validates the token and permanently merges it into their local ladder.
+
+---
+
+## 5. Known Issues & Backlog
+* **Weapon Tuning & Juice**: Recoil screen impulse and muzzle flash particles could have weapon-specific color palettes (e.g. emerald flash for `Scrap Blaster`, violet particle jet for `Vector Railgun`).
+* **Audio Polyphony Capping**: Under rapid minigun fire combined with Kernel Panic bursts, oscillator count can briefly spike; adding an active voice pool cap (~32 simultaneous nodes) will optimize low-end mobile browsers.
+* **Touch / Mobile Joystick Controls**: Touch pointer events are functional for shooting, but dual virtual on-screen thumbsticks would improve tablet/phone gameplay.
+
+---
+
+## 6. Tomorrow's Execution Plan (`/plan`)
+
+```markdown
+### Phase 8 Execution Plan: Weapon Juice, Encounter Pacing & Online Leaderboard Deployment
+
+1. Weapon Polish & Combat Juice:
+   - Implement weapon-specific muzzle flash vector spikes and dynamic ejection sparks for all 9 weapons.
+   - Add micro hit-stop freeze (0.03s) on critical strikes and heavy daemon purges.
+   - Refine recoil trauma impulse curves per weapon archetype.
+
+2. Security Daemon Encounter Pacing & Boss Escalation:
+   - Introduce milestone miniboss waves at Wave 5 and Wave 10:
+     - "KERNEL_WATCHDOG_TITAN": Multi-turreted heavy daemon with rotating laser shields.
+     - "ROOTKIT_CORE": Swarm spawner deploying accelerated BIT_SCANNERS.
+   - Balance spawn budget curves for smoother progression between Waves 1 through 15.
+
+3. Online Leaderboard Deployment (Option 1 - Cloudflare Worker):
+   - Scaffold Cloudflare Worker script in `workers/leaderboard-worker.js`.
+   - Wire remote API synchronization in `LeaderboardService.js` with offline fallback.
+   - Add "GLOBAL" vs "LOCAL" tab toggle in `TerminalUI.js`.
+
+4. Release Packaging & Live Build Validation:
+   - Verify GitHub Pages deployment live build and PWA offline manifest.
+   - Run end-to-end playtest verification.
+```

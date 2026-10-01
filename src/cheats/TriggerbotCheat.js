@@ -61,7 +61,9 @@ export class TriggerbotCheat extends CheatInterceptor {
     if (!player || !enemies) return aimAngle;
 
     const maxDist = 700;
-    const rayDir = new Vec2(Math.cos(aimAngle), Math.sin(aimAngle));
+    const maxDistSq = maxDist * maxDist;
+    const rayDirX = Math.cos(aimAngle);
+    const rayDirY = Math.sin(aimAngle);
     let hitFound = false;
     const tolerance = 14 + this.level * 10;
 
@@ -84,14 +86,15 @@ export class TriggerbotCheat extends CheatInterceptor {
       const enemy = enemies[i];
       if (!enemy.active || enemy.markedForRemoval) continue;
 
-      const toEnemy = new Vec2(enemy.x - player.x, enemy.y - player.y);
-      const dist = toEnemy.length();
-      if (dist > maxDist || dist < 1) continue;
+      const toEnemyX = enemy.x - player.x;
+      const toEnemyY = enemy.y - player.y;
+      const distSq = toEnemyX * toEnemyX + toEnemyY * toEnemyY;
+      if (distSq > maxDistSq || distSq < 1) continue;
 
-      const proj = toEnemy.dot(rayDir);
+      const proj = toEnemyX * rayDirX + toEnemyY * rayDirY;
       if (proj <= 0) continue; // Behind player
 
-      const perpDist = Math.sqrt(Math.max(0, dist * dist - proj * proj));
+      const perpDist = Math.sqrt(Math.max(0, distSq - proj * proj));
       if (perpDist <= enemy.radius + tolerance) {
         if (isUnblocked(enemy.x, enemy.y)) {
           hitFound = true;
@@ -109,12 +112,13 @@ export class TriggerbotCheat extends CheatInterceptor {
         if (!history || history.length < 2) continue;
         for (let j = history.length - 1; j >= 0; j--) {
           const snap = history[j];
-          const toSnap = new Vec2(snap.x - player.x, snap.y - player.y);
-          const distSnap = toSnap.length();
-          if (distSnap > maxDist || distSnap < 1) continue;
-          const projSnap = toSnap.dot(rayDir);
+          const toSnapX = snap.x - player.x;
+          const toSnapY = snap.y - player.y;
+          const distSnapSq = toSnapX * toSnapX + toSnapY * toSnapY;
+          if (distSnapSq > maxDistSq || distSnapSq < 1) continue;
+          const projSnap = toSnapX * rayDirX + toSnapY * rayDirY;
           if (projSnap <= 0) continue;
-          const perpDistSnap = Math.sqrt(Math.max(0, distSnap * distSnap - projSnap * projSnap));
+          const perpDistSnap = Math.sqrt(Math.max(0, distSnapSq - projSnap * projSnap));
           if (perpDistSnap <= enemy.radius + tolerance) {
             if (isUnblocked(snap.x, snap.y)) {
               hitFound = true;

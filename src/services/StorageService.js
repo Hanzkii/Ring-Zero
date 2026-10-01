@@ -157,6 +157,10 @@ export class StorageService {
           ...DEFAULT_SAVE_STATE.riskModifiers,
           ...(parsed.riskModifiers || {}),
         },
+        firmware: {
+          ...DEFAULT_SAVE_STATE.firmware,
+          ...(parsed.firmware || {}),
+        },
         settings: {
           ...DEFAULT_SAVE_STATE.settings,
           ...(parsed.settings || {}),

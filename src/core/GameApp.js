@@ -762,9 +762,9 @@ export class GameApp {
     this.particleSystem.update(dt);
 
     // Camera follow tracking with lead
-    const aimDistance = this.input.screenPointer.dist(
-      new Vec2(this.camera.viewportWidth * 0.5, this.camera.viewportHeight * 0.5)
-    );
+    const cx = this.camera.viewportWidth * 0.5;
+    const cy = this.camera.viewportHeight * 0.5;
+    const aimDistance = Math.hypot(this.input.screenPointer.x - cx, this.input.screenPointer.y - cy);
     this.camera.update(dt, this.player, this.input.aimVector, aimDistance);
 
     // Resolve Narrowphase Collisions

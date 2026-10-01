@@ -228,7 +228,7 @@ export class CollisionSystem {
       if (distSq <= totalR * totalR) {
         if (player.isDashing) {
           // Dash Ram: Cutting through enemy deals high damage
-          enemy.takeDamage(45, new Vec2(player.vx, player.vy).normalize(), 200);
+          enemy.takeDamage(45, this._knockbackDir.set(player.vx, player.vy).normalize(), 200);
           this.particleSystem.emitImpact(enemy.x, enemy.y, player.rotation, 8, COLOR.CYAN);
           this.camera.addTrauma(0.18);
         } else if (player.iFramesTimer <= 0) {
@@ -556,7 +556,7 @@ export class CollisionSystem {
                 if (!enemy.active || enemy.markedForRemoval) continue;
                 const d = Math.hypot(enemy.x - prop.x, enemy.y - prop.y);
                 if (d < blastRadius + enemy.radius) {
-                  const dir = new Vec2(enemy.x - prop.x, enemy.y - prop.y).normalize();
+                  const dir = this._knockbackDir.set(enemy.x - prop.x, enemy.y - prop.y).normalize();
                   const died = enemy.takeDamage(120, dir, 300);
                   if (died) {
                     this.particleSystem.emitBurst(enemy.x, enemy.y, 14, enemy.color, 240);

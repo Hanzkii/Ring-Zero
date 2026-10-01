@@ -57,6 +57,9 @@ export class DraftModal {
    */
   open(options, rerollTokens = 0) {
     if (options.length === 0) return;
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this._onKeyDown);
+    }
 
     this.isOpen = true;
     this.currentOptions = options;
