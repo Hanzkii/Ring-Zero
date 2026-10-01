@@ -438,15 +438,18 @@ export class GameApp {
     const accuracy = this.stats.shotsFired > 0
       ? (this.stats.shotsHit / this.stats.shotsFired) * 100
       : 0;
+    const durationSeconds = Math.max(1, Math.round((Date.now() - (this.runStartTime || Date.now())) / 1000));
 
     const summary = {
       score: Math.floor(this.score * mult),
       wavesCleared: Math.max(0, this.waveManager.waveNumber - 1),
+      waveNumber: this.waveManager.waveNumber,
       enemiesKilled: this.stats.enemiesKilled,
       accuracy: Math.min(100, accuracy),
       riskMultiplier: mult,
       bountiesEarned: this.player.bounties || 0,
       clearanceRing: this.storage.clearanceRing,
+      durationSeconds,
     };
 
     this.terminalUI.showRunDiagnostic(summary);
@@ -486,6 +489,7 @@ export class GameApp {
     this.player.vy = 0;
     this.score = 0;
     this.stats = { shotsFired: 0, shotsHit: 0, enemiesKilled: 0 };
+    this.runStartTime = Date.now();
     this.achievementSystem?.resetRun();
 
     // 2. Clear and teardown cheats
@@ -825,15 +829,18 @@ export class GameApp {
       const accuracy = this.stats.shotsFired > 0
         ? (this.stats.shotsHit / this.stats.shotsFired) * 100
         : 0;
+      const durationSeconds = Math.max(1, Math.round((Date.now() - (this.runStartTime || Date.now())) / 1000));
 
       const summary = {
         score: Math.floor(this.score * mult),
         wavesCleared: Math.max(0, this.waveManager.waveNumber - 1),
+        waveNumber: this.waveManager.waveNumber,
         enemiesKilled: this.stats.enemiesKilled,
         accuracy: Math.min(100, accuracy),
         riskMultiplier: mult,
         bountiesEarned: this.player.bounties || 0,
         clearanceRing: this.storage.clearanceRing,
+        durationSeconds,
       };
 
       this.terminalUI.showRunDiagnostic(summary);

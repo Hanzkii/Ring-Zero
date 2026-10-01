@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 17:30 EEST  
-**Git Head:** Pending Commit (origin/main)  
-**Test Suite Health:** 556 / 556 passing across 10 test suites (0 failures)
+**Last Updated:** 2026-10-01 17:45 EEST  
+**Git Head:** `33253a9` (origin/main)  
+**Test Suite Health:** 562 / 562 passing across 11 test suites (0 failures)
 
 ---
 
@@ -240,7 +240,7 @@ scripts/
 
 ## 3. Test Suites
 
-All 10 automated test suites passing cleanly:
+All 11 automated test suites passing cleanly:
 1. `test/phase1_test.js`: Core physics, math, camera, spatial hash, object pool (28 tests)
 2. `test/phase2_test.js`: Weapons, ballistics, swarm AI, particles (37 tests)
 3. `test/phase3_test.js`: Interceptor pipeline, cheats, backtrack, silent aim, triggerbot synergy (63 tests)
@@ -251,8 +251,9 @@ All 10 automated test suites passing cleanly:
 8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
 9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
 10. `test/phase8_test.js`: True silent aim decoupling, screen flash elimination, tier 2 arsenal UX, achievements engine & toasts, weapon recoil & hit-stop, boss encounters & elite modifiers, cloudflare worker leaderboard integration (19 tests)
+11. `test/leaderboard_integration_test.js`: Cloudflare Worker HMAC signing, submitRun offline queueing under ring0_pending_submissions, fetchTopScores caching under ring0_leaderboard_cache, worker handler, and live UI status (6 tests)
 
-**Total: 556 tests passing, 0 failing.**
+**Total: 562 tests passing, 0 failing.**
 
 ---
 

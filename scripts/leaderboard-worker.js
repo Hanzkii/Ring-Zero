@@ -11,19 +11,33 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const VERIFICATION_SALT = 'RING_ZERO_KERNEL_SIG_v1.0.4';
+const HMAC_SECRET = 'null404_kernel_gate';
 
 /**
- * Computes native SHA-256 digest using Web Crypto API
- * @param {string} payload
- * @returns {Promise<string>}
+ * Validates HMAC-SHA256 signature using native Web Crypto API
+ * Canonical: `${playerName}:${score}:${waveNumber}:${durationSeconds}:${timestamp}`
+ * @param {string} canonical
+ * @param {string} signatureHex
+ * @returns {Promise<boolean>}
  */
-async function computeHash(payload) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(payload);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+async function verifyHmac(canonical, signatureHex) {
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(HMAC_SECRET),
+      { name: 'HMAC', hash: { name: 'SHA-256' } },
+      false,
+      ['verify']
+    );
+
+    const cleanHex = signatureHex.trim();
+    if (cleanHex.length % 2 !== 0) return false;
+    const sigBytes = new Uint8Array(cleanHex.match(/.{1,2}/g).map((b) => parseInt(b, 16)));
+    return await crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(canonical));
+  } catch {
+    return false;
+  }
 }
 
 export default {
@@ -34,18 +48,24 @@ export default {
 
     const url = new URL(request.url);
 
-    // GET /api/leaderboard?limit=10
+    // GET /api/leaderboard?limit=100
     if (request.method === 'GET' && url.pathname.endsWith('/leaderboard')) {
-      const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '10', 10));
+      const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '100', 10));
       let records = [];
 
-      if (env.LEADERBOARD_KV) {
+      if (env?.LEADERBOARD_KV) {
         const raw = await env.LEADERBOARD_KV.get('top_scores');
         if (raw) records = JSON.parse(raw);
       }
 
       records.sort((a, b) => b.score - a.score);
-      const ranked = records.slice(0, limit).map((r, i) => ({ ...r, rank: i + 1 }));
+      const ranked = records.slice(0, limit).map((r, i) => ({
+        ...r,
+        rank: i + 1,
+        playerName: r.playerName || r.callsign || 'OPERATOR_0',
+        callsign: r.callsign || r.playerName || 'OPERATOR_0',
+      }));
+
       return new Response(JSON.stringify(ranked), { headers: CORS_HEADERS });
     }
 
@@ -53,35 +73,43 @@ export default {
     if (request.method === 'POST' && url.pathname.endsWith('/submit')) {
       try {
         const body = await request.json();
+        const playerName = (body.playerName || body.callsign || 'OPERATOR_0').toUpperCase().slice(0, 14);
         const score = Math.floor(body.score || 0);
-        const waves = Math.floor(body.wavesCleared || 0);
-        const ring = body.clearanceRing !== undefined ? body.clearanceRing : 3;
-        const bounties = Math.floor(body.bountiesEarned || 0);
-        const payload = `${score}:${waves}:${ring}:${bounties}:${VERIFICATION_SALT}`;
-        const expectedChecksum = await computeHash(payload);
+        const waveNumber = Math.floor(body.waveNumber !== undefined ? body.waveNumber : (body.wavesCleared || 0));
+        const durationSeconds = Math.floor(body.durationSeconds || 0);
+        const timestamp = body.timestamp || Date.now();
+        const clearanceRing = body.clearanceRing !== undefined ? body.clearanceRing : 3;
 
-        if (body.checksum !== expectedChecksum) {
+        const canonical = `${playerName}:${score}:${waveNumber}:${durationSeconds}:${timestamp}`;
+        const signature = body.signature || body.checksum;
+
+        if (!signature || !(await verifyHmac(canonical, signature))) {
           return new Response(
-            JSON.stringify({ success: false, error: 'INVALID_CHECKSUM_SIG' }),
+            JSON.stringify({ success: false, error: 'INVALID_HMAC_SIGNATURE' }),
             { status: 403, headers: CORS_HEADERS }
           );
         }
 
+        const runHash = signature.slice(0, 16);
         const entry = {
-          callsign: (body.callsign || 'OPERATOR_0').toUpperCase().slice(0, 14),
+          playerName,
+          callsign: playerName,
           score,
-          wavesCleared: waves,
-          clearanceRing: ring,
+          waveNumber,
+          wavesCleared: waveNumber,
+          clearanceRing,
+          durationSeconds,
           accuracy: Number((body.accuracy || 0).toFixed(1)),
           riskMultiplier: Number((body.riskMultiplier || 1.0).toFixed(2)),
-          bountiesEarned: bounties,
-          timestamp: new Date().toISOString(),
-          checksum: expectedChecksum,
+          bountiesEarned: Math.floor(body.bountiesEarned || 0),
+          timestamp,
+          signature,
+          runHash,
           verified: true,
         };
 
         let records = [];
-        if (env.LEADERBOARD_KV) {
+        if (env?.LEADERBOARD_KV) {
           const raw = await env.LEADERBOARD_KV.get('top_scores');
           if (raw) records = JSON.parse(raw);
           records.push(entry);
@@ -90,11 +118,11 @@ export default {
           await env.LEADERBOARD_KV.put('top_scores', JSON.stringify(records));
         }
 
-        const rankIndex = records.findIndex((r) => r.checksum === entry.checksum);
+        const rankIndex = records.findIndex((r) => r.signature === entry.signature);
         const rank = rankIndex !== -1 ? rankIndex + 1 : 1;
 
         return new Response(
-          JSON.stringify({ success: true, rank, entry }),
+          JSON.stringify({ success: true, rank, runHash, entry }),
           { headers: CORS_HEADERS }
         );
       } catch (err) {

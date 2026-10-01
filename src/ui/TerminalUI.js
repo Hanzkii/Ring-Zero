@@ -539,52 +539,73 @@ export class TerminalUI {
   }
 
   async _renderLeaderboardTab(container) {
-    container.innerHTML = `<div style="text-align: center; padding: 24px; color: ${COLOR.CYAN};">QUERYING CRYPTOGRAPHIC LEDGER...</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 24px; color: ${COLOR.CYAN};">QUERYING CLOUDFLARE EDGE LEDGER...</div>`;
 
-    const scores = await this.leaderboard.fetchTopScores(7);
+    const scores = await this.leaderboard.fetchTopScores(100);
+
+    const statusBadge = this.leaderboard.isOnline
+      ? `<span style="color: ${COLOR.CYAN}; font-weight: bold; font-family: monospace;">[STATUS: EDGE LINK ACTIVE]</span>`
+      : `<span style="color: ${COLOR.AMBER}; font-weight: bold; font-family: monospace;">[STATUS: LOCAL BUFFER / OFFLINE]</span>`;
 
     let html = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; justify-content: space-between;">
-        <span>GLOBAL KERNEL LEADERBOARD</span>
-        <span style="color: ${COLOR.GREEN}; font-size: 11px;">[SHA-256 INTEGRITY VERIFIED]</span>
+      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-weight: bold; letter-spacing: 1px;">GLOBAL KERNEL LEADERBOARD</span>
+          ${statusBadge}
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="color: ${COLOR.GREEN}; font-size: 11px;">[HMAC-SHA256 VERIFIED]</span>
+          <button id="btn-refresh-leaderboard" class="btn-vector" style="padding: 4px 10px; font-size: 10px; border-color: rgba(0,240,255,0.4);">
+            REFRESH
+          </button>
+        </div>
       </div>
-      <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
-        <thead>
-          <tr style="border-bottom: 1px solid rgba(0,240,255,0.3); color: rgba(255,255,255,0.6);">
-            <th style="padding: 6px 4px;">RANK</th>
-            <th style="padding: 6px 4px;">OPERATOR</th>
-            <th style="padding: 6px 4px;">SCORE</th>
-            <th style="padding: 6px 4px;">WAVES</th>
-            <th style="padding: 6px 4px;">CLEARANCE</th>
-            <th style="padding: 6px 4px;">ACCURACY</th>
-            <th style="padding: 6px 4px;">STATUS</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div style="max-height: 290px; overflow-y: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid rgba(0,240,255,0.3); color: rgba(255,255,255,0.6); position: sticky; top: 0; background: #070A0F;">
+              <th style="padding: 8px 6px;">RANK</th>
+              <th style="padding: 8px 6px;">CALL-SIGN / TAG</th>
+              <th style="padding: 8px 6px;">SCORE</th>
+              <th style="padding: 8px 6px;">WAVE</th>
+              <th style="padding: 8px 6px;">CLEARANCE TIER</th>
+              <th style="padding: 8px 6px;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
     `;
 
     scores.forEach((s) => {
-      const ringText = s.clearanceRing === 0 ? 'RING 0' : `RING ${s.clearanceRing}`;
+      const tag = (s.playerName || s.callsign || 'OPERATOR_0').toUpperCase();
+      const wave = s.waveNumber !== undefined ? s.waveNumber : (s.wavesCleared !== undefined ? s.wavesCleared : 0);
+      const ring = s.clearanceRing !== undefined ? s.clearanceRing : (s.clearanceTier !== undefined ? s.clearanceTier : 3);
+      const ringText = ring === 0 ? 'RING 0 [KERNEL]' : `RING ${ring}`;
       const color = s.rank === 1 ? COLOR.AMBER : s.rank <= 3 ? COLOR.CYAN : COLOR.WHITE;
+
       html += `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); color: ${color};">
-          <td style="padding: 8px 4px; font-weight: bold;">#${s.rank}</td>
-          <td style="padding: 8px 4px; font-weight: bold;">${s.callsign}</td>
-          <td style="padding: 8px 4px;">${s.score.toLocaleString()}</td>
-          <td style="padding: 8px 4px;">W${s.wavesCleared}</td>
-          <td style="padding: 8px 4px;">${ringText}</td>
-          <td style="padding: 8px 4px;">${s.accuracy}%</td>
-          <td style="padding: 8px 4px; color: ${COLOR.GREEN};">✓ SECURE</td>
+          <td style="padding: 8px 6px; font-weight: bold;">#${s.rank}</td>
+          <td style="padding: 8px 6px; font-weight: bold; letter-spacing: 0.5px;">${tag}</td>
+          <td style="padding: 8px 6px;">${(s.score || 0).toLocaleString()}</td>
+          <td style="padding: 8px 6px;">W${wave}</td>
+          <td style="padding: 8px 6px;">${ringText}</td>
+          <td style="padding: 8px 6px; color: ${COLOR.GREEN};">✓ SECURE</td>
         </tr>
       `;
     });
 
     html += `
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     `;
 
     container.innerHTML = html;
+
+    container.querySelector('#btn-refresh-leaderboard')?.addEventListener('click', () => {
+      this.soundBank.playUIClick();
+      this._renderLeaderboardTab(container);
+    });
   }
 
   /**
@@ -636,23 +657,44 @@ export class TerminalUI {
 
     this.soundBank.playGlitch();
 
-    // Persist run
+    // Persist run to local stats
     this.storage.recordRun(runSummary);
 
-    // Compute verification checksum
+    const savedCallsign = (typeof localStorage !== 'undefined' && localStorage.getItem('ring0_callsign')) || 'OPERATOR_0';
+
+    // Automatically trigger submitRun on run completion (Game Over / Victory)
+    const autoSubmitPromise = this.leaderboard.submitRun({
+      playerName: savedCallsign,
+      score: runSummary.score,
+      waveNumber: runSummary.waveNumber !== undefined ? runSummary.waveNumber : (runSummary.wavesCleared || 0),
+      clearanceRing: runSummary.clearanceRing,
+      durationSeconds: runSummary.durationSeconds || 0,
+      accuracy: runSummary.accuracy,
+      riskMultiplier: runSummary.riskMultiplier,
+      bountiesEarned: runSummary.bountiesEarned,
+    });
+
+    // Compute verification checksum for display
     const checksum = await this.leaderboard.computeChecksum(runSummary);
     const shortHash = checksum.slice(0, 16);
 
     const mult = runSummary.riskMultiplier.toFixed(2);
     const accuracy = runSummary.accuracy.toFixed(1);
 
+    const statusBadge = this.leaderboard.isOnline
+      ? `<span id="diag-link-status" style="color: ${COLOR.CYAN}; font-size: 11px; font-weight: bold; font-family: monospace;">[STATUS: EDGE LINK ACTIVE]</span>`
+      : `<span id="diag-link-status" style="color: ${COLOR.AMBER}; font-size: 11px; font-weight: bold; font-family: monospace;">[STATUS: LOCAL BUFFER / OFFLINE]</span>`;
+
     this.diagnosticModal.style.display = 'flex';
     this.diagnosticModal.innerHTML = `
       <div class="terminal-box" style="max-width: 680px; width: 92%;">
         <div class="terminal-header">
-          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;">
             <h2 class="terminal-title" style="color: ${COLOR.RED}; font-size: 22px;">// RUN DIAGNOSTIC // PURGED //</h2>
-            <div style="font-size: 11px; color: ${COLOR.GREEN};">SHA-256: ${shortHash}...</div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              ${statusBadge}
+              <div style="font-size: 11px; color: ${COLOR.GREEN};">SHA-256: ${shortHash}...</div>
+            </div>
           </div>
           <div class="terminal-subtitle">TELEMETRY ANALYSIS & CRYPTOGRAPHIC CLEARANCE VERIFICATION</div>
         </div>
@@ -666,7 +708,7 @@ export class TerminalUI {
             </div>
             <div style="background: rgba(0,0,0,0.4); padding: 12px; border: 1px solid rgba(0,240,255,0.2);">
               <div style="font-size: 10px; color: rgba(255,255,255,0.5);">WAVES CLEARED</div>
-              <div style="font-size: 20px; font-weight: bold; color: ${COLOR.WHITE};">${runSummary.wavesCleared}</div>
+              <div style="font-size: 20px; font-weight: bold; color: ${COLOR.WHITE};">${runSummary.wavesCleared !== undefined ? runSummary.wavesCleared : runSummary.waveNumber}</div>
             </div>
             <div style="background: rgba(0,0,0,0.4); padding: 12px; border: 1px solid rgba(0,240,255,0.2);">
               <div style="font-size: 10px; color: rgba(255,255,255,0.5);">BOUNTIES HARVESTED</div>
@@ -687,10 +729,10 @@ export class TerminalUI {
           </div>
 
           <!-- Score Submission Form -->
-          <div id="submit-section" style="background: rgba(0,240,255,0.03); border: 1px solid rgba(0,240,255,0.2); padding: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <div id="submit-section" style="background: rgba(0,240,255,0.03); border: 1px solid rgba(0,240,255,0.2); padding: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 11px; color: rgba(255,255,255,0.7);">OPERATOR CALLSIGN:</span>
-              <input type="text" id="input-callsign" value="OPERATOR_0" maxlength="12" style="
+              <span style="font-size: 11px; color: rgba(255,255,255,0.7);">CALL-SIGN / TAG:</span>
+              <input type="text" id="input-callsign" value="${savedCallsign}" maxlength="14" style="
                 background: #0D111A; border: 1px solid ${COLOR.CYAN}; color: ${COLOR.WHITE};
                 padding: 6px 10px; font-family: monospace; font-size: 12px; text-transform: uppercase; width: 140px;
               ">
@@ -699,7 +741,9 @@ export class TerminalUI {
               TRANSMIT TELEMETRY
             </button>
           </div>
-          <div id="submit-feedback" style="font-size: 11px; margin-top: 6px; color: ${COLOR.GREEN}; display: none;"></div>
+          <div id="submit-feedback" style="font-size: 11px; margin-top: 8px; color: ${COLOR.CYAN}; display: block; font-family: monospace;">
+            AUTOSYNC: COMMITTING RUN DATA...
+          </div>
         </div>
 
         <div class="terminal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
@@ -716,27 +760,73 @@ export class TerminalUI {
       </div>
     `;
 
-    // Hook submit button
+    // Hook submit button & automatic submission resolution
     const submitBtn = document.getElementById('btn-submit-score');
     const callsignInput = document.getElementById('input-callsign');
     const feedback = document.getElementById('submit-feedback');
+    const diagStatus = document.getElementById('diag-link-status');
+
+    // Handle background automatic submit result
+    autoSubmitPromise.then((res) => {
+      if (feedback && feedback.textContent.includes('COMMITTING')) {
+        if (res.remote) {
+          feedback.style.color = COLOR.GREEN;
+          feedback.textContent = `✓ AUTO-COMMITTED TO EDGE! LEADERBOARD RANK: #${res.rank} // VERIFIED HASH: ${res.runHash}`;
+          if (diagStatus) {
+            diagStatus.textContent = '[STATUS: EDGE LINK ACTIVE]';
+            diagStatus.style.color = COLOR.CYAN;
+          }
+        } else {
+          feedback.style.color = COLOR.AMBER;
+          feedback.textContent = `! RECORDED IN LOCAL BUFFER (OFFLINE) // RANK: #${res.rank} // HASH: ${res.runHash}`;
+          if (diagStatus) {
+            diagStatus.textContent = '[STATUS: LOCAL BUFFER / OFFLINE]';
+            diagStatus.style.color = COLOR.AMBER;
+          }
+        }
+      }
+    }).catch(() => {});
 
     submitBtn?.addEventListener('click', async () => {
-      const callsign = callsignInput?.value.trim() || 'OPERATOR_0';
+      const callsign = (callsignInput?.value.trim() || 'OPERATOR_0').toUpperCase().slice(0, 14);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('ring0_callsign', callsign);
+      }
       this.soundBank.playUIClick();
       submitBtn.disabled = true;
       submitBtn.textContent = 'TRANSMITTING...';
 
-      const result = await this.leaderboard.submitScore({
-        ...runSummary,
-        callsign,
+      const result = await this.leaderboard.submitRun({
+        playerName: callsign,
+        score: runSummary.score,
+        waveNumber: runSummary.waveNumber !== undefined ? runSummary.waveNumber : (runSummary.wavesCleared || 0),
+        clearanceRing: runSummary.clearanceRing,
+        durationSeconds: runSummary.durationSeconds || 0,
+        accuracy: runSummary.accuracy,
+        riskMultiplier: runSummary.riskMultiplier,
+        bountiesEarned: runSummary.bountiesEarned,
       });
 
       if (feedback) {
         feedback.style.display = 'block';
-        feedback.textContent = `TELEMETRY RECORDED! LEADERBOARD RANK: #${result.rank} // VERIFIED HASH: ${shortHash}`;
+        if (result.remote) {
+          feedback.style.color = COLOR.GREEN;
+          feedback.textContent = `✓ TRANSMITTED TO EDGE! LEADERBOARD RANK: #${result.rank} // VERIFIED HASH: ${result.runHash}`;
+          if (diagStatus) {
+            diagStatus.textContent = '[STATUS: EDGE LINK ACTIVE]';
+            diagStatus.style.color = COLOR.CYAN;
+          }
+        } else {
+          feedback.style.color = COLOR.AMBER;
+          feedback.textContent = `! SAVED TO LOCAL BUFFER (OFFLINE) // RANK: #${result.rank} // HASH: ${result.runHash}`;
+          if (diagStatus) {
+            diagStatus.textContent = '[STATUS: LOCAL BUFFER / OFFLINE]';
+            diagStatus.style.color = COLOR.AMBER;
+          }
+        }
       }
-      submitBtn.textContent = 'TRANSMITTED';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'TRANSMIT TELEMETRY';
       this.soundBank.playLevelUp();
     });
 
