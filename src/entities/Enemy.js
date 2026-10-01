@@ -241,6 +241,17 @@ export class Enemy extends Entity {
       );
     }
 
+    // Nanite Repair module drops: 100% on MEMORY_LEAK, 9% on standard daemons
+    const isHeavy = this.type === 'MEMORY_LEAK';
+    const naniteChance = isHeavy ? 1.0 : 0.09;
+    if (Math.random() < naniteChance) {
+      drops.push(
+        new Drop(this.x + randomRange(-10, 10), this.y + randomRange(-10, 10), DROP_TYPE.NANITE_REPAIR, {
+          healValue: 25,
+        })
+      );
+    }
+
     return drops;
   }
 

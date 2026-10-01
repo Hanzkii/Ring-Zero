@@ -33,6 +33,8 @@ import { TerminalUI } from '../ui/TerminalUI.js';
 import { WEAPON_ARCHETYPES, WeaponInstance } from '../systems/WeaponSystem.js';
 import { PickupSystem } from '../systems/PickupSystem.js';
 import { SynthMusic, MUSIC_INTENSITY } from '../audio/SynthMusic.js';
+import { DebugRenderer } from '../ui/DebugRenderer.js';
+import { DebugConsole } from '../ui/DebugConsole.js';
 
 export const APP_STATE = {
   BOOT: 'BOOT',
@@ -189,6 +191,12 @@ export class GameApp {
       const bonusBounties = 30 + waveNum * 20;
       this.player.bounties = (this.player.bounties || 0) + bonusBounties;
       this.score += 250 * waveNum;
+
+      // Combat sustain: restore +35% max HP upon clearing each wave
+      const healAmount = Math.round(this.player.maxHealth * 0.35);
+      this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
+      this.particleSystem.emitBurst(this.player.x, this.player.y, 20, COLOR.GREEN, 320);
+
       this.soundBank.playWallhackPulse();
     };
 
@@ -207,10 +215,16 @@ export class GameApp {
     this.raycaster = new Raycaster2D(950);
     this.currentBiome = 'facility';
     this.currentSeed = 1337;
-    /** @type {import('../world/DestructibleProp.js').DestructibleProp[]} */
     this.props = [];
     this.map = null;
     this.loadMap(this.currentBiome, this.currentSeed);
+
+    // Developer Diagnostic Visualizer & Authenticated Debug Console
+    this.debugRenderer = new DebugRenderer();
+    this.debugConsole = new DebugConsole({
+      gameApp: this,
+      debugRenderer: this.debugRenderer,
+    });
 
     // Game loop setup
     this.loop = new GameLoop({
@@ -404,8 +418,8 @@ export class GameApp {
     this.score = 0;
     this.stats = { shotsFired: 0, shotsHit: 0, enemiesKilled: 0 };
 
-    // 2. Clear cheats
-    this.cheatManager.activeCheats.clear();
+    // 2. Clear and teardown cheats
+    this.cheatManager.reset();
     this.cheatManager.clearanceRing = this.storage.clearanceRing;
 
     // 3. Reset weapons
@@ -825,6 +839,22 @@ export class GameApp {
       enemies: this.enemies,
       camera: this.camera,
     });
+
+    // 14. Render Developer Debug Diagnostics (Hitboxes, Spatial Grid, Raycasts, Backtrack trails)
+    if (this.debugRenderer) {
+      this.debugRenderer.render(ctx, {
+        camera: this.camera,
+        player: this.player,
+        enemies: this.enemies,
+        drops: this.drops,
+        props: this.props,
+        projectilePool: this.projectilePool,
+        spatialGrid: this.spatialGrid,
+        backtrackCheat: this.cheatManager.getCheat('backtrack'),
+        raycaster: this.raycaster,
+        wallSegments: this.map ? this.map.getSegments() : [],
+      });
+    }
 
     // End camera world coordinate space
     this.camera.end(ctx);

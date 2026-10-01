@@ -56,8 +56,11 @@ export class PickupSystem {
       const drop = drops[i];
       if (!drop.active || drop.markedForRemoval) continue;
 
-      // Both XP and Crypto fragments are subject to magnetic attraction
-      const isMagnetic = drop.type === DROP_TYPE.XP || drop.type === DROP_TYPE.CRYPTO;
+      // XP, Crypto fragments, and Nanite Repair modules are subject to magnetic attraction
+      const isMagnetic =
+        drop.type === DROP_TYPE.XP ||
+        drop.type === DROP_TYPE.CRYPTO ||
+        drop.type === DROP_TYPE.NANITE_REPAIR;
       if (!isMagnetic) continue;
 
       const dx = player.x - drop.x;

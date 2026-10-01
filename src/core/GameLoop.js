@@ -24,6 +24,7 @@ export class GameLoop {
 
     this.lastTime = 0;
     this.accumulator = 0;
+    this.timeScale = 1.0;
 
     // Real-time telemetry metrics
     this.fps = 0;
@@ -68,6 +69,10 @@ export class GameLoop {
     this.lastTime = performance.now();
   }
 
+  setTimeScale(scale) {
+    this.timeScale = Math.max(0.05, Math.min(10.0, Number(scale) || 1.0));
+  }
+
   _step(timestamp) {
     if (!this.isRunning) return;
 
@@ -81,7 +86,7 @@ export class GameLoop {
     }
 
     if (!this.isPaused) {
-      this.accumulator += frameDelta;
+      this.accumulator += frameDelta * this.timeScale;
 
       // Consume fixed simulation ticks
       while (this.accumulator >= this.fixedDt) {

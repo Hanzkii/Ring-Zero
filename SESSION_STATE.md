@@ -1,7 +1,7 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 12:25 EEST  
-**Test Suite Health:** 397 / 397 passing across 8 test suites (0 failures)
+**Last Updated:** 2026-10-01 12:45 EEST  
+**Test Suite Health:** 459 / 459 passing across 9 test suites (0 failures)
 
 ---
 
@@ -97,6 +97,32 @@
   - Mouse Aim Sensitivity slider (0.2x-3.0x, default 1.0x) with cursor delta scaling.
   - Persistent storage in `localStorage`.
 
+### Phase 7: Hardening, Combat Balance, Nanite Repair & Developer Debug Console
+* **Critical Stability & Respawn Bug Fixes**:
+  - `Player.js`: Complete angular desync clearance on run reset (`visualRotationOffset`, `visualAngle`, `renderAngle`, `desyncAngle`, `spinOffset`, `rotation` reset to 0). Added `godMode` invulnerability bypass in `takeDamage()`.
+  - `SpinbotCheat.js`: Internal accumulator purge via `reset()` and `teardown()`.
+  - `CheatManager.js`: Added `reset()` dispatching `cheat.reset()` / `teardown()` across all active interceptors.
+  - `TriggerbotCheat.js`: Per-tick affirmative raycast validation with `fireRequested` state clearing, preventing high-cadence sticky firing.
+* **Combat Sustain & Nanite Repair Drops**:
+  - `Drop.js`: Added `DROP_TYPE.NANITE_REPAIR` (emerald vector cross, restores +25 HP capped at max health).
+  - `PickupSystem.js`: Seamless integration of `NANITE_REPAIR` with Cache Magnet attraction physics.
+  - `Enemy.js`: 100% guaranteed Nanite Repair drop on heavy daemons (`MEMORY_LEAK`), 9% base chance on standard daemons.
+  - `WaveManager.js` & `GameApp.js`: Wave completion reward granting +35% max HP recovery and green nano-pulse particle burst.
+* **GameLoop Timescale Control (`GameLoop.js`)**:
+  - Dynamic `timeScale` parameter [0.05 to 10.0] scaling accumulator step rates without mutating fixed 60Hz physics timestep.
+* **Developer Debug Console (`src/ui/DebugConsole.js`)**:
+  - Toggled via backtick (`` ` ``) or `F1`.
+  - Kernel passphrase authentication gate: `null404` (`auth null404`).
+  - Protected privileged command suite: `god`, `unlockall`, `givecrypto <amount>`, `noclip`, `killall`, `nextwave`, `timescale <float>`, `debug <mode>`, `help`, `clear`.
+  - Command history navigation via Up/Down arrow keys.
+* **Developer Diagnostic Renderer (`src/ui/DebugRenderer.js`)**:
+  - Pure Canvas 2D zero-GC visual diagnostic passes:
+    1. Hitbox & Hurtbox wireframe circles & AABBs (Player, Enemies, Projectiles, Drops, Props).
+    2. Spatial Hash Grid 128px occupancy and boundary counters.
+    3. Raycast line-of-sight and target acquisition vectors.
+    4. 90-tick Backtrack ghost history trails.
+  - Toggled dynamically via console commands (`debug hitboxes`, `debug spatial`, `debug backtrack`, `debug all`, `debug none`).
+
 ---
 
 ## 2. Subsystem Architecture Map
@@ -105,7 +131,7 @@
 src/
 ├── core/
 │   ├── GameApp.js          # Central orchestrator: state machine, vector bounding panels & HUD
-│   ├── GameLoop.js         # 60Hz physics accumulator & render alpha dispatcher
+│   ├── GameLoop.js         # 60Hz physics accumulator & render alpha dispatcher, timescale control
 │   ├── InputManager.js     # Keyboard & mouse tracking, sensitivity delta scaling, aim vectors
 │   ├── Camera2D.js         # World-to-screen transforms, trauma shake (T^2), mouse leading
 │   ├── ObjectPool.js       # Preallocated zero-GC object recycling
@@ -118,16 +144,16 @@ src/
 │   ├── CheatDefinition.js  # CHEAT_REGISTRY (16 exploits), RING_TIER hierarchy, interceptor base
 │   └── [16 Exploit Files] # Interceptor implementations for physics, aim, ballistics, and damage
 ├── entities/
-│   ├── Player.js           # Cyber-chassis with layered hulls, thruster plumes, and shield aura
+│   ├── Player.js           # Cyber-chassis with layered hulls, thruster plumes, shield aura, godMode, noclip
 │   ├── Enemy.js            # Security daemons with animated scanning lasers, radar rings, and cores
 │   ├── Projectile.js       # High-speed ballistic pulses with pierce, crit, and wall penetration
-│   └── Drop.js             # Memory fragments (XP), crypto bounties, and weapon crates
+│   └── Drop.js             # Memory fragments (XP), crypto bounties, weapon crates, Nanite Repair
 ├── services/
 │   ├── StorageService.js   # localStorage schema, firmware micro-upgrades, risk modifiers
 │   └── LeaderboardService.js # High scores, seeded global rankings, SHA-256 run verification
 ├── systems/
-│   ├── CheatManager.js     # Interceptor pipeline dispatcher, drafting card generator
-│   ├── CollisionSystem.js  # Spatial hash querying, circle-vs-AABB, bullet wall pierce, noclip
+│   ├── CheatManager.js     # Interceptor pipeline dispatcher, drafting card generator, reset()
+│   ├── CollisionSystem.js  # Spatial hash querying, circle-vs-AABB, bullet wall pierce, noclip, nanite pickup
 │   ├── PickupSystem.js     # Magnetic attraction dynamics with Cache Magnet firmware scaling
 │   ├── SpatialHashGrid.js  # 128px uniform spatial hash partitioning
 │   ├── WeaponSystem.js     # Dual weapon slots, ammo clips, reloading, firing interceptor hook
@@ -139,20 +165,24 @@ src/
     ├── TerminalUI.js       # Interactive boot terminal, briefing, shop, firmware lab, leaderboard
     ├── DraftModal.js       # Exploit card drafting dialog with procedural vector icon headers
     ├── PauseOverlay.js     # [ESC]/[P] pause menu with hardware telemetry and exploit icon badges
-    └── SettingsModal.js    # Vector sliders for volume, screen shake trauma, and debug grid
+    ├── SettingsModal.js    # Vector sliders for volume, screen shake trauma, and debug grid
+    ├── DebugConsole.js     # Authenticated (`null404`) developer terminal overlay
+    └── DebugRenderer.js    # Zero-GC Canvas 2D diagnostics for hitboxes, spatial grid, LOS, backtrack trails
 ```
 
 ---
 
 ## 3. Test Suites
 
-All 7 test suites are verified:
-1. `test/phase1_test.js`: Core physics, math, camera, spatial hash, object pool (30 tests)
-2. `test/phase2_test.js`: Weapons, ballistics, swarm AI, particles (39 tests)
-3. `test/phase3_test.js`: Interceptor pipeline, cheats, backtrack, silent aim (62 tests)
-4. `test/phase4_test.js`: Procedural BSP, cellular caverns, fog of war, props (44 tests)
-5. `test/phase5_test.js`: Web Audio API, storage, risk multipliers, leaderboard (56 tests)
-6. `test/arsenal_expansion_test.js`: 16-exploit matrix, settings, firmware, rerolls (89 tests)
-7. `test/phase5_5_visual_test.js`: Vector icons, cyber-chassis, daemons, HUD, firmware UI (32 tests)
+All 9 automated test suites passing cleanly:
+1. `test/phase1_test.js`: Core physics, math, camera, spatial hash, object pool (19 tests)
+2. `test/phase2_test.js`: Weapons, ballistics, swarm AI, particles (45 tests)
+3. `test/phase3_test.js`: Interceptor pipeline, cheats, backtrack, silent aim (64 tests)
+4. `test/phase4_test.js`: Procedural BSP, cellular caverns, fog of war, props (40 tests)
+5. `test/phase5_test.js`: Web Audio API, storage, risk multipliers, leaderboard (44 tests)
+6. `test/phase5_5_visual_test.js`: Vector icons, cyber-chassis, daemons, HUD, firmware UI (50 tests)
+7. `test/arsenal_expansion_test.js`: 16-exploit matrix, settings, firmware, rerolls (89 tests)
+8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
+9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Debug Renderer (62 tests)
 
-**Total: 351 tests passing, 0 failing.**
+**Total: 459 tests passing, 0 failing.**

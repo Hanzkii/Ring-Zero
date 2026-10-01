@@ -11,9 +11,22 @@ export class TriggerbotCheat extends CheatInterceptor {
   constructor() {
     super(CHEAT_REGISTRY.TRIGGERBOT);
     this.targetInCrosshair = false;
+    this.fireRequested = false;
     this.fireTimer = 0;
     this.backtrackCheat = null;
     this.backtrackTarget = null;
+  }
+
+  reset() {
+    this.targetInCrosshair = false;
+    this.fireRequested = false;
+    this.fireTimer = 0;
+    this.backtrackCheat = null;
+    this.backtrackTarget = null;
+  }
+
+  teardown() {
+    this.reset();
   }
 
   /**
@@ -24,10 +37,13 @@ export class TriggerbotCheat extends CheatInterceptor {
    * @returns {number}
    */
   onAimInput(aimAngle, aimVector, context) {
+    // Explicit hit-test required every single tick: clear requested fire state
+    this.targetInCrosshair = false;
+    this.fireRequested = false;
+    this.backtrackTarget = null;
+
     if (!this.enabled) {
-      this.targetInCrosshair = false;
       this.backtrackCheat = null;
-      this.backtrackTarget = null;
       return aimAngle;
     }
 
@@ -111,11 +127,12 @@ export class TriggerbotCheat extends CheatInterceptor {
     }
 
     this.targetInCrosshair = hitFound;
+    this.fireRequested = hitFound;
     return aimAngle;
   }
 
   shouldAutoShoot() {
-    if (!this.enabled || !this.targetInCrosshair) return false;
+    if (!this.enabled || !this.targetInCrosshair || !this.fireRequested) return false;
     if (this.backtrackTarget && this.backtrackCheat) {
       this.backtrackCheat.rewindEnemy(this.backtrackTarget);
     }

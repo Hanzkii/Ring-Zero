@@ -16,6 +16,16 @@ export class SpinbotCheat extends CheatInterceptor {
     this.evasionCount = 0;
   }
 
+  reset() {
+    this.spinAngle = 0;
+    this.evasionTriggeredTimer = 0;
+    this.evasionCount = 0;
+  }
+
+  teardown() {
+    this.reset();
+  }
+
   /**
    * Rapidly rotates anti-aim visual angle
    * @param {import('../entities/Player.js').Player} player

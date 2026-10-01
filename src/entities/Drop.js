@@ -12,6 +12,7 @@ export const DROP_TYPE = {
   XP: 'XP',
   WEAPON: 'WEAPON',
   CRYPTO: 'CRYPTO',
+  NANITE_REPAIR: 'NANITE_REPAIR',
 };
 
 export class Drop extends Entity {
@@ -19,16 +20,17 @@ export class Drop extends Entity {
    * @param {number} x
    * @param {number} y
    * @param {string} type
-   * @param {Object} data - { xpValue, weapon, cryptoValue, lifetime }
+   * @param {Object} data - { xpValue, weapon, cryptoValue, healValue, lifetime }
    */
   constructor(x = 0, y = 0, type = DROP_TYPE.XP, data = {}) {
-    super(x, y, type === DROP_TYPE.WEAPON ? 18 : 9, COLLISION_LAYER.DROP);
+    super(x, y, type === DROP_TYPE.WEAPON ? 18 : (type === DROP_TYPE.NANITE_REPAIR ? 11 : 9), COLLISION_LAYER.DROP);
 
     this.type = type;
     this.data = data;
 
     this.xpValue = data.xpValue || 10;
     this.cryptoValue = data.cryptoValue || 15;
+    this.healValue = data.healValue || 25;
     this.weapon = data.weapon || null;
 
     // Despawn lifetime: Weapons stay on the ground for 18 seconds before expiring
@@ -64,7 +66,7 @@ export class Drop extends Entity {
 
     // Check magnet vacuum radius (player magnet radius: default 180px)
     const magnetRadius = player.magnetRadius || 180;
-    if ((this.type === DROP_TYPE.XP || this.type === DROP_TYPE.CRYPTO) && distSq < magnetRadius * magnetRadius) {
+    if ((this.type === DROP_TYPE.XP || this.type === DROP_TYPE.CRYPTO || this.type === DROP_TYPE.NANITE_REPAIR) && distSq < magnetRadius * magnetRadius) {
       this.isMagnetized = true;
     }
 
@@ -170,6 +172,41 @@ export class Drop extends Entity {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('₿', 0, 0);
+    } else if (this.type === DROP_TYPE.NANITE_REPAIR) {
+      // Emerald nanite repair module: glowing medical vector cross with corner brackets
+      const s = this.radius + pulse * 1.0;
+      const arm = s * 0.38;
+
+      ctx.strokeStyle = COLOR.GREEN;
+      ctx.lineWidth = 1.5;
+
+      // Draw vector cross path
+      ctx.beginPath();
+      ctx.moveTo(-arm, -s);
+      ctx.lineTo(arm, -s);
+      ctx.lineTo(arm, -arm);
+      ctx.lineTo(s, -arm);
+      ctx.lineTo(s, arm);
+      ctx.lineTo(arm, arm);
+      ctx.lineTo(arm, s);
+      ctx.lineTo(-arm, s);
+      ctx.lineTo(-arm, arm);
+      ctx.lineTo(-s, arm);
+      ctx.lineTo(-s, -arm);
+      ctx.lineTo(-arm, -arm);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Soft pulsating inner core
+      ctx.fillStyle = 'rgba(0, 255, 136, 0.25)';
+      ctx.fill();
+
+      // Inner white micro-pip
+      ctx.fillStyle = COLOR.WHITE;
+      ctx.fillRect(-1.5, -1.5, 3, 3);
+
+      // Corner telemetry brackets
+      VectorRenderer.drawTargetBracket(ctx, 0, 0, s * 2.6, COLOR.GREEN);
     }
 
     ctx.restore();

@@ -53,6 +53,14 @@ export class Player extends Entity {
 
     // Visual angle desync offset (driven by Spinbot.asi)
     this.visualRotationOffset = 0;
+    this.visualAngle = 0;
+    this.renderAngle = 0;
+    this.desyncAngle = 0;
+    this.spinOffset = 0;
+
+    // Developer debug god mode & noclip
+    this.godMode = false;
+    this.noclip = false;
 
     // Animation elapsed timer for thrusters and shield shimmer
     this.animTime = 0;
@@ -64,7 +72,7 @@ export class Player extends Entity {
    * @returns {boolean} Whether player was destroyed
    */
   takeDamage(amount) {
-    if (this.iFramesTimer > 0 || this.isDashing) return false;
+    if (this.godMode || this.iFramesTimer > 0 || this.isDashing) return false;
 
     this.health = Math.max(0, this.health - amount);
     this.iFramesTimer = 0.45; // 450ms invulnerability window
@@ -99,6 +107,16 @@ export class Player extends Entity {
     this.dashTrails = [];
     this.vx = 0;
     this.vy = 0;
+    this.rotation = 0;
+    this.prevRotation = 0;
+    this.targetRotation = 0;
+    this.visualRotationOffset = 0;
+    this.visualAngle = 0;
+    this.renderAngle = 0;
+    this.desyncAngle = 0;
+    this.spinOffset = 0;
+    this.godMode = false;
+    this.noclip = false;
   }
 
   /**

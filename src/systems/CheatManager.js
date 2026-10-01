@@ -31,6 +31,20 @@ export class CheatManager {
   }
 
   /**
+   * Resets and purges all active cheats, invoking their teardown/reset hooks
+   */
+  reset() {
+    for (const cheat of this.activeCheats.values()) {
+      if (typeof cheat.reset === 'function') {
+        cheat.reset();
+      } else if (typeof cheat.teardown === 'function') {
+        cheat.teardown();
+      }
+    }
+    this.activeCheats.clear();
+  }
+
+  /**
    * Installs a new cheat or upgrades an existing one (Rank 1 to 3).
    * If SilentAim is acquired, normal Aimbot is purged/overridden.
    * @param {string} cheatId

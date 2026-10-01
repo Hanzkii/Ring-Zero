@@ -296,6 +296,12 @@ export class CollisionSystem {
           this.particleSystem.emitBurst(drop.x, drop.y, 10, COLOR.AMBER, 220);
           this.soundBank?.playUIClick();
           drop.markedForRemoval = true;
+        } else if (drop.type === DROP_TYPE.NANITE_REPAIR) {
+          const heal = drop.healValue || 25;
+          player.health = Math.min(player.maxHealth, player.health + heal);
+          this.particleSystem.emitBurst(drop.x, drop.y, 14, COLOR.GREEN, 200);
+          this.soundBank?.playLevelUp();
+          drop.markedForRemoval = true;
         } else if (drop.type === DROP_TYPE.WEAPON && drop.weapon) {
           // Store weapon in secondary/reserve slot without switching active weapon
           this.weaponSystem.equipWeapon(drop.weapon, false);
