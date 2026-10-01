@@ -575,24 +575,34 @@ export class TerminalUI {
           <tbody>
     `;
 
-    scores.forEach((s) => {
-      const tag = (s.playerName || s.callsign || 'OPERATOR_0').toUpperCase();
-      const wave = s.waveNumber !== undefined ? s.waveNumber : (s.wavesCleared !== undefined ? s.wavesCleared : 0);
-      const ring = s.clearanceRing !== undefined ? s.clearanceRing : (s.clearanceTier !== undefined ? s.clearanceTier : 3);
-      const ringText = ring === 0 ? 'RING 0 [KERNEL]' : `RING ${ring}`;
-      const color = s.rank === 1 ? COLOR.AMBER : s.rank <= 3 ? COLOR.CYAN : COLOR.WHITE;
-
+    if (scores.length === 0) {
       html += `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); color: ${color};">
-          <td style="padding: 8px 6px; font-weight: bold;">#${s.rank}</td>
-          <td style="padding: 8px 6px; font-weight: bold; letter-spacing: 0.5px;">${tag}</td>
-          <td style="padding: 8px 6px;">${(s.score || 0).toLocaleString()}</td>
-          <td style="padding: 8px 6px;">W${wave}</td>
-          <td style="padding: 8px 6px;">${ringText}</td>
-          <td style="padding: 8px 6px; color: ${COLOR.GREEN};">✓ SECURE</td>
+        <tr>
+          <td colspan="6" style="padding: 28px 12px; text-align: center; color: rgba(255,255,255,0.45); font-family: monospace; font-size: 11px; letter-spacing: 1px;">
+            // NO RECORDS IN KERNEL LEDGER // COMPLETE A RUN TO LOG SCORE //
+          </td>
         </tr>
       `;
-    });
+    } else {
+      scores.forEach((s) => {
+        const tag = (s.playerName || s.callsign || 'OPERATOR_0').toUpperCase();
+        const wave = s.waveNumber !== undefined ? s.waveNumber : (s.wavesCleared !== undefined ? s.wavesCleared : 0);
+        const ring = s.clearanceRing !== undefined ? s.clearanceRing : (s.clearanceTier !== undefined ? s.clearanceTier : 3);
+        const ringText = ring === 0 ? 'RING 0 [KERNEL]' : `RING ${ring}`;
+        const color = s.rank === 1 ? COLOR.AMBER : s.rank <= 3 ? COLOR.CYAN : COLOR.WHITE;
+
+        html += `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); color: ${color};">
+            <td style="padding: 8px 6px; font-weight: bold;">#${s.rank}</td>
+            <td style="padding: 8px 6px; font-weight: bold; letter-spacing: 0.5px;">${tag}</td>
+            <td style="padding: 8px 6px;">${(s.score || 0).toLocaleString()}</td>
+            <td style="padding: 8px 6px;">W${wave}</td>
+            <td style="padding: 8px 6px;">${ringText}</td>
+            <td style="padding: 8px 6px; color: ${COLOR.GREEN};">✓ SECURE</td>
+          </tr>
+        `;
+      });
+    }
 
     html += `
           </tbody>

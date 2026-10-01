@@ -12,79 +12,8 @@ export const PENDING_SUBMISSIONS_KEY = 'ring0_pending_submissions';
 export const LEADERBOARD_STORAGE_KEY = 'ring_zero_leaderboard_v1';
 export const VERIFICATION_SALT = 'RING_ZERO_KERNEL_SIG_v1.0.4';
 
-/** Initial seeded global leaderboard entries */
-export const SEEDED_RECORDS = [
-  {
-    rank: 1,
-    playerName: 'KRNL_OVERLORD',
-    callsign: 'KRNL_OVERLORD',
-    score: 84250,
-    waveNumber: 24,
-    wavesCleared: 24,
-    clearanceRing: 0,
-    durationSeconds: 780,
-    accuracy: 94.2,
-    riskMultiplier: 2.25,
-    timestamp: 1727533320000,
-    verified: true,
-  },
-  {
-    rank: 2,
-    playerName: 'ZERO_COOL',
-    callsign: 'ZERO_COOL',
-    score: 61900,
-    waveNumber: 19,
-    wavesCleared: 19,
-    clearanceRing: 1,
-    durationSeconds: 610,
-    accuracy: 89.8,
-    riskMultiplier: 1.75,
-    timestamp: 1727579505000,
-    verified: true,
-  },
-  {
-    rank: 3,
-    playerName: 'GHOST_DEV',
-    callsign: 'GHOST_DEV',
-    score: 47320,
-    waveNumber: 15,
-    wavesCleared: 15,
-    clearanceRing: 1,
-    durationSeconds: 490,
-    accuracy: 91.5,
-    riskMultiplier: 1.5,
-    timestamp: 1727633052000,
-    verified: true,
-  },
-  {
-    rank: 4,
-    playerName: 'HEX_DAEMON',
-    callsign: 'HEX_DAEMON',
-    score: 32800,
-    waveNumber: 11,
-    wavesCleared: 11,
-    clearanceRing: 2,
-    durationSeconds: 380,
-    accuracy: 82.0,
-    riskMultiplier: 1.25,
-    timestamp: 1727689222000,
-    verified: true,
-  },
-  {
-    rank: 5,
-    playerName: 'NULL_POINTER',
-    callsign: 'NULL_POINTER',
-    score: 18450,
-    waveNumber: 7,
-    wavesCleared: 7,
-    clearanceRing: 3,
-    durationSeconds: 240,
-    accuracy: 76.4,
-    riskMultiplier: 1.0,
-    timestamp: 1727715301000,
-    verified: true,
-  },
-];
+/** Initial seeded global leaderboard entries (cleared for live edge ledger) */
+export const SEEDED_RECORDS = [];
 
 export class LeaderboardService {
   constructor(options = {}) {
@@ -271,13 +200,18 @@ export class LeaderboardService {
 
     const payload = {
       playerName: finalPlayerName,
+      player_name: finalPlayerName,
       callsign: finalPlayerName,
       score: finalScore,
       waveNumber: finalWave,
+      wave_number: finalWave,
       wavesCleared: finalWave,
       clearanceRing: finalRing,
+      clearance_ring: `RING_${finalRing}`,
       durationSeconds: finalDuration,
+      duration_seconds: finalDuration,
       timestamp,
+      created_at: timestamp,
       signature,
       checksum: legacyChecksum,
       accuracy: Number(Number(accuracy).toFixed(1)),
@@ -296,7 +230,7 @@ export class LeaderboardService {
     if (this.enableRemote && typeof fetch === 'function') {
       try {
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
         const res = await fetch(`${this.apiUrl}/api/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -362,27 +296,47 @@ export class LeaderboardService {
     if (tryRemote && this.enableRemote && typeof fetch === 'function') {
       try {
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
         const res = await fetch(`${this.apiUrl}/api/leaderboard?limit=${limit}`, {
           signal: controller?.signal,
         });
         if (timeoutId) clearTimeout(timeoutId);
 
         if (res.ok) {
-          const remoteRecords = await res.json();
-          if (Array.isArray(remoteRecords) && remoteRecords.length > 0) {
+          const json = await res.json();
+          const remoteRecords = Array.isArray(json)
+            ? json
+            : (Array.isArray(json?.scores) ? json.scores : (Array.isArray(json?.data) ? json.data : null));
+
+          if (remoteRecords !== null) {
             this.isOnline = true;
-            this.saveCachedScores(remoteRecords);
+            const mapped = remoteRecords.slice(0, limit).map((r, i) => {
+              const name = (r.player_name || r.playerName || r.callsign || 'OPERATOR_0').toUpperCase().slice(0, 14);
+              const wave = r.wave_number !== undefined ? r.wave_number : (r.waveNumber !== undefined ? r.waveNumber : (r.wavesCleared !== undefined ? r.wavesCleared : 0));
+              let ring = r.clearance_ring !== undefined ? r.clearance_ring : (r.clearanceRing !== undefined ? r.clearanceRing : (r.clearanceTier !== undefined ? r.clearanceTier : 3));
+              if (typeof ring === 'string') {
+                if (ring.includes('0')) ring = 0;
+                else if (ring.includes('1')) ring = 1;
+                else if (ring.includes('2')) ring = 2;
+                else if (ring.includes('3')) ring = 3;
+              }
+              return {
+                ...r,
+                rank: r.rank || i + 1,
+                callsign: name,
+                playerName: name,
+                score: Math.floor(r.score || 0),
+                waveNumber: wave,
+                wavesCleared: wave,
+                clearanceRing: ring,
+                durationSeconds: r.duration_seconds !== undefined ? r.duration_seconds : (r.durationSeconds || 0),
+                timestamp: r.created_at || r.timestamp || Date.now(),
+              };
+            });
+
+            this.saveCachedScores(mapped);
             this.flushPendingSubmissions().catch(() => {});
-            return remoteRecords.slice(0, limit).map((r, i) => ({
-              ...r,
-              rank: r.rank || i + 1,
-              callsign: r.callsign || r.playerName || 'OPERATOR_0',
-              playerName: r.playerName || r.callsign || 'OPERATOR_0',
-              waveNumber: r.waveNumber !== undefined ? r.waveNumber : (r.wavesCleared !== undefined ? r.wavesCleared : 0),
-              wavesCleared: r.wavesCleared !== undefined ? r.wavesCleared : (r.waveNumber !== undefined ? r.waveNumber : 0),
-              clearanceRing: r.clearanceRing !== undefined ? r.clearanceRing : (r.clearanceTier !== undefined ? r.clearanceTier : 3),
-            }));
+            return mapped;
           }
         }
       } catch {
@@ -395,15 +349,27 @@ export class LeaderboardService {
     // Network error / offline fallback: load cached scores from ring0_leaderboard_cache
     const cached = this.loadCachedScores();
     if (cached && cached.length > 0) {
-      return cached.slice(0, limit).map((r, i) => ({
-        ...r,
-        rank: r.rank || i + 1,
-        callsign: r.callsign || r.playerName || 'OPERATOR_0',
-        playerName: r.playerName || r.callsign || 'OPERATOR_0',
-        waveNumber: r.waveNumber !== undefined ? r.waveNumber : (r.wavesCleared !== undefined ? r.wavesCleared : 0),
-        wavesCleared: r.wavesCleared !== undefined ? r.wavesCleared : (r.waveNumber !== undefined ? r.waveNumber : 0),
-        clearanceRing: r.clearanceRing !== undefined ? r.clearanceRing : (r.clearanceTier !== undefined ? r.clearanceTier : 3),
-      }));
+      return cached.slice(0, limit).map((r, i) => {
+        const name = (r.player_name || r.playerName || r.callsign || 'OPERATOR_0').toUpperCase().slice(0, 14);
+        const wave = r.wave_number !== undefined ? r.wave_number : (r.waveNumber !== undefined ? r.waveNumber : (r.wavesCleared !== undefined ? r.wavesCleared : 0));
+        let ring = r.clearance_ring !== undefined ? r.clearance_ring : (r.clearanceRing !== undefined ? r.clearanceRing : (r.clearanceTier !== undefined ? r.clearanceTier : 3));
+        if (typeof ring === 'string') {
+          if (ring.includes('0')) ring = 0;
+          else if (ring.includes('1')) ring = 1;
+          else if (ring.includes('2')) ring = 2;
+          else if (ring.includes('3')) ring = 3;
+        }
+        return {
+          ...r,
+          rank: r.rank || i + 1,
+          callsign: name,
+          playerName: name,
+          score: Math.floor(r.score || 0),
+          waveNumber: wave,
+          wavesCleared: wave,
+          clearanceRing: ring,
+        };
+      });
     }
 
     // Default fallback: combine seeded records and local player scores
@@ -425,8 +391,8 @@ export class LeaderboardService {
     return unique.slice(0, limit).map((entry, idx) => ({
       ...entry,
       rank: idx + 1,
-      callsign: entry.callsign || entry.playerName || 'OPERATOR_0',
-      playerName: entry.playerName || entry.callsign || 'OPERATOR_0',
+      callsign: (entry.callsign || entry.playerName || 'OPERATOR_0').toUpperCase(),
+      playerName: (entry.playerName || entry.callsign || 'OPERATOR_0').toUpperCase(),
       waveNumber: entry.waveNumber !== undefined ? entry.waveNumber : (entry.wavesCleared !== undefined ? entry.wavesCleared : 0),
       wavesCleared: entry.wavesCleared !== undefined ? entry.wavesCleared : (entry.waveNumber !== undefined ? entry.waveNumber : 0),
       clearanceRing: entry.clearanceRing !== undefined ? entry.clearanceRing : (entry.clearanceTier !== undefined ? entry.clearanceTier : 3),
