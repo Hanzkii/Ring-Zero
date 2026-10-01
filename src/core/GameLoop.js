@@ -25,6 +25,7 @@ export class GameLoop {
     this.lastTime = 0;
     this.accumulator = 0;
     this.timeScale = 1.0;
+    this.hitStopFrames = 0;
 
     // Real-time telemetry metrics
     this.fps = 0;
@@ -35,6 +36,14 @@ export class GameLoop {
     this._lastMetricTime = 0;
 
     this._step = this._step.bind(this);
+  }
+
+  /**
+   * Triggers a momentary micro-freeze (1-2 frames) for visceral hit-stop crunch
+   * @param {number} [frames=2]
+   */
+  triggerHitStop(frames = 2) {
+    this.hitStopFrames = Math.max(this.hitStopFrames, frames);
   }
 
   start() {
@@ -86,13 +95,18 @@ export class GameLoop {
     }
 
     if (!this.isPaused) {
-      this.accumulator += frameDelta * this.timeScale;
+      if (this.hitStopFrames > 0) {
+        this.hitStopFrames--;
+        this.accumulator = 0; // Freeze physics integration for critical impact frame
+      } else {
+        this.accumulator += frameDelta * this.timeScale;
 
-      // Consume fixed simulation ticks
-      while (this.accumulator >= this.fixedDt) {
-        this.onUpdate(this.fixedDt);
-        this.accumulator -= this.fixedDt;
-        this._tickCount++;
+        // Consume fixed simulation ticks
+        while (this.accumulator >= this.fixedDt) {
+          this.onUpdate(this.fixedDt);
+          this.accumulator -= this.fixedDt;
+          this._tickCount++;
+        }
       }
     }
 

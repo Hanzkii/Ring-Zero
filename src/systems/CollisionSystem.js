@@ -19,8 +19,9 @@ export class CollisionSystem {
    * @param {import('../core/Camera2D.js').Camera2D} options.camera
    * @param {import('./CheatManager.js').CheatManager} [options.cheatManager]
    * @param {import('../audio/SoundBank.js').SoundBank} [options.soundBank]
+   * @param {import('./AchievementSystem.js').AchievementSystem} [options.achievementSystem]
    */
-  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera, cheatManager = null, soundBank = null }) {
+  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera, cheatManager = null, soundBank = null, achievementSystem = null }) {
     this.spatialGrid = spatialGrid;
     this.projectilePool = projectilePool;
     this.particleSystem = particleSystem;
@@ -28,6 +29,7 @@ export class CollisionSystem {
     this.camera = camera;
     this.cheatManager = cheatManager;
     this.soundBank = soundBank;
+    this.achievementSystem = achievementSystem;
 
     // Reusable candidate query arrays
     this._candidateList = [];
@@ -115,7 +117,13 @@ export class CollisionSystem {
         this.particleSystem.emitImpact(proj.x, proj.y, proj.rotation, 6, isGhostHit ? COLOR.AMBER : proj.color);
         this.soundBank?.playHit();
 
+        if (proj.isCritical) {
+          this.loop?.triggerHitStop(2);
+          this.camera?.addTrauma(0.12);
+        }
+
         if (died) {
+          this.achievementSystem?.onEnemyKilled(enemy, isGhostHit);
           // Destruction explosion
           this.particleSystem.emitBurst(enemy.x, enemy.y, 16, enemy.color, 280);
           this.soundBank?.playExplosion(false);
@@ -128,12 +136,13 @@ export class CollisionSystem {
             this.spatialGrid.insert(d);
           }
 
-          // Memory-Leak split mechanic: spawns 2 Mini Bit-Scanners
-          if (enemy.type === 'MEMORY_LEAK' && onSpawnChildEnemy) {
-            for (let i = 0; i < 2; i++) {
+          // Cluster-Splitter elite or Memory-Leak split mechanic
+          if ((enemy.isSplitter || enemy.type === 'MEMORY_LEAK') && onSpawnChildEnemy) {
+            const count = enemy.isSplitter ? 3 : 2;
+            for (let i = 0; i < count; i++) {
               const child = new Enemy(
-                enemy.x + (i === 0 ? -12 : 12),
-                enemy.y + (i === 0 ? -12 : 12),
+                enemy.x + (i === 0 ? -12 : (i === 1 ? 12 : 0)),
+                enemy.y + (i === 0 ? -12 : (i === 1 ? 12 : 14)),
                 ENEMY_ARCHETYPES.BIT_SCANNER
               );
               child.health = 20;
@@ -142,6 +151,33 @@ export class CollisionSystem {
               onSpawnChildEnemy(child);
             }
           }
+        }
+
+        // Cluster ordnance detonation on impact
+        if (proj.isCluster && !proj.isSubMunition && this.projectilePool) {
+          const subCount = proj.clusterCount || 3;
+          for (let c = 0; c < subCount; c++) {
+            const angle = (c * Math.PI * 2) / subCount + Math.random() * 0.4;
+            const sub = this.projectilePool.obtain();
+            if (sub) {
+              sub.spawn({
+                x: proj.x,
+                y: proj.y,
+                angle: angle,
+                speed: 720,
+                damage: Math.floor(proj.damage * 0.45),
+                pierce: 1,
+                maxLifetime: 0.55,
+                color: COLOR.RED,
+                layer: COLLISION_LAYER.PROJECTILE_PLAYER,
+                knockback: 90,
+                isSubMunition: true,
+                isCluster: false,
+              });
+            }
+          }
+          this.particleSystem?.emitBurst(proj.x, proj.y, 8, COLOR.RED, 160);
+          proj.isCluster = false;
         }
 
         const shouldDespawn = proj.onHit(enemy);
@@ -185,9 +221,11 @@ export class CollisionSystem {
           }
 
           if (evaded) {
+            this.achievementSystem?.onProjectileEvaded();
             this.particleSystem.emitBurst(player.x, player.y, 8, COLOR.CYAN, 240);
             this.particleSystem.emitBurst(player.x, player.y, 6, '#FF0077', 280);
           } else {
+            this.achievementSystem?.onPlayerDamaged();
             player.takeDamage(finalDamage, this.cheatManager, {
               sourceEntity: proj,
               projectilePool: this.projectilePool,
@@ -252,9 +290,11 @@ export class CollisionSystem {
           }
 
           if (evaded) {
+            this.achievementSystem?.onProjectileEvaded();
             this.particleSystem.emitBurst(player.x, player.y, 10, COLOR.CYAN, 260);
             this.particleSystem.emitBurst(player.x, player.y, 6, '#FF0077', 300);
           } else {
+            this.achievementSystem?.onPlayerDamaged();
             player.takeDamage(finalDamage, this.cheatManager, {
               sourceEntity: enemy,
               projectilePool: this.projectilePool,

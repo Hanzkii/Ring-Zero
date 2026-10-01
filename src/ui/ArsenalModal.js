@@ -1,7 +1,7 @@
 /**
  * Ring Zero - Milestone Arsenal Re-Armament Modal
  * Presented at milestone waves (Wave 3, Wave 6, Wave 10) to choose and equip
- * 2 unlocked weapons across Slot 1 and Slot 2.
+ * 2 unlocked weapons across Slot 1 and Slot 2 with full comparison telemetry.
  */
 
 import { COLOR } from '../core/Constants.js';
@@ -42,44 +42,73 @@ export class ArsenalModal {
 
     this.modalEl.innerHTML = `
       <div style="
-        width: 92%; max-width: 900px; max-height: 90vh;
-        background: rgba(11, 15, 23, 0.96); border: 1px solid ${COLOR.CYAN};
-        padding: 24px 32px; display: flex; flex-direction: column; gap: 16px;
-        box-shadow: 0 0 50px rgba(0, 240, 255, 0.15); box-sizing: border-box; overflow: hidden;
+        width: 94%; max-width: 960px; max-height: 92vh;
+        background: rgba(11, 15, 23, 0.97); border: 1px solid ${COLOR.CYAN};
+        padding: 20px 28px; display: flex; flex-direction: column; gap: 14px;
+        box-shadow: 0 0 50px rgba(0, 240, 255, 0.18); box-sizing: border-box; overflow: hidden;
       ">
-        <div style="border-bottom: 1px solid rgba(0, 240, 255, 0.25); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div style="border-bottom: 1px solid rgba(0, 240, 255, 0.25); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end;">
           <div>
-            <div style="font-size: 11px; color: ${COLOR.CYAN}; letter-spacing: 2px;">// HARDWARE ARSENAL RE-ARMAMENT // MILESTONE WAVE COMPLETED //</div>
-            <h2 id="arsenal-title" style="margin: 4px 0 0 0; font-size: 22px; color: #FFFFFF; letter-spacing: 1.5px;">ARSENAL LOADOUT SELECTION</h2>
+            <div style="font-size: 11px; color: ${COLOR.CYAN}; letter-spacing: 2px;">// HARDWARE ARSENAL RE-ARMAMENT // LOADOUT CONFIGURATION //</div>
+            <h2 id="arsenal-title" style="margin: 4px 0 0 0; font-size: 20px; color: #FFFFFF; letter-spacing: 1.5px;">ARSENAL LOADOUT SELECTION</h2>
           </div>
-          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">SELECT 2 WEAPONS: [SLOT 1] & [SLOT 2]</div>
+          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">ASSIGN WEAPONS TO PRIMARY & SECONDARY SLOTS</div>
         </div>
 
-        <!-- Selected Slots Preview Bar -->
-        <div style="display: flex; gap: 16px; padding: 10px 14px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);">
-          <div id="arsenal-slot1-preview" style="flex: 1; display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 11px; color: ${COLOR.CYAN}; font-weight: bold;">[SLOT 1]:</span>
-            <span id="arsenal-slot1-name" style="font-size: 13px; font-weight: bold; color: ${COLOR.CYAN};">NONE</span>
+        <!-- Dedicated Dual-Slot Visual Cards with Swap Control -->
+        <div style="display: flex; gap: 14px; align-items: stretch;">
+          <!-- Slot 1 Card -->
+          <div id="arsenal-slot1-card" style="
+            flex: 1; background: rgba(0, 240, 255, 0.06); border: 1.5px solid ${COLOR.CYAN};
+            padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+          ">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; font-weight: bold; color: ${COLOR.CYAN}; letter-spacing: 1px;">[SLOT 1 // PRIMARY [1]]</span>
+              <span id="arsenal-slot1-badge" style="font-size: 9px; color: ${COLOR.CYAN}; border: 1px solid ${COLOR.CYAN}; padding: 1px 5px;">ACTIVE</span>
+            </div>
+            <div id="arsenal-slot1-name" style="font-size: 16px; font-weight: bold; color: ${COLOR.CYAN};">NONE</div>
+            <div id="arsenal-slot1-stats" style="font-size: 10px; color: rgba(255,255,255,0.7);">--</div>
           </div>
-          <div style="width: 1px; background: rgba(255, 255, 255, 0.15);"></div>
-          <div id="arsenal-slot2-preview" style="flex: 1; display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 11px; color: ${COLOR.AMBER}; font-weight: bold;">[SLOT 2]:</span>
-            <span id="arsenal-slot2-name" style="font-size: 13px; font-weight: bold; color: ${COLOR.AMBER};">NONE</span>
+
+          <!-- Swap Slots Action Button -->
+          <button id="btn-swap-slots" title="Swap Slot 1 and Slot 2 (Key Q)" style="
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #FFFFFF; font-family: monospace; font-size: 11px; font-weight: bold;
+            padding: 0 14px; cursor: pointer; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease;
+          ">
+            <span>&#8644;</span>
+            <span style="font-size: 9px; letter-spacing: 1px;">SWAP [Q]</span>
+          </button>
+
+          <!-- Slot 2 Card -->
+          <div id="arsenal-slot2-card" style="
+            flex: 1; background: rgba(255, 170, 0, 0.06); border: 1.5px solid ${COLOR.AMBER};
+            padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+          ">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; font-weight: bold; color: ${COLOR.AMBER}; letter-spacing: 1px;">[SLOT 2 // SECONDARY [2]]</span>
+              <span id="arsenal-slot2-badge" style="font-size: 9px; color: ${COLOR.AMBER}; border: 1px solid ${COLOR.AMBER}; padding: 1px 5px;">RESERVE</span>
+            </div>
+            <div id="arsenal-slot2-name" style="font-size: 16px; font-weight: bold; color: ${COLOR.AMBER};">NONE</div>
+            <div id="arsenal-slot2-stats" style="font-size: 10px; color: rgba(255,255,255,0.7);">--</div>
           </div>
         </div>
 
-        <!-- Weapons Grid Container -->
+        <!-- Weapons Grid Container with Stat Comparison Telemetry -->
         <div id="arsenal-cards-grid" style="
-          flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-          gap: 12px; padding: 6px 2px; max-height: 48vh;
+          flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 12px; padding: 4px 2px; max-height: 48vh;
         "></div>
 
         <!-- Footer -->
-        <div style="border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.4);">CLICK WEAPON TO EQUIP / TOGGLE &bull; PRESS [ENTER] TO CONFIRM</div>
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 11px; color: rgba(255, 255, 255, 0.45);">
+            SELECT WEAPONS &bull; [Q] SWAP SLOTS &bull; PRESS [ENTER] TO CONFIRM
+          </div>
           <button id="btn-confirm-arsenal" style="
             background: rgba(0, 240, 255, 0.15); border: 1px solid ${COLOR.CYAN}; color: ${COLOR.CYAN};
-            font-family: monospace; font-size: 12px; font-weight: bold; padding: 8px 22px; cursor: pointer;
+            font-family: monospace; font-size: 12px; font-weight: bold; padding: 8px 24px; cursor: pointer;
             letter-spacing: 1.5px; transition: all 0.2s ease;
           ">CONFIRM LOADOUT [ENTER]</button>
         </div>
@@ -92,6 +121,9 @@ export class ArsenalModal {
 
     this.confirmBtn = this.modalEl.querySelector('#btn-confirm-arsenal');
     this.confirmBtn?.addEventListener('click', () => this.confirmSelection());
+
+    this.swapBtn = this.modalEl.querySelector('#btn-swap-slots');
+    this.swapBtn?.addEventListener('click', () => this.swapSlots());
 
     this._onKeyDown = this._onKeyDown.bind(this);
   }
@@ -141,6 +173,14 @@ export class ArsenalModal {
     }
   }
 
+  swapSlots() {
+    const temp = this.selectedSlot1;
+    this.selectedSlot1 = this.selectedSlot2;
+    this.selectedSlot2 = temp;
+    this._renderGrid();
+    this._updatePreviews();
+  }
+
   _renderGrid() {
     const grid = this.modalEl.querySelector('#arsenal-cards-grid');
     if (!grid) return;
@@ -156,10 +196,10 @@ export class ArsenalModal {
 
       if (isSlot1) {
         borderColor = COLOR.CYAN;
-        badgeHtml = `<span style="font-size: 10px; color: ${COLOR.CYAN}; font-weight: bold; border: 1px solid ${COLOR.CYAN}; padding: 1px 6px;">[SLOT 1]</span>`;
+        badgeHtml = `<span style="font-size: 10px; color: ${COLOR.CYAN}; font-weight: bold; border: 1px solid ${COLOR.CYAN}; padding: 1px 6px;">EQUIPPED [SLOT 1]</span>`;
       } else if (isSlot2) {
         borderColor = COLOR.AMBER;
-        badgeHtml = `<span style="font-size: 10px; color: ${COLOR.AMBER}; font-weight: bold; border: 1px solid ${COLOR.AMBER}; padding: 1px 6px;">[SLOT 2]</span>`;
+        badgeHtml = `<span style="font-size: 10px; color: ${COLOR.AMBER}; font-weight: bold; border: 1px solid ${COLOR.AMBER}; padding: 1px 6px;">EQUIPPED [SLOT 2]</span>`;
       }
 
       const tierBadge = w.tier === 0
@@ -168,10 +208,19 @@ export class ArsenalModal {
           ? `<span style="color: ${COLOR.CYAN};">T1 MIL-SPEC</span>`
           : `<span style="color: ${COLOR.RED};">T2 KERNEL</span>`;
 
+      // Traits calculation
+      const traits = [];
+      if (w.pierce && w.pierce > 1) traits.push(`PIERCE x${w.pierce}`);
+      if (w.canPierceWalls) traits.push(`WALL-PEN`);
+      if (w.isCluster) traits.push(`CLUSTER`);
+      if (w.pellets && w.pellets > 1) traits.push(`PELLETS x${w.pellets}`);
+      if (w.spreadDeg === 0) traits.push(`PINPOINT`);
+      const traitsStr = traits.length > 0 ? traits.join(' &bull; ') : 'STANDARD';
+
       card.style.cssText = `
-        background: rgba(18, 24, 34, 0.85); border: 1px solid ${borderColor};
-        padding: 10px 14px; cursor: pointer; display: flex; flex-direction: column;
-        gap: 6px; position: relative; transition: all 0.15s ease;
+        background: rgba(18, 24, 34, 0.9); border: 1.5px solid ${borderColor};
+        padding: 12px 14px; display: flex; flex-direction: column;
+        gap: 8px; position: relative; transition: all 0.15s ease;
       `;
 
       card.innerHTML = `
@@ -180,10 +229,52 @@ export class ArsenalModal {
           ${badgeHtml}
         </div>
         <div style="font-size: 15px; font-weight: bold; color: ${w.color || '#FFF'};">${w.name}</div>
-        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">${w.mode.toUpperCase()} &bull; ${w.damage} DMG &bull; ${w.fireRate.toFixed(1)}/s &bull; CLIP: ${w.clipSize}</div>
-        <div style="font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.4; margin-top: 2px;">${w.description || ''}</div>
+        
+        <!-- Comparison Telemetry -->
+        <div style="
+          display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 10px;
+          background: rgba(0,0,0,0.3); padding: 6px 8px; border: 1px solid rgba(255,255,255,0.06);
+          font-size: 10px; color: rgba(255,255,255,0.8);
+        ">
+          <div>DMG: <span style="font-weight: bold; color: #FFF;">${w.damage}</span></div>
+          <div>FIRE RATE: <span style="font-weight: bold; color: #FFF;">${w.fireRate.toFixed(1)}/s</span></div>
+          <div>CLIP: <span style="font-weight: bold; color: #FFF;">${w.clipSize}</span></div>
+          <div>RELOAD: <span style="font-weight: bold; color: #FFF;">${w.reloadTime.toFixed(1)}s</span></div>
+          <div style="grid-column: 1 / -1; color: ${COLOR.CYAN_DIM}; font-size: 9px;">TRAITS: ${traitsStr}</div>
+        </div>
+
+        <div style="font-size: 11px; color: rgba(255,255,255,0.65); line-height: 1.35; flex: 1;">${w.description || ''}</div>
+
+        <!-- Dedicated Dual Slot Equip Buttons -->
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <button class="btn-equip-slot1" style="
+            flex: 1; padding: 6px 8px; font-family: monospace; font-size: 10px; font-weight: bold;
+            cursor: pointer; letter-spacing: 0.5px;
+            background: ${isSlot1 ? COLOR.CYAN : 'rgba(0, 240, 255, 0.12)'};
+            border: 1px solid ${COLOR.CYAN};
+            color: ${isSlot1 ? '#0B0F17' : COLOR.CYAN};
+          ">EQUIP SLOT 1</button>
+          <button class="btn-equip-slot2" style="
+            flex: 1; padding: 6px 8px; font-family: monospace; font-size: 10px; font-weight: bold;
+            cursor: pointer; letter-spacing: 0.5px;
+            background: ${isSlot2 ? COLOR.AMBER : 'rgba(255, 170, 0, 0.12)'};
+            border: 1px solid ${COLOR.AMBER};
+            color: ${isSlot2 ? '#0B0F17' : COLOR.AMBER};
+          ">EQUIP SLOT 2</button>
+        </div>
       `;
 
+      // Hook explicit button actions
+      card.querySelector('.btn-equip-slot1')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectWeapon(0, w);
+      });
+      card.querySelector('.btn-equip-slot2')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectWeapon(1, w);
+      });
+
+      // Clicking anywhere else on card defaults to toggle/equip
       card.addEventListener('click', () => {
         this.selectWeapon(w);
       });
@@ -195,14 +286,23 @@ export class ArsenalModal {
   _updatePreviews() {
     const s1Name = this.modalEl.querySelector('#arsenal-slot1-name');
     const s2Name = this.modalEl.querySelector('#arsenal-slot2-name');
+    const s1Stats = this.modalEl.querySelector('#arsenal-slot1-stats');
+    const s2Stats = this.modalEl.querySelector('#arsenal-slot2-stats');
 
     if (s1Name) {
       s1Name.textContent = this.selectedSlot1 ? this.selectedSlot1.name : 'NONE';
       s1Name.style.color = this.selectedSlot1?.color || COLOR.CYAN;
     }
+    if (s1Stats && this.selectedSlot1) {
+      s1Stats.textContent = `${this.selectedSlot1.mode.toUpperCase()} &bull; ${this.selectedSlot1.damage} DMG &bull; ${this.selectedSlot1.fireRate.toFixed(1)}/s &bull; CLIP: ${this.selectedSlot1.clipSize}`;
+    }
+
     if (s2Name) {
       s2Name.textContent = this.selectedSlot2 ? this.selectedSlot2.name : 'NONE';
       s2Name.style.color = this.selectedSlot2?.color || COLOR.AMBER;
+    }
+    if (s2Stats && this.selectedSlot2) {
+      s2Stats.textContent = `${this.selectedSlot2.mode.toUpperCase()} &bull; ${this.selectedSlot2.damage} DMG &bull; ${this.selectedSlot2.fireRate.toFixed(1)}/s &bull; CLIP: ${this.selectedSlot2.clipSize}`;
     }
 
     if (this.confirmBtn) {
@@ -223,11 +323,18 @@ export class ArsenalModal {
     if (!weaponConfig) return;
 
     if (slotIdx === 0) {
+      // Explicitly equip to Slot 1
+      if (this.selectedSlot2?.id === weaponConfig.id) {
+        this.selectedSlot2 = this.selectedSlot1;
+      }
       this.selectedSlot1 = weaponConfig;
     } else if (slotIdx === 1) {
+      // Explicitly equip to Slot 2
+      if (this.selectedSlot1?.id === weaponConfig.id) {
+        this.selectedSlot1 = this.selectedSlot2;
+      }
       this.selectedSlot2 = weaponConfig;
     } else if (this.selectedSlot1?.id === weaponConfig.id) {
-      // Already Slot 1: If Slot 2 exists, demote Slot 1 or keep
       return;
     } else if (this.selectedSlot2?.id === weaponConfig.id) {
       // Swap slots
@@ -262,7 +369,10 @@ export class ArsenalModal {
     if (!this.isOpen) return;
     e.stopPropagation();
 
-    if (e.code === 'Enter') {
+    if (e.code === 'KeyQ') {
+      e.preventDefault();
+      this.swapSlots();
+    } else if (e.code === 'Enter') {
       e.preventDefault();
       this.confirmSelection();
     } else if (e.code === 'Escape') {

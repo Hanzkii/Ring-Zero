@@ -3,7 +3,7 @@
  * Paces daemon spawn budgets, enemy composition scaling, and wave progression timers.
  */
 
-import { Enemy, ENEMY_ARCHETYPES } from '../entities/Enemy.js';
+import { Enemy, ENEMY_ARCHETYPES, ELITE_MODIFIER } from '../entities/Enemy.js';
 import { WORLD } from '../core/Constants.js';
 import { randomRange } from '../core/VectorMath.js';
 
@@ -46,6 +46,7 @@ export class WaveManager {
     this.enemiesRemaining = 0;
     this.spawnInterval = Math.max(0.35, 1.2 - waveNum * 0.08);
     this.spawnTimer = 0.5;
+    this.bossSpawned = false;
   }
 
   /**
@@ -102,6 +103,25 @@ export class WaveManager {
    * @param {import('../entities/Player.js').Player} player
    */
   _spawnNextBatch(player) {
+    // Mini-Boss and Major Boss spawn gates
+    if (this.waveNumber === 5 && !this.bossSpawned) {
+      this.bossSpawned = true;
+      const pos = this._calculateSpawnPosition(player);
+      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.KERNEL_WATCHER);
+      this.onSpawnEnemy(boss);
+      this.budgetSpent += ENEMY_ARCHETYPES.KERNEL_WATCHER.xpValue;
+      return;
+    }
+
+    if (this.waveNumber === 10 && !this.bossSpawned) {
+      this.bossSpawned = true;
+      const pos = this._calculateSpawnPosition(player);
+      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.ZERO_DAY_COLOSSUS);
+      this.onSpawnEnemy(boss);
+      this.budgetSpent += ENEMY_ARCHETYPES.ZERO_DAY_COLOSSUS.xpValue;
+      return;
+    }
+
     const batchSize = Math.min(3 + Math.floor(this.waveNumber * 0.5), 8);
 
     for (let i = 0; i < batchSize; i++) {
@@ -110,7 +130,16 @@ export class WaveManager {
       const archetype = this._chooseArchetype();
       const pos = this._calculateSpawnPosition(player);
 
-      const enemy = new Enemy(pos.x, pos.y, archetype);
+      // Elite modifier chance starting Wave 3
+      let elite = ELITE_MODIFIER.NONE;
+      if (this.waveNumber >= 3 && Math.random() < 0.22) {
+        const roll = Math.random();
+        if (roll < 0.35) elite = ELITE_MODIFIER.SHIELDED;
+        else if (roll < 0.70) elite = ELITE_MODIFIER.OVERCLOCKED;
+        else elite = ELITE_MODIFIER.CLUSTER_SPLITTER;
+      }
+
+      const enemy = new Enemy(pos.x, pos.y, { ...archetype, elite });
       this.onSpawnEnemy(enemy);
 
       this.budgetSpent += archetype.xpValue;

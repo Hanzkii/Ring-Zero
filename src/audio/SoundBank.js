@@ -37,37 +37,48 @@ export class SoundBank {
   playShoot(weaponId = 'kernel_pistol', isCritical = false) {
     if (!this.synth.initialized) return;
 
+    // Dynamic procedural pitch variation to eliminate audio fatigue on automatic fire
+    const jitter = 1.0 + (Math.random() - 0.5) * 0.12;
+
     switch (weaponId) {
       case 'flak_submachine':
-        this.synth.playTone(1100, 150, 0.05, 'sawtooth', 0.22);
-        this.synth.playFilteredNoise(0.04, 'bandpass', 1800, 400, 0.2);
+      case 'pulse_smg':
+        this.synth.playTone(1100 * jitter, 150 * jitter, 0.05, 'sawtooth', 0.22);
+        this.synth.playFilteredNoise(0.04, 'bandpass', 1800 * jitter, 400, 0.2);
         break;
 
       case 'combat_sweeper':
-        this.synth.playTone(450, 60, 0.14, 'triangle', 0.45);
+      case 'scrap_blaster':
+        this.synth.playTone(450 * jitter, 60 * jitter, 0.14, 'triangle', 0.45);
         this.synth.playFilteredNoise(0.12, 'lowpass', 1400, 150, 0.5);
         break;
 
       case 'rotary_minigun':
-        this.synth.playTone(850, 120, 0.045, 'sawtooth', 0.25);
+        this.synth.playTone(850 * jitter, 120 * jitter, 0.045, 'sawtooth', 0.25);
         break;
 
       case 'vector_railgun':
-        this.synth.playTone(2600, 120, 0.25, 'sawtooth', 0.55);
+        this.synth.playTone(2600 * jitter, 120, 0.25, 'sawtooth', 0.55);
         this.synth.playTone(120, 30, 0.35, 'sine', 0.6);
         this.synth.playFilteredNoise(0.2, 'highpass', 1200, 200, 0.35);
         break;
 
+      case 'memory_corruptor':
+        this.synth.playTone(620 * jitter, 160 * jitter, 0.09, 'sawtooth', 0.35);
+        this.synth.playFilteredNoise(0.08, 'bandpass', 1300 * jitter, 350, 0.28);
+        break;
+
       case 'kernel_pistol':
+      case 'pistol_sys':
       default:
-        this.synth.playTone(900, 90, 0.08, 'sawtooth', 0.28);
+        this.synth.playTone(900 * jitter, 90 * jitter, 0.08, 'sawtooth', 0.28);
         this.synth.playFilteredNoise(0.05, 'lowpass', 1200, 300, 0.18);
         break;
     }
 
     if (isCritical) {
       // High-frequency metallic ping for critical vector strikes
-      this.synth.playTone(2800, 1400, 0.09, 'sine', 0.2);
+      this.synth.playTone(2800 * jitter, 1400 * jitter, 0.09, 'sine', 0.2);
     }
   }
 

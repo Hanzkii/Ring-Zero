@@ -67,8 +67,10 @@ const SEEDED_RECORDS = [
 ];
 
 export class LeaderboardService {
-  constructor() {
-    this.storageKey = LEADERBOARD_STORAGE_KEY;
+  constructor(options = {}) {
+    this.storageKey = options.storageKey || LEADERBOARD_STORAGE_KEY;
+    this.remoteEndpoint = options.remoteEndpoint || 'https://ring-zero-leaderboard.workers.dev/api';
+    this.enableRemote = options.enableRemote ?? true;
   }
 
   /**
@@ -148,8 +150,36 @@ export class LeaderboardService {
     const trimmed = localList.slice(0, 50);
     this.saveLocalScores(trimmed);
 
-    // Compute rank across global + local records
-    const combined = await this.fetchTopScores(100);
+    // Attempt remote submission to Cloudflare Worker endpoint if online
+    if (this.enableRemote && typeof fetch === 'function') {
+      try {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 1800) : null;
+        const res = await fetch(`${this.remoteEndpoint}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry),
+          signal: controller?.signal,
+        });
+        if (timeoutId) clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data.rank === 'number') {
+            return {
+              success: true,
+              rank: data.rank,
+              entry: data.entry || entry,
+              remote: true,
+            };
+          }
+        }
+      } catch {
+        // Fall back gracefully to offline local calculation
+      }
+    }
+
+    // Offline / fallback rank calculation across global + local records
+    const combined = await this.fetchTopScores(100, false);
     const rankIndex = combined.findIndex((r) => r.checksum === entry.checksum);
     const finalRank = rankIndex !== -1 ? rankIndex + 1 : combined.length;
 
@@ -157,15 +187,37 @@ export class LeaderboardService {
       success: true,
       rank: finalRank,
       entry,
+      remote: false,
     };
   }
 
   /**
    * Fetches top rankings combining seeded records and player records
    * @param {number} [limit=10]
+   * @param {boolean} [tryRemote=true]
    * @returns {Promise<Array<Object>>}
    */
-  async fetchTopScores(limit = 10) {
+  async fetchTopScores(limit = 10, tryRemote = true) {
+    // Attempt remote fetch from Cloudflare Worker endpoint if enabled
+    if (tryRemote && this.enableRemote && typeof fetch === 'function') {
+      try {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 1800) : null;
+        const res = await fetch(`${this.remoteEndpoint}/leaderboard?limit=${limit}`, {
+          signal: controller?.signal,
+        });
+        if (timeoutId) clearTimeout(timeoutId);
+        if (res.ok) {
+          const remoteRecords = await res.json();
+          if (Array.isArray(remoteRecords) && remoteRecords.length > 0) {
+            return remoteRecords.slice(0, limit);
+          }
+        }
+      } catch {
+        // Fall back gracefully to local + seeded records
+      }
+    }
+
     const local = this.loadLocalScores();
     const combined = [...SEEDED_RECORDS, ...local];
 

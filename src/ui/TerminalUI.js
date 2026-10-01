@@ -10,6 +10,7 @@
 
 import { RING_TIER } from '../cheats/CheatDefinition.js';
 import { COLOR } from '../core/Constants.js';
+import { ACHIEVEMENT_REGISTRY } from '../systems/AchievementSystem.js';
 
 export class TerminalUI {
   /**
@@ -17,18 +18,20 @@ export class TerminalUI {
    * @param {import('../services/StorageService.js').StorageService} options.storage
    * @param {import('../audio/SoundBank.js').SoundBank} options.soundBank
    * @param {import('../services/LeaderboardService.js').LeaderboardService} options.leaderboard
+   * @param {import('../systems/AchievementSystem.js').AchievementSystem} [options.achievementSystem=null]
    * @param {function(): void} options.onStartRun
    * @param {function(): void} options.onRestartRun
    */
-  constructor({ storage, soundBank, leaderboard, onStartRun, onRestartRun, onOpenSettings = null }) {
+  constructor({ storage, soundBank, leaderboard, achievementSystem = null, onStartRun, onRestartRun, onOpenSettings = null }) {
     this.storage = storage;
     this.soundBank = soundBank;
     this.leaderboard = leaderboard;
+    this.achievementSystem = achievementSystem;
     this.onStartRun = onStartRun;
     this.onRestartRun = onRestartRun;
     this.onOpenSettings = onOpenSettings;
 
-    this.activeTab = 'briefing'; // 'briefing', 'shop', 'firmware', 'daemons', 'leaderboard'
+    this.activeTab = 'briefing'; // 'briefing', 'shop', 'firmware', 'daemons', 'leaderboard', 'achievements'
     this.bootOverlay = typeof document !== 'undefined' ? document.getElementById('terminal-overlay') : null;
     this.diagnosticModal = null;
 
@@ -62,6 +65,7 @@ export class TerminalUI {
             <button class="term-tab-btn" data-tab="firmware">[ 3: FIRMWARE LAB ]</button>
             <button class="term-tab-btn" data-tab="daemons">[ 4: SECURITY DAEMONS ]</button>
             <button class="term-tab-btn" data-tab="leaderboard">[ 5: LEADERBOARD ]</button>
+            <button class="term-tab-btn" data-tab="achievements">[ 6: ACHIEVEMENTS ]</button>
           </div>
         </div>
 
@@ -161,7 +165,66 @@ export class TerminalUI {
       this._renderDaemonsTab(container);
     } else if (this.activeTab === 'leaderboard') {
       this._renderLeaderboardTab(container);
+    } else if (this.activeTab === 'achievements') {
+      this._renderAchievementsTab(container);
     }
+  }
+
+  _renderAchievementsTab(container) {
+    container.innerHTML = '';
+    const achList = Object.values(ACHIEVEMENT_REGISTRY);
+    const unlockedMap = this.achievementSystem?.unlocked || new Map();
+    let unlockedCount = 0;
+    achList.forEach((a) => {
+      if (unlockedMap.has(a.id)) unlockedCount++;
+    });
+    const pct = Math.round((unlockedCount / achList.length) * 100);
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display: flex; flex-direction: column; gap: 14px;';
+
+    wrap.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 8px;">
+        <div>
+          <div style="font-size: 11px; color: ${COLOR.CYAN}; letter-spacing: 1.5px;">// CYBERNETIC CLEARANCE // RUNTIME ACQUISITIONS //</div>
+          <div style="font-size: 15px; font-weight: bold; color: #FFF; margin-top: 2px;">SYSTEM ACHIEVEMENTS: ${unlockedCount} / ${achList.length} COMPLETED (${pct}%)</div>
+        </div>
+        <div style="width: 140px; height: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(0,240,255,0.3);">
+          <div style="height: 100%; width: ${pct}%; background: ${COLOR.CYAN};"></div>
+        </div>
+      </div>
+
+      <div style="
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 10px; max-height: 52vh; overflow-y: auto; padding-right: 4px;
+      ">
+        ${achList.map((ach) => {
+          const isDone = unlockedMap.has(ach.id);
+          const data = unlockedMap.get(ach.id);
+          const dateStr = data?.unlockedAt ? new Date(data.unlockedAt).toLocaleDateString() : '';
+          const borderCol = isDone ? COLOR.CYAN : 'rgba(255,255,255,0.1)';
+          const badgeCol = isDone ? COLOR.AMBER : 'rgba(255,255,255,0.3)';
+          const titleCol = isDone ? '#FFF' : 'rgba(255,255,255,0.4)';
+          const statusText = isDone ? `<span style="color: ${COLOR.CYAN};">[UNLOCKED ${dateStr}]</span>` : `<span style="color: rgba(255,255,255,0.3);">[LOCKED]</span>`;
+
+          return `
+            <div style="
+              background: rgba(18, 24, 34, 0.7); border: 1px solid ${borderCol};
+              padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
+            ">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 10px; font-weight: bold; color: ${badgeCol}; letter-spacing: 1px;">[${ach.badge}]</span>
+                <span style="font-size: 9px; font-family: monospace;">${statusText}</span>
+              </div>
+              <div style="font-size: 13px; font-weight: bold; color: ${titleCol};">${ach.title}</div>
+              <div style="font-size: 10px; color: rgba(255,255,255,0.6); line-height: 1.3;">${ach.description}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    container.appendChild(wrap);
   }
 
   _renderFirmwareTab(container) {

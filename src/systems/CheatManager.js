@@ -185,7 +185,11 @@ export class CheatManager {
     for (const cheat of this.activeCheats.values()) {
       if (cheat.enabled) {
         if (hasSilentAim && cheat.id === 'aimbot') continue;
-        currentAngle = cheat.onAimInput(currentAngle, aimVector, context);
+        const res = cheat.onAimInput(currentAngle, aimVector, context);
+        // SilentAim NEVER alters player chassis or reticle orientation - true stealth decoupling
+        if (cheat.id !== 'silentaim') {
+          currentAngle = res;
+        }
       }
     }
     return currentAngle;

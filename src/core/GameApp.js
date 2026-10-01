@@ -36,6 +36,7 @@ import { SynthMusic, MUSIC_INTENSITY } from '../audio/SynthMusic.js';
 import { DebugRenderer } from '../ui/DebugRenderer.js';
 import { DebugConsole } from '../ui/DebugConsole.js';
 import { ArsenalModal } from '../ui/ArsenalModal.js';
+import { AchievementSystem } from '../systems/AchievementSystem.js';
 
 export const APP_STATE = {
   BOOT: 'BOOT',
@@ -113,10 +114,15 @@ export class GameApp {
     // Sync debug grid setting
     this.showSpatialGridDebug = !!this.storage.settings?.showDebugGrid;
 
+    this.achievementSystem = new AchievementSystem({
+      soundBank: this.soundBank,
+    });
+
     this.terminalUI = new TerminalUI({
       storage: this.storage,
       soundBank: this.soundBank,
       leaderboard: this.leaderboard,
+      achievementSystem: this.achievementSystem,
       onStartRun: () => this.start(),
       onRestartRun: () => this.restart(),
       onOpenSettings: () => this.openSettings(),
@@ -207,6 +213,13 @@ export class GameApp {
 
       this.soundBank.playWallhackPulse();
 
+      // Notify achievements
+      const acc = this.stats.shotsFired > 0 ? (this.stats.shotsHit / this.stats.shotsFired) * 100 : 0;
+      const hasSilent = this.cheatManager.hasCheat('silentaim');
+      const fwCount = Object.values(this.storage.firmware || {}).reduce((a, b) => a + b, 0);
+      this.achievementSystem?.onWaveCompleted(waveNum, acc, hasSilent, fwCount);
+      this.achievementSystem?.onBountiesUpdated(this.storage.cryptoBounties + (this.player.bounties || 0));
+
       // Milestone waves (Wave 3, Wave 6, Wave 10) trigger Arsenal Selection
       if (waveNum === 3 || waveNum === 6 || waveNum === 10) {
         this.openArsenalModal(waveNum);
@@ -222,6 +235,7 @@ export class GameApp {
       camera: this.camera,
       cheatManager: this.cheatManager,
       soundBank: this.soundBank,
+      achievementSystem: this.achievementSystem,
     });
 
     // Procedural World Architecture & Raycasting
@@ -244,6 +258,7 @@ export class GameApp {
       onUpdate: (dt) => this.update(dt),
       onRender: (alpha) => this.render(alpha),
     });
+    this.collisionSystem.loop = this.loop;
 
     // Resize handling
     this._onResize = this._onResize.bind(this);
@@ -471,6 +486,7 @@ export class GameApp {
     this.player.vy = 0;
     this.score = 0;
     this.stats = { shotsFired: 0, shotsHit: 0, enemiesKilled: 0 };
+    this.achievementSystem?.resetRun();
 
     // 2. Clear and teardown cheats
     this.cheatManager.reset();
@@ -540,6 +556,7 @@ export class GameApp {
     this.input.resetInputs();
     this.soundBank.playLevelUp();
     this.cheatManager.addOrUpgradeCheat(chosenDef.id);
+    this.achievementSystem?.onCheatUnlocked(chosenDef.id, chosenDef.ringTier);
     this.player.pendingLevelUps--;
 
     // If another level-up is pending, open next draft round
@@ -563,6 +580,8 @@ export class GameApp {
    * @param {number} dt - Fixed delta time (1/60 s)
    */
   update(dt) {
+    this.achievementSystem?.update(dt);
+
     // If game over, handle Enter to re-deploy or Escape for main menu
     if (this.state === APP_STATE.GAMEOVER) {
       if (this.input.isKeyJustPressed('Enter')) {
@@ -926,15 +945,6 @@ export class GameApp {
     // End camera world coordinate space
     this.camera.end(ctx);
 
-    // Screen Flash overlay (Kernel Panic / intense feedback)
-    if (this.camera.screenFlash > 0) {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.9, this.camera.screenFlash * 0.75)})`;
-      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      ctx.restore();
-    }
-
     // 10. Render Screen-Space Vector HUD & Telemetry
     this._renderScreenHUD(ctx);
 
@@ -1234,6 +1244,11 @@ export class GameApp {
     const radar = this.cheatManager.getCheat('radartelemetry');
     if (radar && radar.enabled) {
       radar.renderRadar(ctx, w, h, this.player, this.enemies, this.drops, this.props);
+    }
+
+    // 7. Cyber-Clearance Achievement Toasts
+    if (this.achievementSystem) {
+      this.achievementSystem.renderToasts(ctx, w);
     }
 
     ctx.restore();

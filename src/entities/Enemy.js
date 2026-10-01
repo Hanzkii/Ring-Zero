@@ -55,6 +55,35 @@ export const ENEMY_ARCHETYPES = {
     xpValue: 45,
     crateDropChance: 0.20,
   },
+  KERNEL_WATCHER: {
+    type: 'KERNEL_WATCHER',
+    name: 'KERNEL-WATCHER [BOSS]',
+    maxHealth: 650,
+    speed: 110,
+    radius: 26,
+    contactDamage: 45,
+    color: '#FF0055',
+    xpValue: 200,
+    isBoss: true,
+  },
+  ZERO_DAY_COLOSSUS: {
+    type: 'ZERO_DAY_COLOSSUS',
+    name: 'ZERO-DAY COLOSSUS [BOSS]',
+    maxHealth: 1600,
+    speed: 80,
+    radius: 34,
+    contactDamage: 60,
+    color: '#FF3300',
+    xpValue: 500,
+    isBoss: true,
+  },
+};
+
+export const ELITE_MODIFIER = {
+  NONE: 'NONE',
+  SHIELDED: 'SHIELDED',
+  OVERCLOCKED: 'OVERCLOCKED',
+  CLUSTER_SPLITTER: 'CLUSTER_SPLITTER',
 };
 
 export class Enemy extends Entity {
@@ -77,6 +106,23 @@ export class Enemy extends Entity {
     this.xpValue = config.xpValue;
     this.crateDropChance = 0; // World weapon crates disabled in Phase 7 (obtainable via milestone arsenal selection)
 
+    // Boss & Elite status
+    this.isBoss = Boolean(config.isBoss);
+    this.elite = config.elite || ELITE_MODIFIER.NONE;
+    this.shield = 0;
+    this.maxShield = 0;
+    this.isSplitter = false;
+
+    if (this.elite === ELITE_MODIFIER.SHIELDED) {
+      this.maxShield = Math.round(this.maxHealth * 0.5);
+      this.shield = this.maxShield;
+    } else if (this.elite === ELITE_MODIFIER.OVERCLOCKED) {
+      this.speed = Math.round(this.speed * 1.45);
+      this.color = COLOR.AMBER;
+    } else if (this.elite === ELITE_MODIFIER.CLUSTER_SPLITTER) {
+      this.isSplitter = true;
+    }
+
     // AI steering vectors
     this.targetPos = new Vec2();
     this.separationVec = new Vec2();
@@ -97,6 +143,20 @@ export class Enemy extends Entity {
    * @returns {boolean} Whether enemy died from this hit
    */
   takeDamage(amount, knockbackDir = null, knockbackImpulse = 120) {
+    if (this.shield > 0) {
+      const absorbed = Math.min(this.shield, amount);
+      this.shield -= absorbed;
+      amount -= absorbed;
+      this.hitFlashTimer = 0.08;
+      if (amount <= 0) {
+        if (knockbackDir) {
+          this.vx += knockbackDir.x * (knockbackImpulse * 0.4);
+          this.vy += knockbackDir.y * (knockbackImpulse * 0.4);
+        }
+        return false;
+      }
+    }
+
     this.health -= amount;
     this.hitFlashTimer = 0.08;
 
@@ -468,19 +528,61 @@ export class Enemy extends Entity {
         ctx.stroke();
         break;
       }
+
+      case 'KERNEL_WATCHER':
+      case 'ZERO_DAY_COLOSSUS': {
+        // Multi-ring Boss Core with rotating hazard brackets
+        ctx.strokeStyle = wireColor;
+        ctx.lineWidth = 2;
+        VectorRenderer.strokeCircle(ctx, 0, 0, r, wireColor, 2);
+
+        ctx.save();
+        ctx.rotate(this.pulsePhase * 1.5);
+        VectorRenderer.drawTargetBracket(ctx, 0, 0, r * 2.4, wireColor, 6);
+        ctx.restore();
+
+        ctx.save();
+        ctx.rotate(-this.pulsePhase * 2.0);
+        ctx.strokeStyle = COLOR.WHITE;
+        ctx.lineWidth = 1.5;
+        VectorRenderer.strokeCircle(ctx, 0, 0, r * 0.5, COLOR.WHITE, 1.5);
+        ctx.restore();
+        break;
+      }
     }
 
-    // Health bar overhead if damaged
-    if (this.health < this.maxHealth) {
-      ctx.rotate(-this.rotation); // Keep health bar horizontal
-      const barW = r * 2.2;
-      const barH = 3;
-      const pct = Math.max(0, this.health / this.maxHealth);
+    // Rotating shield perimeter if active
+    if (this.shield > 0) {
+      ctx.save();
+      ctx.strokeStyle = COLOR.CYAN;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 5]);
+      VectorRenderer.strokeCircle(ctx, 0, 0, r + 5, COLOR.CYAN, 1.5);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
 
+    // Health bar overhead if damaged or boss
+    if (this.health < this.maxHealth || this.isBoss || this.shield > 0) {
+      ctx.rotate(-this.rotation); // Keep health bar horizontal
+      const barW = this.isBoss ? r * 2.5 : r * 1.8;
+      const barH = this.isBoss ? 4 : 2;
+      const pct = Math.max(0, this.health / this.maxHealth);
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(-barW * 0.5, -r - 10, barW, barH);
-      ctx.fillStyle = COLOR.RED;
-      ctx.fillRect(-barW * 0.5, -r - 10, barW * pct, barH);
+      ctx.fillRect(-barW * 0.5, -r - 12, barW, barH);
+      ctx.fillStyle = this.isBoss ? '#FF0055' : COLOR.RED;
+      ctx.fillRect(-barW * 0.5, -r - 12, barW * pct, barH);
+      if (this.shield > 0) {
+        const shieldPct = Math.min(1.0, this.shield / this.maxShield);
+        ctx.fillStyle = COLOR.CYAN;
+        ctx.fillRect(-barW * 0.5, -r - 15, barW * shieldPct, 2);
+      }
+      if (this.isBoss) {
+        ctx.font = 'bold 9px monospace';
+        ctx.fillStyle = '#FF0055';
+        ctx.textAlign = 'center';
+        ctx.fillText(`[BOSS: ${Math.ceil(this.health)} HP]`, 0, -r - 18);
+      }
     }
 
     ctx.restore();

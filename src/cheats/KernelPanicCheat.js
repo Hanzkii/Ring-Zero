@@ -11,10 +11,12 @@ export class KernelPanicCheat extends CheatInterceptor {
   constructor() {
     super(CHEAT_REGISTRY.KERNELPANIC);
     this.shotCounter = 0;
+    this.shockwaves = [];
   }
 
   reset() {
     this.shotCounter = 0;
+    this.shockwaves.length = 0;
   }
 
   teardown() {
@@ -106,7 +108,17 @@ export class KernelPanicCheat extends CheatInterceptor {
       });
     }
 
-    // Screen flash & camera trauma
+    // Expanding vector shockwave FX
+    this.shockwaves.push({
+      x: player.x,
+      y: player.y,
+      radius: 10,
+      maxRadius: 360,
+      life: 0,
+      maxLife: 0.45,
+    });
+
+    // Screen flash property (maintained for telemetry/checks) & camera trauma
     if (camera) {
       camera.screenFlash = 1.0;
       if (typeof camera.addTrauma === 'function') {
@@ -164,6 +176,46 @@ export class KernelPanicCheat extends CheatInterceptor {
       );
     }
     return { damage: incomingDamage, evaded: false };
+  }
+
+  /**
+   * Renders expanding world-space vector shockwave rings without screen flash
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} alpha
+   * @param {Object} context
+   */
+  onRenderWorld(ctx, alpha, context) {
+    if (!this.enabled || this.shockwaves.length === 0) return;
+    const dt = context?.dt || 0.016;
+
+    ctx.save();
+    for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+      const sw = this.shockwaves[i];
+      sw.life += dt;
+      const progress = sw.life / sw.maxLife;
+      if (progress >= 1.0) {
+        this.shockwaves.splice(i, 1);
+        continue;
+      }
+
+      const r = sw.radius + (sw.maxRadius - sw.radius) * progress;
+      const ringAlpha = (1.0 - progress) * 0.85;
+
+      ctx.lineWidth = 3 * (1.0 - progress);
+      ctx.strokeStyle = `rgba(255, 0, 85, ${ringAlpha})`;
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha * 0.7})`;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, r * 0.75, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
   }
 
   onRenderHUD(ctx, x, y) {

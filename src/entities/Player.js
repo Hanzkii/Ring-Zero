@@ -62,6 +62,10 @@ export class Player extends Entity {
     this.godMode = false;
     this.noclip = false;
 
+    // Visual weapon recoil kick and barrel climb
+    this.recoilKickOffset = 0;
+    this.recoilClimbAngle = 0;
+
     // Animation elapsed timer for thrusters and shield shimmer
     this.animTime = 0;
   }
@@ -121,6 +125,17 @@ export class Player extends Entity {
     this.spinOffset = 0;
     this.godMode = false;
     this.noclip = false;
+    this.recoilKickOffset = 0;
+    this.recoilClimbAngle = 0;
+  }
+
+  /**
+   * Applies tactile weapon recoil kick and barrel muzzle climb
+   * @param {number} [trauma=0.1]
+   */
+  applyRecoil(trauma = 0.1) {
+    this.recoilKickOffset = Math.min(8, this.recoilKickOffset + trauma * 16);
+    this.recoilClimbAngle += (Math.random() - 0.5) * trauma * 0.25;
   }
 
   /**
@@ -172,6 +187,10 @@ export class Player extends Entity {
   updateKinematics(dt, moveDir, aimAngle) {
     this.preStep();
     this.animTime += dt;
+
+    // Smooth tactile weapon recoil decay
+    this.recoilKickOffset *= Math.exp(-dt * 24);
+    this.recoilClimbAngle *= Math.exp(-dt * 20);
 
     // Dash timer update
     if (this.isDashing) {
@@ -277,7 +296,10 @@ export class Player extends Entity {
     // 3. Draw main cyber-chassis
     ctx.save();
     ctx.translate(rx, ry);
-    ctx.rotate(rot);
+    ctx.rotate(rot + (this.recoilClimbAngle || 0));
+    if (this.recoilKickOffset > 0.001) {
+      ctx.translate(-this.recoilKickOffset, 0);
+    }
 
     let hullColor = COLOR.CYAN;
     if (this.hitFlashTimer > 0) {

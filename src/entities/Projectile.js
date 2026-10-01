@@ -56,11 +56,20 @@ export class Projectile extends Entity {
     layer = COLLISION_LAYER.PROJECTILE_PLAYER,
     knockback = 120,
     isCritical = false,
+    canPierceWalls = false,
+    isCluster = false,
+    clusterCount = 0,
+    isSubMunition = false,
   }) {
     this.x = x;
     this.y = y;
     this.prevX = x;
     this.prevY = y;
+
+    this.canPierceWalls = Boolean(canPierceWalls);
+    this.isCluster = Boolean(isCluster);
+    this.clusterCount = clusterCount;
+    this.isSubMunition = Boolean(isSubMunition);
 
     this.rotation = angle;
     this.prevRotation = angle;
@@ -173,5 +182,9 @@ export class Projectile extends Entity {
     this.hitEntityIds.clear();
     this.hitsRemaining = 1;
     this.lifetime = 0;
+    this.canPierceWalls = false;
+    this.isCluster = false;
+    this.clusterCount = 0;
+    this.isSubMunition = false;
   }
 }

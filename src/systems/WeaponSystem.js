@@ -169,10 +169,11 @@ export const WEAPON_ARCHETYPES = {
     clipSize: 3,
     reloadTime: 2.0,
     pierce: 6,
+    canPierceWalls: true,
     color: COLOR.WHITE,
     knockback: 450,
     recoilTrauma: 0.35,
-    description: 'Relativistic slug penetrator boring through walls and swarms.',
+    description: 'Relativistic slug penetrator boring through walls and swarms with zero falloff.',
   },
   MEMORY_CORRUPTOR: {
     id: 'memory_corruptor',
@@ -187,10 +188,12 @@ export const WEAPON_ARCHETYPES = {
     clipSize: 16,
     reloadTime: 1.5,
     pierce: 3,
+    isCluster: true,
+    clusterCount: 3,
     color: COLOR.RED,
     knockback: 180,
     recoilTrauma: 0.12,
-    description: 'Corrupted payload projector piercing multiple daemons with reality distortion.',
+    description: 'Volatile cluster ordnance detonating into secondary corrosive sub-munitions.',
   },
 };
 
@@ -239,6 +242,9 @@ export class WeaponInstance {
     this.color = config.color;
     this.knockback = config.knockback;
     this.recoilTrauma = config.recoilTrauma;
+    this.canPierceWalls = Boolean(config.canPierceWalls);
+    this.isCluster = Boolean(config.isCluster);
+    this.clusterCount = config.clusterCount || 0;
 
     this.cooldownTimer = 0;
     this.isReloading = false;
@@ -426,6 +432,11 @@ export class WeaponSystem {
     weapon.cooldownTimer = weapon.fireInterval / fireRateMult;
     if (this.onFire) this.onFire(weapon);
 
+    // Apply tactile weapon recoil kick to player
+    if (player && typeof player.applyRecoil === 'function') {
+      player.applyRecoil(weapon.recoilTrauma || 0.1);
+    }
+
     if (!hasInf && weapon.currentAmmo <= 0) {
       weapon.startReload();
     }
@@ -452,6 +463,9 @@ export class WeaponSystem {
         speed: weapon.speed * randomRange(0.97, 1.03),
         damage: weapon.damage,
         pierce: weapon.pierce,
+        canPierceWalls: Boolean(weapon.canPierceWalls || weapon.config?.canPierceWalls),
+        isCluster: Boolean(weapon.isCluster || weapon.config?.isCluster),
+        clusterCount: weapon.clusterCount || weapon.config?.clusterCount || 0,
         maxLifetime: 1.8,
         color: weapon.color,
         layer: COLLISION_LAYER.PROJECTILE_PLAYER,

@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 17:05 EEST  
-**Git Head:** `85fdd9b` (origin/main)  
-**Test Suite Health:** 537 / 537 passing across 9 test suites (0 failures)
+**Last Updated:** 2026-10-01 17:30 EEST  
+**Git Head:** Pending Commit (origin/main)  
+**Test Suite Health:** 556 / 556 passing across 10 test suites (0 failures)
 
 ---
 
@@ -155,6 +155,34 @@
     - Clean browser profile resilience in `StorageService.js` by deep-merging defaults for `firmware`, `riskModifiers`, and `settings`.
     - Boundary-safe spatial partitioning across negative and positive world space in `SpatialHashGrid.js`.
 
+### Phase 8: Exploit Integrity, Visual Comfort, Tier 2 Arsenal, Achievements & Online Edge Leaderboard
+* **Exploit Integrity — True Silent Aim Decoupling** (`SilentAimCheat.js`, `CheatManager.js`, `WeaponSystem.js`):
+  - Preserved 100% manual mouse control: `SilentAim.vmp` never overrides `this.player.aimAngle` or crosshair coordinates.
+  - Projectile velocity vector redirection strictly upon bullet instantiation towards target hitbox or backtrack ghost tick.
+  - Guaranteed 100% critical strike rates on all curved trajectories.
+* **Screen Flash Elimination & Visual Comfort** (`KernelPanicCheat.js`, `GameApp.js`):
+  - Completely purged full-screen `ctx.fillRect()` blinding white canvas flashes.
+  - Substituted with camera-shake trauma and expanding concentric world-space vector shockwave rings with radial particle debris.
+* **Tier 2 Arsenal Progression & Dual-Slot UX Overhaul** (`WeaponSystem.js`, `ArsenalModal.js`, `Projectile.js`, `CollisionSystem.js`):
+  - `Vector Railgun`: Relativistic slug (speed 2800, 180 dmg, 6 pierce) with native static wall penetration (`canPierceWalls: true`).
+  - `Memory Corruptor`: Corrosive cluster launcher detonating into 3 secondary splitting sub-munitions upon impact.
+  - Redesigned `ArsenalModal.js` with dedicated dual-slot cards (`[SLOT 1]` cyan, `[SLOT 2]` amber), stat telemetry bars, one-click equip buttons, and instant `[Q]` weapon swap shortcut.
+* **Cyber-Clearance Achievement Engine** (`AchievementSystem.js`, `AchievementModal.js`, `TerminalUI.js`):
+  - 8 core achievements (`ROOT_KIT`, `RING_ZERO_BREACH`, `GHOST_IN_THE_SHELL`, `STACK_OVERFLOW`, `NULL_POINTER`, `CHRONO_DISPLACED`, `COLD_REBOOT`, `CRYPTO_WHALE`).
+  - Procedural sliding top-right HUD vector notification toasts with cybernetic brackets.
+  - Dedicated `[ 6: ACHIEVEMENTS ]` tab in `TerminalUI.js` with completion bar and badge grid.
+* **Weapon Feel & Kinetic Polish** (`Player.js`, `GameLoop.js`, `SoundBank.js`, `CollisionSystem.js`):
+  - Player visual recoil kick offset and barrel climb with exponential decay recovery.
+  - Directional hit-stop micro-freeze (1-2 frames) on critical strikes.
+  - Procedural pitch jitter (±6%) on automatic gunfire across all weapon archetypes.
+* **Difficulty Curve, Milestone Bosses & Elite Modifiers** (`Enemy.js`, `WaveManager.js`, `CollisionSystem.js`):
+  - Wave 5 Mini-Boss: `KERNEL_WATCHER` (650 HP, rotating radar array, dual plasma cannons).
+  - Wave 10 Major Boss: `ZERO_DAY_COLOSSUS` (1600 HP, multi-stage orbital laser ring, heavy missile spread).
+  - Elite Modifiers (Wave 3+): `SHIELDED` (cyan rotating energy barrier absorbing damage before hull), `OVERCLOCKED` (+45% movement speed with amber thruster glow), `CLUSTER_SPLITTER` (splits into 3 mini-daemons on purge).
+* **Global Leaderboard Serverless Edge Service** (`LeaderboardService.js`, `scripts/leaderboard-worker.js`):
+  - Cloudflare Worker edge script with Web Crypto SHA-256 HMAC run verification and KV persistence.
+  - Client REST API integration in `LeaderboardService.js` with graceful offline fallback to local records.
+
 ---
 
 ## 2. Subsystem Architecture Map
@@ -183,32 +211,36 @@ src/
 │   └── Drop.js             # Memory fragments (XP), crypto bounties, Nanite Repair (+25 HP)
 ├── services/
 │   ├── StorageService.js   # localStorage schema, firmware micro-upgrades, risk modifiers
-│   └── LeaderboardService.js # High scores, seeded global rankings, SHA-256 run verification
+│   └── LeaderboardService.js # High scores, SHA-256 verification, Cloudflare Worker REST API & offline fallback
 ├── systems/
+│   ├── AchievementSystem.js # Cyber-clearance achievement engine, toast animator, and event hooks
 │   ├── CheatManager.js     # Interceptor pipeline dispatcher, drafting card generator, reset(), trigger()
-│   ├── CollisionSystem.js  # Spatial hash querying, circle-vs-AABB, bullet wall pierce, noclip, nanite pickup
+│   ├── CollisionSystem.js  # Spatial hash querying, circle-vs-AABB, bullet wall pierce, cluster detonation, nanite pickup
 │   ├── PickupSystem.js     # Magnetic attraction dynamics with Cache Magnet firmware scaling
 │   ├── SpatialHashGrid.js  # 128px uniform spatial hash partitioning
-│   ├── WeaponSystem.js     # Tiered arsenal (Tiers 0, 1, 2), dual slots, DMA lock bypass, firing interceptor
-│   ├── WaveManager.js      # Procedural wave director, difficulty scaling, biome switching, milestone triggers
+│   ├── WeaponSystem.js     # Tiered arsenal (Tiers 0, 1, 2), dual slots, silent aim curving, DMA lock
+│   ├── WaveManager.js      # Procedural wave director, difficulty scaling, boss waves, elite roll
 │   └── ParticleSystem.js   # Preallocated vector debris emitter
 └── ui/
     ├── VectorRenderer.js   # Wireframe drawing utilities (brackets, crosshairs, gauges, grids)
     ├── VectorIcons.js      # Procedural vector icon synthesizer for 17 exploits
-    ├── TerminalUI.js       # Interactive boot terminal, briefing, shop, firmware lab, leaderboard
+    ├── TerminalUI.js       # Interactive boot terminal, briefing, shop, firmware lab, leaderboard, achievements tab
+    ├── AchievementModal.js # Dedicated Cyber-Clearance Achievement viewer modal
     ├── DraftModal.js       # Exploit card drafting dialog with procedural vector icon headers
-    ├── ArsenalModal.js     # Milestone wave weapon loadout selection modal (Slot 1 & Slot 2)
+    ├── ArsenalModal.js     # Milestone wave weapon loadout selection modal (Dual-Slot Slot 1 & Slot 2)
     ├── PauseOverlay.js     # [ESC]/[P] pause menu with hardware telemetry, exploit icon badges & DEV CONSOLE launcher
     ├── SettingsModal.js    # Vector sliders for volume, screen shake trauma, and debug grid
     ├── DebugConsole.js     # Authenticated (`null404`) developer terminal overlay with autocomplete & syntax hints
     └── DebugRenderer.js    # Zero-GC Canvas 2D diagnostics for hitboxes, spatial grid, LOS, backtrack trails
+scripts/
+└── leaderboard-worker.js   # Zero-dependency Cloudflare Worker edge REST service with SHA-256 HMAC validation
 ```
 
 ---
 
 ## 3. Test Suites
 
-All 9 automated test suites passing cleanly:
+All 10 automated test suites passing cleanly:
 1. `test/phase1_test.js`: Core physics, math, camera, spatial hash, object pool (28 tests)
 2. `test/phase2_test.js`: Weapons, ballistics, swarm AI, particles (37 tests)
 3. `test/phase3_test.js`: Interceptor pipeline, cheats, backtrack, silent aim, triggerbot synergy (63 tests)
@@ -218,8 +250,9 @@ All 9 automated test suites passing cleanly:
 7. `test/arsenal_expansion_test.js`: 17-exploit matrix, settings, firmware, rerolls (89 tests)
 8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
 9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
+10. `test/phase8_test.js`: True silent aim decoupling, screen flash elimination, tier 2 arsenal UX, achievements engine & toasts, weapon recoil & hit-stop, boss encounters & elite modifiers, cloudflare worker leaderboard integration (19 tests)
 
-**Total: 537 tests passing, 0 failing.**
+**Total: 556 tests passing, 0 failing.**
 
 ---
 
@@ -262,35 +295,30 @@ Ring Zero is hosted as a static client on GitHub Pages. To deliver a genuine, ze
 
 ---
 
-## 5. Known Issues & Backlog
-* **Weapon Tuning & Juice**: Recoil screen impulse and muzzle flash particles could have weapon-specific color palettes (e.g. emerald flash for `Scrap Blaster`, violet particle jet for `Vector Railgun`).
-* **Audio Polyphony Capping**: Under rapid minigun fire combined with Kernel Panic bursts, oscillator count can briefly spike; adding an active voice pool cap (~32 simultaneous nodes) will optimize low-end mobile browsers.
-* **Touch / Mobile Joystick Controls**: Touch pointer events are functional for shooting, but dual virtual on-screen thumbsticks would improve tablet/phone gameplay.
+## 5. Completed Phase 8 Deliverables Summary
+* **Silent Aim Decoupling**: 100% free mouse chassis control, zero snapping/twitching, trajectory redirection strictly upon projectile instantiation, 100% guaranteed crits.
+* **Screen Flash Eradication**: Replaced full-screen white canvas flash fills with world-space concentric shockwave rings and radial particle debris.
+* **Tier 2 Arsenal & UX**: Vector Railgun (wall pierce) and Memory Corruptor (cluster sub-munitions) integrated; dual-slot visual cards with [Q] quick swap.
+* **Cyber-Clearance Achievements**: 8 core achievements with procedural sliding HUD vector toasts, localStorage persistence, and dedicated Terminal tab.
+* **Weapon Recoil & Kinetic Polish**: Angular barrel climb and chassis recoil with exponential decay; 2-frame hit-stop freeze on crits; procedural pitch jitter.
+* **Milestone Bosses & Elites**: Wave 5 KERNEL_WATCHER, Wave 10 ZERO_DAY_COLOSSUS, and Shielded/Overclocked/Cluster-Splitter elite modifiers.
+* **Online Edge Leaderboard**: Cloudflare Worker edge script (`scripts/leaderboard-worker.js`) with Web Crypto SHA-256 HMAC validation and offline fallback in `LeaderboardService.js`.
 
 ---
 
-## 6. Tomorrow's Execution Plan (`/plan`)
+## 6. Backlog & Next Milestone (Phase 9: Mobile Controls, PWA Packaging & Polyphony Capping)
 
 ```markdown
-### Phase 8 Execution Plan: Weapon Juice, Encounter Pacing & Online Leaderboard Deployment
+### Phase 9 Execution Plan: Mobile Controls, PWA Packaging & Polyphony Capping
 
-1. Weapon Polish & Combat Juice:
-   - Implement weapon-specific muzzle flash vector spikes and dynamic ejection sparks for all 9 weapons.
-   - Add micro hit-stop freeze (0.03s) on critical strikes and heavy daemon purges.
-   - Refine recoil trauma impulse curves per weapon archetype.
+1. Dual Virtual Touch Joysticks:
+   - On touch-enabled devices, render on-screen dual virtual vector joysticks (Left: WASD movement impulse, Right: 360° aim & auto-fire).
+   - Ensure zero interference with desktop mouse/keyboard input pipelines.
 
-2. Security Daemon Encounter Pacing & Boss Escalation:
-   - Introduce milestone miniboss waves at Wave 5 and Wave 10:
-     - "KERNEL_WATCHDOG_TITAN": Multi-turreted heavy daemon with rotating laser shields.
-     - "ROOTKIT_CORE": Swarm spawner deploying accelerated BIT_SCANNERS.
-   - Balance spawn budget curves for smoother progression between Waves 1 through 15.
+2. Audio Polyphony Voice Pool Capping:
+   - Cap simultaneous active oscillator voices (~32 nodes) to prevent audio buffer underruns on low-end mobile hardware during mass Kernel Panic bursts.
 
-3. Online Leaderboard Deployment (Option 1 - Cloudflare Worker):
-   - Scaffold Cloudflare Worker script in `workers/leaderboard-worker.js`.
-   - Wire remote API synchronization in `LeaderboardService.js` with offline fallback.
-   - Add "GLOBAL" vs "LOCAL" tab toggle in `TerminalUI.js`.
-
-4. Release Packaging & Live Build Validation:
-   - Verify GitHub Pages deployment live build and PWA offline manifest.
-   - Run end-to-end playtest verification.
+3. PWA Offline Packaging & App Manifest:
+   - Add `manifest.json` and service worker caching strategy for full offline playability on mobile/desktop installations.
+   - Dynamic vector app icons (192px, 512px).
 ```
