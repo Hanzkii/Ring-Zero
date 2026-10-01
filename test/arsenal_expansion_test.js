@@ -4,7 +4,7 @@
  * 1. Audio & Screen Shake Settings
  * 2. Permanent Firmware Micro-Upgrades & Bonus Scaling
  * 3. Draft Rerolls via Heuristic Spoofing Tokens
- * 4. All 9 New Exploits (Speedhack, Triggerbot, PacketChoke, RadarTelemetry, PenetrationBucker, RapidFire, Noclip, Lagswitch, KernelPanic)
+ * 4. All 9 New Exploits (Speedhack, Triggerbot, PacketChoke, RadarTelemetry, PenetrationBucker, RapidFire, Noclip, Rootkit, KernelPanic)
  * 5. Complete 16-Exploit Matrix & Strict Ring Clearance Gating
  * 6. In-Run Pause & Resume Mechanics
  */
@@ -328,24 +328,24 @@ console.log('\n4. Testing New Exploits:');
   assert(player.x === 0 && player.vx === 200, 'Noclip allows player to freely phase through static walls without velocity clamping');
 }
 
-// Lagswitch (Ring 0)
+// Rootkit (Ring 0)
 {
   const manager = new CheatManager();
-  const cheat = manager.addOrUpgradeCheat('lagswitch');
-  assert(cheat !== null, 'Lagswitch installed');
-  assert(!cheat.shouldFreezeWorld(), 'Lagswitch is initially inactive');
+  const cheat = manager.addOrUpgradeCheat('rootkit');
+  assert(cheat !== null, 'Rootkit installed');
+  assert(cheat.isActive === false, 'Rootkit is initially inactive');
 
   const activated = cheat.trigger();
-  assert(activated === true, 'Lagswitch successfully triggered');
-  assert(cheat.shouldFreezeWorld() === true, 'Lagswitch freezes world execution');
-  assert(cheat.durationTimer > 0, 'Lagswitch freeze timer active');
+  assert(activated === true, 'Rootkit successfully triggered');
+  assert(cheat.isActive === true, 'Rootkit is active after trigger');
+  assert(cheat.durationTimer > 0, 'Rootkit duration timer active');
 
   const player = new Player(0, 0);
-  // Advance time past freeze duration
+  // Advance time past duration
   cheat.onPlayerUpdate(player, 5.0, {});
-  assert(cheat.shouldFreezeWorld() === false, 'Lagswitch unfreezes after duration elapses');
-  assert(cheat.cooldownTimer > 0, 'Lagswitch cooldown active');
-  assert(cheat.trigger() === false, 'Cannot re-trigger Lagswitch while on cooldown');
+  assert(cheat.isActive === false, 'Rootkit deactivates after duration elapses');
+  assert(cheat.cooldownTimer > 0, 'Rootkit cooldown active');
+  assert(cheat.trigger() === false, 'Cannot re-trigger Rootkit while on cooldown');
 }
 
 // KernelPanic (Ring 0)
@@ -389,7 +389,7 @@ console.log('\n5. Testing 16-Exploit Matrix & Clearance Gating:');
   assert(!r3Ids.includes('penetrationbucker'), 'Ring 3 excludes PenetrationBucker (Ring 1)');
   assert(!r3Ids.includes('rapidfire'), 'Ring 3 excludes RapidFire (Ring 1)');
   assert(!r3Ids.includes('noclip'), 'Ring 3 excludes Noclip (Ring 0)');
-  assert(!r3Ids.includes('lagswitch'), 'Ring 3 excludes Lagswitch (Ring 0)');
+  assert(!r3Ids.includes('rootkit'), 'Ring 3 excludes Rootkit (Ring 0)');
   assert(!r3Ids.includes('kernelpanic'), 'Ring 3 excludes KernelPanic (Ring 0)');
 
   // Ring 2 Test
@@ -415,7 +415,7 @@ console.log('\n5. Testing 16-Exploit Matrix & Clearance Gating:');
   const r0Options = manager.generateDraftOptions(30);
   const r0Ids = r0Options.map((o) => o.def.id);
   assert(r0Ids.includes('noclip'), 'Ring 0 includes Noclip');
-  assert(r0Ids.includes('lagswitch'), 'Ring 0 includes Lagswitch');
+  assert(r0Ids.includes('rootkit'), 'Ring 0 includes Rootkit');
   assert(r0Ids.includes('kernelpanic'), 'Ring 0 includes KernelPanic');
 }
 

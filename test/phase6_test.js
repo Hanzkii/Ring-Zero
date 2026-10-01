@@ -2,7 +2,7 @@
  * Ring Zero - Phase 6 Core Systems & Exploit Fixes Automated Test Suite
  * Validates:
  * 1. Stability & Exploit Bug Fixes:
- *    - Lagswitch entity update gating without loop corruption
+ *    - Rootkit safe timer and EMP trigger gating
  *    - Kernel Panic hostile projectile purge & omnidirectional laser burst
  *    - Wall-penetration targeting synergy (Aimbot & Triggerbot with PenetrationBucker)
  * 2. Economy & Drop Magnetics (PickupSystem):
@@ -117,7 +117,7 @@ if (typeof window !== 'undefined') {
   window.webkitAudioContext = MockAudioContext;
 }
 
-import { LagswitchCheat } from '../src/cheats/LagswitchCheat.js';
+import { RootkitCheat } from '../src/cheats/RootkitCheat.js';
 import { KernelPanicCheat } from '../src/cheats/KernelPanicCheat.js';
 import { AimbotCheat } from '../src/cheats/AimbotCheat.js';
 import { TriggerbotCheat } from '../src/cheats/TriggerbotCheat.js';
@@ -158,20 +158,20 @@ console.log('=== RUNNING PHASE 6 CORE SYSTEMS & EXPLOIT FIXES SUITE ===\n');
 // -------------------------------------------------------------
 console.log('1. Testing Stability & Exploit Bug Fixes:');
 
-// 1a. Lagswitch safe timer and hostiles freeze gating
-const lagswitch = new LagswitchCheat();
-assert(lagswitch.durationTimer === 0, 'Lagswitch starts with zero duration timer');
-assert(!lagswitch.shouldFreezeHostiles(), 'Lagswitch does not freeze hostiles when idle');
-lagswitch.trigger();
-assert(lagswitch.shouldFreezeHostiles(), 'Lagswitch freezes hostiles after activation');
-assert(lagswitch.shouldFreezeWorld(), 'Lagswitch reports shouldFreezeWorld true');
+// 1a. Rootkit safe timer and trigger lifecycle
+const rootkit = new RootkitCheat();
+assert(rootkit.durationTimer === 0, 'Rootkit starts with zero duration timer');
+assert(!rootkit.isActive, 'Rootkit does not trigger when idle');
+rootkit.trigger();
+assert(rootkit.isActive, 'Rootkit activates after trigger');
+assert(rootkit.durationTimer > 0, 'Rootkit reports active duration timer');
 
 // Update with safe dt
-lagswitch.update(1.0);
-assert(lagswitch.durationTimer === 1.5, 'Lagswitch timer safely decrements by dt (2.5 -> 1.5)');
-lagswitch.update(1.6);
-assert(!lagswitch.shouldFreezeHostiles(), 'Lagswitch unfreezes hostiles after durationTimer expires');
-assert(lagswitch.cooldownTimer > 0, 'Lagswitch enters cooldown after expiration');
+rootkit.update(1.0);
+assert(rootkit.durationTimer === 1.5, 'Rootkit timer safely decrements by dt (2.5 -> 1.5)');
+rootkit.update(1.6);
+assert(!rootkit.isActive, 'Rootkit deactivates after durationTimer expires');
+assert(rootkit.cooldownTimer > 0, 'Rootkit enters cooldown after expiration');
 
 // 1b. Kernel Panic hostile projectile purge and radial laser burst
 const kernelPanic = new KernelPanicCheat();

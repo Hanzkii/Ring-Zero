@@ -270,11 +270,11 @@ All 11 automated test suites passing cleanly:
 5. `test/phase5_test.js`: Web Audio API, storage, risk multipliers, leaderboard, weapon drop filtering (56 tests)
 6. `test/phase5_5_visual_test.js`: Vector icons, cyber-chassis, daemons, HUD, firmware UI (33 tests)
 7. `test/arsenal_expansion_test.js`: 17-exploit matrix, settings, firmware, rerolls (89 tests)
-8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
-9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
+8. `test/phase6_test.js`: Rootkit/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
+9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Rootkit purge, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (139 tests)
 10. `test/phase8_test.js`: True silent aim decoupling, screen flash elimination, tier 2 arsenal UX, achievements engine & toasts, weapon recoil & hit-stop, boss encounters & elite modifiers, cloudflare worker leaderboard integration (19 tests)
 11. `test/leaderboard_integration_test.js`: Cloudflare Worker HMAC signing, submitRun offline queueing under ring0_pending_submissions, fetchTopScores caching under ring0_leaderboard_cache, worker handler, live UI status, 30-second client-side throttling with immediate submitRun invalidation, and Top 100 display with getPlayerBestRun & pinned personal rank footer verification (8 tests)
-12. `test/audio_aimbot_lagswitch_test.js`: Procedural darksynth OST tracks, tempo, and wave rotation; aimbot velocity decoupling; lagswitch enemy dt=0 freeze, ghost trails, projectile freeze, wave timer pause, and unfreeze catchup (37 tests)
+12. `test/audio_aimbot_rootkit_test.js`: Procedural darksynth OST tracks, tempo, and wave rotation; aimbot velocity decoupling & closest target priority; Rootkit EMP screen purge, damage, and i-frames (37 tests)
 
 **Total: 601 tests passing, 0 failing across 12 test suites.**
 

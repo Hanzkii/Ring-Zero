@@ -1,16 +1,15 @@
 /**
- * Ring Zero - Audio Pacing, Aimbot Decoupling & Lagswitch Verification Test
+ * Ring Zero - Audio Pacing, Aimbot Decoupling & Rootkit Verification Test
  * Verifies:
  * 1. Procedural Dark Synthwave OST (140-165 BPM, D Minor, C# Phrygian, tracks rotation)
  * 2. Complete decoupling of Aimbot from player velocity and strafing inertia
- * 3. Repaired Lagswitch temporal freeze: enemy dt=0, stutter ghost afterimages,
- *    hostile projectile freeze, wave spawn timer pause, and unfreeze catchup
+ * 3. Rootkit.sys Ring 0 Kernel EMP Screen Purge, damage, and i-frames
  */
 
 import { strict as assert } from 'assert';
 import { SynthMusic, MUSIC_INTENSITY, MUSIC_TRACKS, TRACK_CONFIGS } from '../src/audio/SynthMusic.js';
 import { AimbotCheat } from '../src/cheats/AimbotCheat.js';
-import { LagswitchCheat } from '../src/cheats/LagswitchCheat.js';
+import { RootkitCheat } from '../src/cheats/RootkitCheat.js';
 import { Player } from '../src/entities/Player.js';
 import { Enemy, ENEMY_ARCHETYPES } from '../src/entities/Enemy.js';
 import { Projectile } from '../src/entities/Projectile.js';
@@ -20,7 +19,7 @@ import { SpatialHashGrid } from '../src/systems/SpatialHashGrid.js';
 import { Vec2 } from '../src/core/VectorMath.js';
 import { COLOR, COLLISION_LAYER } from '../src/core/Constants.js';
 
-console.log('=== AUDIO PACING, AIMBOT DECOUPLING & LAGSWITCH TEST ===\n');
+console.log('=== AUDIO PACING, AIMBOT DECOUPLING & ROOTKIT TEST ===\n');
 
 // Mock Web Audio Context
 class MockAudioParam {
@@ -210,7 +209,7 @@ console.log('\n2. Testing Aimbot Decoupling and Closest Enemy Acquisition (Aimbo
 }
 
 // ---------------------------------------------------------------------------
-// 3. ROOTKIT.SYS: TIER 0 KERNEL EMP SCREEN PURGE (REPLACING OBSOLETE LAGSWITCH)
+// 3. ROOTKIT.SYS: TIER 0 KERNEL EMP SCREEN PURGE
 // ---------------------------------------------------------------------------
 console.log('\n3. Testing Rootkit.sys Tier 0 Kernel Exploit (RootkitCheat.js, CheatManager.js):');
 {
@@ -289,11 +288,6 @@ console.log('\n3. Testing Rootkit.sys Tier 0 Kernel Exploit (RootkitCheat.js, Ch
   // 4. Camera trauma and FX triggered
   assert(camera.trauma > 0, 'Camera trauma triggered');
   assert(particleSystem.emitted.length > 0, 'EMP shockwave particles emitted');
-
-  // 5. Backwards-compatibility alias for legacy tests: lagswitch queries route to rootkit
-  cheatManager.addOrUpgradeCheat('lagswitch');
-  const legacyCheat = cheatManager.getCheat('lagswitch');
-  assert.ok(legacyCheat, 'Legacy "lagswitch" query resolved to rootkit cheat instance');
 
   console.log('  [PASS] Rootkit EMP screen purge, projectile obliteration, damage & i-frames verified');
 }

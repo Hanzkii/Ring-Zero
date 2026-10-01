@@ -19,7 +19,6 @@ import { RadarTelemetryCheat } from '../cheats/RadarTelemetryCheat.js';
 import { PenetrationBuckerCheat } from '../cheats/PenetrationBuckerCheat.js';
 import { RapidFireCheat } from '../cheats/RapidFireCheat.js';
 import { NoclipCheat } from '../cheats/NoclipCheat.js';
-import { LagswitchCheat } from '../cheats/LagswitchCheat.js';
 import { RootkitCheat } from '../cheats/RootkitCheat.js';
 import { KernelPanicCheat } from '../cheats/KernelPanicCheat.js';
 import { InfiniteAmmoCheat } from '../cheats/InfiniteAmmoCheat.js';
@@ -113,7 +112,6 @@ export class CheatManager {
         cheat = new NoclipCheat();
         break;
       case 'rootkit':
-      case 'lagswitch':
         cheat = new RootkitCheat();
         break;
       case 'kernelpanic':

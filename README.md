@@ -30,7 +30,7 @@ In **Ring Zero**, your cyber-chassis is trapped in a hostile memory virtualizati
 | **Hyper-Velocity Dash** | `[Space]` or `[RMB]` | High-speed omnidirectional evasion & ram damage |
 | **Weapon Reload** | `[R]` | Auto-reloads on empty clip; accelerated by Fast DMA |
 | **Swap Weapon Slot** | `[Q]` | Toggle between Primary and Secondary weapon loadouts |
-| **Lagswitch Freeze** | `[F]` | Ring 0 active exploit: freezes daemons & bullets in spacetime |
+| **Rootkit Screen Purge** | `[F]` | Ring 0 active exploit: EMP screen purge, wipes hostile bullets, deals massive shockwave damage & grants invulnerability |
 | **Draft Re-roll** | `[R]` *(in Draft Modal)* | Spend Heuristic Spoofing tokens to reroll exploit cards |
 | **Pause Menu** | `[ESC]` or `[P]` | Suspends 60Hz physics; inspects active exploits & loadout |
 | **Spatial Grid Debug** | `[G]` | Real-time visual overlay of the uniform spatial hash cells |
@@ -57,7 +57,7 @@ Exploits are gated behind your clearance ring. Spend crypto bounties earned duri
 | **Ring 1**<br>*(Hypervisor)* | `RapidFire.ovl` | **Rapid Fire** | Ballistics | Accelerates firing hammer and clip cycles. Rank 1: +40% fire rate, -20% reload; Rank 2: +80% fire rate, -35% reload; Rank 3: +120% fire rate, -50% reload. |
 | **Ring 0**<br>*(Kernel Execution)* | `SilentAim.vmp` | **Silent Aim** | Reality-Bending | Disconnects visual camera aim from bullet trajectory. 100% predictive targeting, guaranteed critical hits, overrides and purges standard Aimbot. |
 | **Ring 0**<br>*(Kernel Execution)* | `Noclip.drv` | **Noclip** | Physics Bypass | Unbinds chassis from collision matrices. Completely phases through static concrete walls and server rack obstacles without collision clamping. |
-| **Ring 0**<br>*(Kernel Execution)* | `Lagswitch.sys` | **Lagswitch** | Active Control | Tap `[F]` to freeze hostiles and enemy projectiles in suspended spacetime for 2.5s - 6.0s while player moves and shoots freely. |
+| **Ring 0**<br>*(Kernel Execution)* | `Rootkit.sys` | **Rootkit Purge** | Active Control | Tap `[F]` to discharge an EMP screen purge: incinerates all hostile projectiles across the arena, deals massive kernel shockwave damage (300-950), and grants 2.5s-4.0s invulnerability. |
 | **Ring 0**<br>*(Kernel Execution)* | `KernelPanic.rip` | **Kernel Panic** | Catastrophic | Triggers severe memory dump: every 10/7/5 shots or upon receiving damage, erupts an omnidirectional ring of 16-32 critical piercing lasers. |
 
 ---
@@ -138,7 +138,7 @@ ring-zero/
 │   │   ├── RapidFireCheat.js   # Fire rate & reload cycle acceleration
 │   │   ├── SilentAimCheat.js   # Kernel lock, triggerbot, trajectory curving
 │   │   ├── NoclipCheat.js      # Geometric wall phasing
-│   │   ├── LagswitchCheat.js   # Active [F] temporal freeze
+│   │   ├── RootkitCheat.js     # Active [F] Ring 0 EMP screen purge
 │   │   └── KernelPanicCheat.js # Omnidirectional critical laser rings
 │   ├── entities/
 │   │   ├── Entity.js           # Base spatial entity

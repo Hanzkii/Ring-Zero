@@ -657,7 +657,7 @@ export class GameApp {
 
     // Rootkit Kernel EMP Purge KeyF trigger
     if (this.input.isKeyJustPressed('KeyF')) {
-      const rootkit = this.cheatManager.getCheat('rootkit') || this.cheatManager.getCheat('lagswitch');
+      const rootkit = this.cheatManager.getCheat('rootkit');
       if (rootkit && rootkit.trigger({
         player: this.player,
         enemies: this.enemies,

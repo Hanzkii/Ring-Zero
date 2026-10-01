@@ -202,7 +202,7 @@ import { TriggerbotCheat } from '../src/cheats/TriggerbotCheat.js';
 import { SilentAimCheat } from '../src/cheats/SilentAimCheat.js';
 import { InfiniteAmmoCheat } from '../src/cheats/InfiniteAmmoCheat.js';
 import { KernelPanicCheat } from '../src/cheats/KernelPanicCheat.js';
-import { LagswitchCheat } from '../src/cheats/LagswitchCheat.js';
+import { RootkitCheat } from '../src/cheats/RootkitCheat.js';
 import { CHEAT_REGISTRY, RING_TIER } from '../src/cheats/CheatDefinition.js';
 import { InputManager } from '../src/core/InputManager.js';
 import { ArsenalModal } from '../src/ui/ArsenalModal.js';
@@ -760,7 +760,7 @@ console.log('\n6. Testing Exploit Synergies, Tiered Arsenal & Remediation:');
   assert(triggerbot.shouldAutoShoot() === true, 'Triggerbot shouldAutoShoot returns true during SilentAim lock');
 }
 
-// 6.3 Rootkit Kernel EMP Screen Purge (Replacing obsolete Lagswitch)
+// 6.3 Rootkit Kernel EMP Screen Purge
 {
   const cheatManager = new CheatManager();
   cheatManager.clearanceRing = RING_TIER.RING_0;

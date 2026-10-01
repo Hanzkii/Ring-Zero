@@ -90,10 +90,6 @@ export class VectorIcons {
         this._drawRootkit(ctx, r, color);
         break;
 
-      case 'lagswitch':
-        this._drawRootkit(ctx, r, color);
-        break;
-
       case 'kernelpanic':
         this._drawKernelPanic(ctx, r, color);
         break;
@@ -552,35 +548,6 @@ export class VectorIcons {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Quantum phase wave ripples
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.85, -Math.PI * 0.3, Math.PI * 0.3);
-    ctx.stroke();
-  }
-
-  /** Lagswitch: Temporal hourglass / frozen spacetime crystal */
-  static _drawLagswitch(ctx, r, color) {
-    // Hourglass wireframe
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.7, -r * 0.85);
-    ctx.lineTo(r * 0.7, -r * 0.85);
-    ctx.lineTo(-r * 0.7, r * 0.85);
-    ctx.lineTo(r * 0.7, r * 0.85);
-    ctx.closePath();
-    ctx.stroke();
-
-    // Top and bottom cap lines
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.85, -r * 0.85);
-    ctx.lineTo(r * 0.85, -r * 0.85);
-    ctx.moveTo(-r * 0.85, r * 0.85);
-    ctx.lineTo(r * 0.85, r * 0.85);
-    ctx.stroke();
-
-    // Freeze pulse crystal at waist
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   /** Rootkit: Ring 0 Kernel EMP Screen Purge / Root-access node */

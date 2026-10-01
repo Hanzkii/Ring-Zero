@@ -10,7 +10,7 @@ import { COLOR, COLLISION_LAYER } from '../core/Constants.js';
 
 export class RootkitCheat extends CheatInterceptor {
   constructor() {
-    super(CHEAT_REGISTRY.ROOTKIT || CHEAT_REGISTRY.LAGSWITCH);
+    super(CHEAT_REGISTRY.ROOTKIT);
     this.isActive = false;
     this.durationTimer = 0;
     this.cooldownTimer = 0;
@@ -145,15 +145,6 @@ export class RootkitCheat extends CheatInterceptor {
 
   update(dt) {
     this.onPlayerUpdate(null, dt, null);
-  }
-
-  // Compatibility helpers (Lagswitch freeze is completely eliminated)
-  shouldFreezeHostiles() {
-    return this.isActive;
-  }
-
-  shouldFreezeWorld() {
-    return this.isActive;
   }
 
   onRenderHUD(ctx, x, y) {

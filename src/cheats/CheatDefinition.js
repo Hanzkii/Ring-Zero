@@ -87,7 +87,7 @@ export class CheatInterceptor {
   }
 
   /**
-   * Hook: Intercepts incoming damage to player (e.g. anti-aim, lagswitch)
+   * Hook: Intercepts incoming damage to player (e.g. anti-aim, rootkit)
    * @param {number} incomingDamage
    * @param {Object} context - { player, sourceEntity, isContact }
    * @returns {{ damage: number, evaded: boolean }}
@@ -342,21 +342,6 @@ export const CHEAT_REGISTRY = {
   },
   ROOTKIT: {
     id: 'rootkit',
-    name: 'ROOTKIT PURGE',
-    filename: 'Rootkit.sys',
-    tier: RING_TIER.RING_0,
-    rarity: CHEAT_RARITY.KERNEL,
-    color: COLOR.RED,
-    maxLevel: 3,
-    description: 'Kernel privilege execution: Press [F] to discharge an electromagnetic screen purge, obliterating hostile projectiles and frying all nearby security daemons.',
-    rankDescriptions: [
-      'Rank 1: EMP purge destroys all hostile projectiles, deals 300 kernel damage to all nearby daemons, and grants 2.25s invulnerability [Press F / Cooldown: 12s]',
-      'Rank 2: EMP purge destroys all hostile projectiles, deals 600 kernel damage to all nearby daemons, and grants 3.0s invulnerability [Press F / Cooldown: 10s]',
-      'Rank 3: EMP purge destroys all hostile projectiles, deals 900 kernel damage to all nearby daemons, and grants 3.75s invulnerability [Press F / Cooldown: 8s]',
-    ],
-  },
-  LAGSWITCH: {
-    id: 'lagswitch',
     name: 'ROOTKIT PURGE',
     filename: 'Rootkit.sys',
     tier: RING_TIER.RING_0,
