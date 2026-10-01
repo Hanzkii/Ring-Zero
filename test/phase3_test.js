@@ -287,17 +287,16 @@ console.log('\n8. Testing SilentAim Overriding Aimbot & Autonomous Shooting:');
   assert(silentAim.targetLeadPos.y > 0, 'SilentAim calculated predictive lead ahead of moving enemy');
   assert(modifiedAim > 0, 'SilentAim modified aim angle towards predicted lead position');
 
-  // 6. SilentAim auto-shoot (shouldAutoShoot) periodically fires triggerbot
-  silentAim.autoShootTimer = 0;
-  const shouldFire = silentAim.shouldAutoShoot(0.016, context.weapon);
-  assert(shouldFire === true, 'SilentAim shouldAutoShoot triggered autonomous firing');
-
-  // Manager wantsAutoFire delegates to SilentAim
-  const managerAutoFire = manager.wantsAutoFire(0.016, context.weapon);
-  // Timer was reset by previous shouldAutoShoot call, so advance time past interval
-  silentAim.autoShootTimer = 0;
-  const managerAutoFire2 = manager.wantsAutoFire(0.016, context.weapon);
-  assert(managerAutoFire2 === true, 'CheatManager.wantsAutoFire queries SilentAim triggerbot');
+  // 6. SilentAim decoupled from auto-fire; Triggerbot handles autonomous firing with SilentAim synergy
+  assert(typeof silentAim.shouldAutoShoot === 'undefined', 'SilentAim decoupled from auto-fire (shouldAutoShoot removed)');
+  const triggerbot = manager.addOrUpgradeCheat('triggerbot');
+  triggerbot.onAimInput(rawAim, new Vec2(1, 0), {
+    player,
+    enemies: [enemy],
+    silentAimCheat: silentAim,
+  });
+  assert(triggerbot.shouldAutoShoot() === true, 'Triggerbot fires autonomously when enemy is in SilentAim cone');
+  assert(manager.wantsAutoFire(0.016, context.weapon) === true, 'CheatManager.wantsAutoFire queries Triggerbot with SilentAim synergy');
 }
 
 // 9. Backtrack Physical Hit Registration & Aimbot/SilentAim Backtrack Targeting

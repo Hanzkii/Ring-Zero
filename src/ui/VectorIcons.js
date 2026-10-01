@@ -94,6 +94,10 @@ export class VectorIcons {
         this._drawKernelPanic(ctx, r, color);
         break;
 
+      case 'infiniteammo':
+        this._drawInfiniteAmmo(ctx, r, color);
+        break;
+
       default:
         this._drawDefaultChip(ctx, r, color);
         break;
@@ -594,6 +598,42 @@ export class VectorIcons {
       ctx.closePath();
       ctx.stroke();
     }
+  }
+
+  /** Infinite Ammo: Lemniscate infinity glyph with dual ballistic cartridge silhouettes */
+  static _drawInfiniteAmmo(ctx, r, color) {
+    const loopRadius = r * 0.38;
+    const offset = r * 0.42;
+
+    // Draw infinity loops
+    ctx.beginPath();
+    ctx.arc(-offset, 0, loopRadius, 0, Math.PI * 2);
+    ctx.arc(offset, 0, loopRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Central cross intersection tick
+    ctx.beginPath();
+    ctx.moveTo(-offset * 0.4, -loopRadius * 0.5);
+    ctx.lineTo(offset * 0.4, loopRadius * 0.5);
+    ctx.moveTo(-offset * 0.4, loopRadius * 0.5);
+    ctx.lineTo(offset * 0.4, -loopRadius * 0.5);
+    ctx.stroke();
+
+    // Left bullet tip
+    ctx.beginPath();
+    ctx.moveTo(-offset - loopRadius - 3, 0);
+    ctx.lineTo(-offset - loopRadius + 3, -3);
+    ctx.lineTo(-offset - loopRadius + 3, 3);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right bullet tip
+    ctx.beginPath();
+    ctx.moveTo(offset + loopRadius + 3, 0);
+    ctx.lineTo(offset + loopRadius - 3, -3);
+    ctx.lineTo(offset + loopRadius - 3, 3);
+    ctx.closePath();
+    ctx.fill();
   }
 
   /** Default Hexagonal Core Chip */

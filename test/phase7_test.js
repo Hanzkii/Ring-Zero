@@ -192,18 +192,26 @@ import { SpatialHashGrid } from '../src/systems/SpatialHashGrid.js';
 import { PickupSystem } from '../src/systems/PickupSystem.js';
 import { CollisionSystem } from '../src/systems/CollisionSystem.js';
 import { ParticleSystem } from '../src/systems/ParticleSystem.js';
-import { WeaponSystem } from '../src/systems/WeaponSystem.js';
+import { WeaponSystem, WEAPON_ARCHETYPES, WeaponInstance, getUnlockedWeaponsForWave } from '../src/systems/WeaponSystem.js';
 import { Camera2D } from '../src/core/Camera2D.js';
 import { SoundBank } from '../src/audio/SoundBank.js';
 import { StorageService } from '../src/services/StorageService.js';
 import { CheatManager } from '../src/systems/CheatManager.js';
 import { SpinbotCheat } from '../src/cheats/SpinbotCheat.js';
 import { TriggerbotCheat } from '../src/cheats/TriggerbotCheat.js';
+import { SilentAimCheat } from '../src/cheats/SilentAimCheat.js';
+import { InfiniteAmmoCheat } from '../src/cheats/InfiniteAmmoCheat.js';
+import { KernelPanicCheat } from '../src/cheats/KernelPanicCheat.js';
+import { LagswitchCheat } from '../src/cheats/LagswitchCheat.js';
+import { CHEAT_REGISTRY, RING_TIER } from '../src/cheats/CheatDefinition.js';
+import { InputManager } from '../src/core/InputManager.js';
+import { ArsenalModal } from '../src/ui/ArsenalModal.js';
 import { GameLoop } from '../src/core/GameLoop.js';
 import { DebugRenderer } from '../src/ui/DebugRenderer.js';
 import { DebugConsole, AUTH_PASSPHRASE, COMMAND_REGISTRY } from '../src/ui/DebugConsole.js';
 import { PauseOverlay } from '../src/ui/PauseOverlay.js';
-import { SIMULATION } from '../src/core/Constants.js';
+import { Vec2 } from '../src/core/VectorMath.js';
+import { SIMULATION, COLLISION_LAYER } from '../src/core/Constants.js';
 
 let passed = 0;
 let failed = 0;
@@ -669,6 +677,254 @@ console.log('\n5. Testing Debug Diagnostic Renderer:');
   }
 
   assert(!renderThrew, 'DebugRenderer renders complete diagnostic pass without exceptions');
+}
+
+// =========================================================================
+// 6. Exploit Synergies, Tiered Arsenal & Critical Bug Remediation
+// =========================================================================
+console.log('\n6. Testing Exploit Synergies, Tiered Arsenal & Remediation:');
+
+// 6.1 InfiniteAmmoCheat & DMA Lock
+{
+  assert(Boolean(CHEAT_REGISTRY.INFINITEAMMO), 'CHEAT_REGISTRY contains INFINITEAMMO');
+  assert(CHEAT_REGISTRY.INFINITEAMMO.tier === RING_TIER.RING_0, 'INFINITEAMMO is registered under RING_0 tier');
+
+  const cheatManager = new CheatManager();
+  cheatManager.clearanceRing = RING_TIER.RING_0;
+  cheatManager.addOrUpgradeCheat('infiniteammo');
+
+  assert(cheatManager.hasCheat('infiniteammo'), 'CheatManager has infiniteammo exploit');
+  assert(cheatManager.isActive('infiniteammo'), 'CheatManager reports infiniteammo as active');
+
+  const infCheat = cheatManager.getCheat('infiniteammo');
+  assert(infCheat.fireRateMultiplier === 1.0, 'InfiniteAmmo rank 1 has 1.0x fire rate multiplier');
+  assert(infCheat.getHUDTelemetry().includes('DMA_LOCK'), 'InfiniteAmmo HUD telemetry reports DMA_LOCK status');
+
+  cheatManager.addOrUpgradeCheat('infiniteammo');
+  assert(infCheat.fireRateMultiplier === 1.15, 'InfiniteAmmo rank 2 has 1.15x fire rate multiplier');
+
+  cheatManager.addOrUpgradeCheat('infiniteammo');
+  assert(infCheat.fireRateMultiplier === 1.30, 'InfiniteAmmo rank 3 has 1.30x fire rate multiplier');
+
+  // Verify WeaponSystem DMA lock does not consume ammo
+  const pool = new ObjectPool({ factory: () => new Projectile(), reset: p => p.reset() });
+  const weaponSys = new WeaponSystem(pool);
+  weaponSys.cheatManager = cheatManager;
+
+  const weapon = weaponSys.activeWeapon;
+  const initialAmmo = weapon.currentAmmo;
+  assert(initialAmmo > 0, 'Active weapon has positive starting ammo');
+
+  // Test firing with DMA lock active
+  let spawnedCount = 0;
+  weaponSys.fireInterceptor = (params, cb) => { spawnedCount++; cb(params); };
+
+  const player = new Player(0, 0);
+  const camera = new Camera2D();
+  const input = new InputManager(createMockElement('canvas'));
+
+  // Simulate fire trigger
+  weaponSys._fireWeapon(weapon, player, 0, camera);
+  assert(weapon.currentAmmo === initialAmmo, 'Weapon currentAmmo is preserved without consumption under InfiniteAmmo');
+  weapon.update(0, true);
+  weapon.cooldownTimer = 0;
+  assert(weapon.canFire === true, 'weapon.canFire returns true when hasInfiniteAmmo is true');
+  assert(weapon.isReloading === false, 'weapon is not reloading under InfiniteAmmo even if ammo were 0');
+}
+
+// 6.2 SilentAim & Triggerbot Decoupling & Synergy
+{
+  const silentAim = new SilentAimCheat();
+  assert(typeof silentAim.shouldAutoShoot === 'undefined', 'SilentAimCheat does not implement shouldAutoShoot (strictly decoupled from auto-fire)');
+
+  const triggerbot = new TriggerbotCheat();
+  triggerbot.level = 1;
+
+  // Mock SilentAim acquiring target
+  const dummyTarget = new Enemy(100, 0, ENEMY_ARCHETYPES.PACKET_SNIFFER);
+  silentAim.target = dummyTarget;
+  silentAim.hasTarget = true;
+  silentAim.currentTarget = dummyTarget;
+  silentAim.targetLeadPos = { x: 100, y: 0 };
+
+  const mockPlayer = new Player(0, 0);
+  mockPlayer.aimAngle = 0;
+
+  // When SilentAim is provided in context, Triggerbot triggers fire if locked
+  triggerbot.onAimInput(0, new Vec2(1, 0), {
+    player: mockPlayer,
+    enemies: [dummyTarget],
+    silentAimCheat: silentAim,
+  });
+  assert(triggerbot.fireRequested === true, 'Triggerbot requests fire when target is acquired in SilentAim cone');
+  assert(triggerbot.shouldAutoShoot() === true, 'Triggerbot shouldAutoShoot returns true during SilentAim lock');
+}
+
+// 6.3 Lagswitch Hostile Entity & Projectile Gate
+{
+  const cheatManager = new CheatManager();
+  cheatManager.clearanceRing = RING_TIER.RING_1;
+  cheatManager.addOrUpgradeCheat('lagswitch');
+  const lagswitch = cheatManager.getCheat('lagswitch');
+
+  // Trigger lagswitch
+  lagswitch.trigger();
+  assert(cheatManager.isActive('lagswitch') === true, 'Lagswitch is actively freezing');
+
+  const hostileEnemy = new Enemy(100, 100, ENEMY_ARCHETYPES.PACKET_SNIFFER);
+  assert(hostileEnemy.isHostile === true, 'Enemy isHostile is true');
+  assert(hostileEnemy.owner === 'enemy', 'Enemy owner is "enemy"');
+
+  const player = new Player(0, 0);
+  const grid = new SpatialHashGrid(128);
+
+  // Update AI while lagswitch is active
+  hostileEnemy.updateAI(1/60, player, grid, () => {}, cheatManager);
+  assert(hostileEnemy.x === 100 && hostileEnemy.y === 100, 'Hostile enemy did not integrate position during lagswitch freeze');
+
+  // Projectile gate test
+  const hostileProj = new Projectile();
+  hostileProj.spawn({ x: 50, y: 50, angle: 0, speed: 600, layer: COLLISION_LAYER.PROJECTILE_ENEMY });
+  assert(hostileProj.isHostile === true, 'Hostile projectile has isHostile = true');
+
+  hostileProj.update(1/60, cheatManager);
+  assert(hostileProj.x === 50, 'Hostile projectile position is frozen during lagswitch');
+
+  const playerProj = new Projectile();
+  playerProj.spawn({ x: 50, y: 50, angle: 0, speed: 600, layer: COLLISION_LAYER.PROJECTILE_PLAYER });
+  assert(playerProj.isHostile === false, 'Player projectile has isHostile = false');
+
+  playerProj.update(1/60, cheatManager);
+  assert(playerProj.x > 50, 'Player projectile advances normally during lagswitch');
+}
+
+// 6.4 Kernel Panic Event Hooking & Radial Purge
+{
+  const cheatManager = new CheatManager();
+  cheatManager.clearanceRing = RING_TIER.RING_2;
+  cheatManager.addOrUpgradeCheat('kernelpanic');
+
+  const kpCheat = cheatManager.getCheat('kernelpanic');
+  assert(kpCheat !== null, 'KernelPanicCheat instantiated');
+
+  const player = new Player(0, 0);
+  const pool = new ObjectPool({ factory: () => new Projectile(), reset: p => p.reset() });
+  const camera = new Camera2D();
+  const soundBank = new SoundBank();
+
+  // Wire context for Kernel Panic trigger
+  kpCheat.projectilePool = pool;
+  kpCheat.camera = camera;
+  kpCheat.soundBank = soundBank;
+  kpCheat.enemies = [];
+
+  // Spawn a hostile projectile near player
+  const hostileProj = pool.obtain();
+  hostileProj.spawn({ x: 10, y: 10, angle: 0, speed: 200, layer: COLLISION_LAYER.PROJECTILE_ENEMY });
+
+  // Call player takeDamage with cheatManager and context
+  player.takeDamage(10, cheatManager, {
+    projectilePool: pool,
+    camera: camera,
+    soundBank: soundBank,
+    enemies: [],
+  });
+
+  assert(camera.screenFlash === 1.0, 'Kernel Panic set camera screenFlash to 1.0 upon taking damage');
+  assert(camera.trauma >= 0.6, 'Kernel Panic added trauma to camera');
+  assert(hostileProj.markedForRemoval === true, 'Hostile projectile within camera was purged by Kernel Panic');
+
+  // Verify radial beams were spawned
+  let activeBeams = 0;
+  pool.forEachActive(p => { if (p.layer === COLLISION_LAYER.PROJECTILE_PLAYER) activeBeams++; });
+  assert(activeBeams >= 16, `Kernel Panic spawned radial ring of ${activeBeams} piercing beams`);
+}
+
+// 6.5 InputManager Isolation & State Reset
+{
+  const input = new InputManager(createMockElement('canvas'));
+  input.keys.set('KeyW', true);
+  input.keys.set('Space', true);
+  input.mouseButtons.set(0, true);
+  input.isMouseDown = true;
+
+  assert(input.isMouseDown === true, 'input.isMouseDown is true before reset');
+  input.resetInputs();
+
+  assert(input.isMouseDown === false, 'input.resetInputs() resets isMouseDown to false');
+  assert(input.keys.size === 0, 'input.resetInputs() clears all key buffers');
+  assert(input.mouseButtons.size === 0, 'input.resetInputs() clears all mouse button buffers');
+}
+
+// 6.6 Tiered Arsenal Progression & Zero Weapon Drops
+{
+  // Verify Tier 0 baseline sidearms
+  assert(Boolean(WEAPON_ARCHETYPES.PISTOL_SYS), 'WEAPON_ARCHETYPES contains PISTOL_SYS');
+  assert(WEAPON_ARCHETYPES.PISTOL_SYS.tier === 0, 'PISTOL_SYS is Tier 0');
+  assert(Boolean(WEAPON_ARCHETYPES.PULSE_SMG), 'WEAPON_ARCHETYPES contains PULSE_SMG');
+  assert(WEAPON_ARCHETYPES.PULSE_SMG.tier === 0, 'PULSE_SMG is Tier 0');
+  assert(Boolean(WEAPON_ARCHETYPES.SCRAP_BLASTER), 'WEAPON_ARCHETYPES contains SCRAP_BLASTER');
+  assert(WEAPON_ARCHETYPES.SCRAP_BLASTER.tier === 0, 'SCRAP_BLASTER is Tier 0');
+
+  // Verify Tier 1
+  assert(WEAPON_ARCHETYPES.KERNEL_PISTOL.tier === 1, 'KERNEL_PISTOL is Tier 1');
+  assert(WEAPON_ARCHETYPES.CODE_SWEEPER.tier === 1, 'CODE_SWEEPER is Tier 1');
+  assert(WEAPON_ARCHETYPES.FLAK_SUBMACHINE.tier === 1, 'FLAK_SUBMACHINE is Tier 1');
+  assert(WEAPON_ARCHETYPES.ROTARY_MINIGUN.tier === 1, 'ROTARY_MINIGUN is Tier 1');
+
+  // Verify Tier 2
+  assert(WEAPON_ARCHETYPES.VECTOR_RAILGUN.tier === 2, 'VECTOR_RAILGUN is Tier 2');
+  assert(WEAPON_ARCHETYPES.MEMORY_CORRUPTOR.tier === 2, 'MEMORY_CORRUPTOR is Tier 2');
+
+  // Milestone unlock checks
+  const wave1Weapons = getUnlockedWeaponsForWave(1);
+  assert(wave1Weapons.every(w => w.tier === 0), 'Wave 1 unlocks are strictly Tier 0 baseline');
+
+  const wave3Weapons = getUnlockedWeaponsForWave(3);
+  assert(wave3Weapons.some(w => w.tier === 1), 'Wave 3 milestone unlocks include Tier 1 weapons');
+
+  const wave6Weapons = getUnlockedWeaponsForWave(6);
+  assert(wave6Weapons.some(w => w.tier === 2), 'Wave 6 milestone unlocks include Tier 2 weapons');
+
+  // Verify Enemy drops have 0 weapon crates
+  const enemy = new Enemy(0, 0, ENEMY_ARCHETYPES.PACKET_SNIFFER);
+  let weaponDropCount = 0;
+  for (let i = 0; i < 500; i++) {
+    const drops = enemy.generateDrops();
+    for (const d of drops) {
+      if (d.type === DROP_TYPE.WEAPON) {
+        weaponDropCount++;
+      }
+    }
+  }
+  assert(weaponDropCount === 0, 'World enemy drops contain zero hardware weapon crates (strictly Bounties, XP & Nanite)');
+}
+
+// 6.7 Arsenal Modal Selection
+{
+  const mockContainer = createMockElement('div');
+  let confirmedS1 = null;
+  let confirmedS2 = null;
+
+  const modal = new ArsenalModal(mockContainer, (s1, s2) => {
+    confirmedS1 = s1;
+    confirmedS2 = s2;
+  });
+
+  const available = getUnlockedWeaponsForWave(3);
+  modal.open(3, available, [new WeaponInstance(WEAPON_ARCHETYPES.PISTOL_SYS), null], (s1, s2) => {
+    confirmedS1 = s1;
+    confirmedS2 = s2;
+  });
+
+  assert(modal.isOpen === true, 'ArsenalModal opened successfully');
+  modal.selectWeapon(0, WEAPON_ARCHETYPES.KERNEL_PISTOL);
+  modal.selectWeapon(1, WEAPON_ARCHETYPES.FLAK_SUBMACHINE);
+  modal.confirmSelection();
+
+  assert(modal.isOpen === false, 'ArsenalModal closed after confirmation');
+  assert(confirmedS1?.id === 'kernel_pistol', 'Slot 1 confirmed as KERNEL_PISTOL');
+  assert(confirmedS2?.id === 'flak_submachine', 'Slot 2 confirmed as FLAK_SUBMACHINE');
 }
 
 // =========================================================================

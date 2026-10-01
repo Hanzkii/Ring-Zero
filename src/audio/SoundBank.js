@@ -121,6 +121,16 @@ export class SoundBank {
   }
 
   /**
+   * Catastrophic radial explosion and glitch audio cue for Kernel Panic
+   */
+  playKernelPanic() {
+    if (!this.synth.initialized) return;
+    this.synth.playTone(220, 50, 0.4, 'sawtooth', 0.6);
+    this.synth.playFilteredNoise(0.35, 'lowpass', 600, 50, 0.6);
+    this.synth.playGlitchTone(900, 150, 0.25, 1200);
+  }
+
+  /**
    * Ascending arpeggio chime for level up / exploit draft unlock
    */
   playLevelUp() {

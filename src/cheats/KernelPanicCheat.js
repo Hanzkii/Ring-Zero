@@ -13,6 +13,14 @@ export class KernelPanicCheat extends CheatInterceptor {
     this.shotCounter = 0;
   }
 
+  reset() {
+    this.shotCounter = 0;
+  }
+
+  teardown() {
+    this.reset();
+  }
+
   get shotsPerBurst() {
     // Rank 1: Every 10 shots
     // Rank 2: Every 7 shots
@@ -34,7 +42,13 @@ export class KernelPanicCheat extends CheatInterceptor {
     this.shotCounter++;
     if (this.shotCounter >= this.shotsPerBurst) {
       this.shotCounter = 0;
-      this.triggerKernelPanic(context.player, spawnCallback, context.projectilePool, context.camera);
+      this.triggerKernelPanic(
+        context.player,
+        spawnCallback,
+        context.projectilePool,
+        context.camera,
+        context.soundBank
+      );
     }
   }
 
@@ -44,8 +58,9 @@ export class KernelPanicCheat extends CheatInterceptor {
    * @param {function(Object): void} spawnCallback
    * @param {import('../core/ObjectPool.js').ObjectPool} [projectilePool=null]
    * @param {import('../core/Camera2D.js').Camera2D} [camera=null]
+   * @param {import('../audio/SoundBank.js').SoundBank} [soundBank=null]
    */
-  triggerKernelPanic(player, spawnCallback, projectilePool = null, camera = null) {
+  triggerKernelPanic(player, spawnCallback, projectilePool = null, camera = null, soundBank = null) {
     const count = this.pulseCount;
     if (typeof spawnCallback === 'function') {
       for (let i = 0; i < count; i++) {
@@ -72,7 +87,7 @@ export class KernelPanicCheat extends CheatInterceptor {
     // Purge/recycle all hostile projectiles within active camera bounds
     if (projectilePool && typeof projectilePool.forEachActive === 'function') {
       projectilePool.forEachActive((p) => {
-        if (p.layer === COLLISION_LAYER.PROJECTILE_ENEMY) {
+        if (p.layer === COLLISION_LAYER.PROJECTILE_ENEMY || p.owner === 'enemy' || p.isHostile) {
           if (camera) {
             const margin = 120;
             const halfW = (camera.viewportWidth || 1920) * 0.5 + margin;
@@ -90,6 +105,24 @@ export class KernelPanicCheat extends CheatInterceptor {
         }
       });
     }
+
+    // Screen flash & camera trauma
+    if (camera) {
+      camera.screenFlash = 1.0;
+      if (typeof camera.addTrauma === 'function') {
+        camera.addTrauma(0.65);
+      }
+    }
+
+    // High-intensity glitch / explosion audio cue
+    if (soundBank) {
+      if (typeof soundBank.playKernelPanic === 'function') {
+        soundBank.playKernelPanic();
+      } else {
+        soundBank.playGlitch?.();
+        soundBank.playExplosion?.(true);
+      }
+    }
   }
 
   /**
@@ -104,7 +137,13 @@ export class KernelPanicCheat extends CheatInterceptor {
         if (p) p.spawn(params);
       }
     });
-    this.triggerKernelPanic(context.player, spawnCb, context.projectilePool, context.camera);
+    this.triggerKernelPanic(
+      context.player,
+      spawnCb,
+      context.projectilePool,
+      context.camera,
+      context.soundBank
+    );
   }
 
   onTakeDamage(incomingDamage, context) {
@@ -116,7 +155,13 @@ export class KernelPanicCheat extends CheatInterceptor {
           if (p) p.spawn(params);
         }
       });
-      this.triggerKernelPanic(context.player, spawnCb, context.projectilePool, context.camera);
+      this.triggerKernelPanic(
+        context.player,
+        spawnCb,
+        context.projectilePool,
+        context.camera,
+        context.soundBank
+      );
     }
     return { damage: incomingDamage, evaded: false };
   }

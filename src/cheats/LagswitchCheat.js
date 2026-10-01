@@ -16,6 +16,16 @@ export class LagswitchCheat extends CheatInterceptor {
     this.maxCooldown = 12.0;
   }
 
+  reset() {
+    this.isActive = false;
+    this.durationTimer = 0;
+    this.cooldownTimer = 0;
+  }
+
+  teardown() {
+    this.reset();
+  }
+
   get maxDuration() {
     // Rank 1: 2.5s freeze
     // Rank 2: 4.0s freeze

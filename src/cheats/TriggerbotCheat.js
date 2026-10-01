@@ -51,6 +51,7 @@ export class TriggerbotCheat extends CheatInterceptor {
       player,
       enemies,
       backtrackCheat,
+      silentAimCheat,
       raycaster,
       wallSegments = [],
       hasWallhack = false,
@@ -123,6 +124,32 @@ export class TriggerbotCheat extends CheatInterceptor {
           }
         }
         if (hitFound) break;
+      }
+    }
+
+    // SilentAim acquisition cone expansion check if SilentAim is active
+    if (!hitFound && silentAimCheat && silentAimCheat.enabled) {
+      if (silentAimCheat.hasTarget && silentAimCheat.currentTarget && !silentAimCheat.currentTarget.markedForRemoval) {
+        hitFound = true;
+      } else {
+        const fovHalfAngle = silentAimCheat.level === 3 ? Math.PI : (45 + silentAimCheat.level * 25) * (Math.PI / 180);
+        const maxRange = 550 + silentAimCheat.level * 150;
+        for (let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i];
+          if (!enemy.active || enemy.markedForRemoval) continue;
+          const dx = enemy.x - player.x;
+          const dy = enemy.y - player.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist <= maxRange) {
+            const angleToTarget = Math.atan2(dy, dx);
+            let diff = Math.abs(aimAngle - angleToTarget) % (Math.PI * 2);
+            if (diff > Math.PI) diff = Math.PI * 2 - diff;
+            if (diff <= fovHalfAngle && isUnblocked(enemy.x, enemy.y)) {
+              hitFound = true;
+              break;
+            }
+          }
+        }
       }
     }
 

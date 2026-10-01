@@ -75,12 +75,14 @@ export class Enemy extends Entity {
     this.contactDamage = config.contactDamage;
     this.color = config.color;
     this.xpValue = config.xpValue;
-    this.crateDropChance = config.crateDropChance;
+    this.crateDropChance = 0; // World weapon crates disabled in Phase 7 (obtainable via milestone arsenal selection)
 
     // AI steering vectors
     this.targetPos = new Vec2();
     this.separationVec = new Vec2();
     this.attackCooldown = randomRange(1.0, 2.5); // For ranged Sentinels
+    this.isHostile = true;
+    this.owner = 'enemy';
 
     // Visual feedback
     this.hitFlashTimer = 0;
@@ -117,7 +119,11 @@ export class Enemy extends Entity {
    * @param {import('../systems/SpatialHashGrid.js').SpatialHashGrid} spatialGrid
    * @param {function(Object): void} onShootProjectile - Callback for Sentinel projectiles
    */
-  updateAI(dt, player, spatialGrid, onShootProjectile) {
+  updateAI(dt, player, spatialGrid, onShootProjectile, cheatManager = null) {
+    if (cheatManager && cheatManager.isActive('lagswitch') && (this.isHostile || this.owner === 'enemy')) {
+      return; // Skip positional integration, attack timers, and firing animations
+    }
+
     this.preStep();
     this.pulsePhase += dt * 3.5;
 
@@ -222,25 +228,6 @@ export class Enemy extends Entity {
       );
     }
 
-    // Chance to drop hardware weapon crate, filtered by clearance ring
-    if (Math.random() < this.crateDropChance) {
-      const allowedKeys = ['KERNEL_PISTOL', 'COMBAT_SWEEPER'];
-      if (clearanceRing <= 2) {
-        allowedKeys.push('FLAK_SUBMACHINE', 'ROTARY_MINIGUN');
-      }
-      if (clearanceRing <= 1) {
-        allowedKeys.push('VECTOR_RAILGUN');
-      }
-      const chosenKey = allowedKeys[Math.floor(Math.random() * allowedKeys.length)];
-      const weaponInstance = new WeaponInstance(WEAPON_ARCHETYPES[chosenKey]);
-
-      drops.push(
-        new Drop(this.x + randomRange(-16, 16), this.y + randomRange(-16, 16), DROP_TYPE.WEAPON, {
-          weapon: weaponInstance,
-        })
-      );
-    }
-
     // Nanite Repair module drops: 100% on MEMORY_LEAK, 9% on standard daemons
     const isHeavy = this.type === 'MEMORY_LEAK';
     const naniteChance = isHeavy ? 1.0 : 0.09;
@@ -248,6 +235,20 @@ export class Enemy extends Entity {
       drops.push(
         new Drop(this.x + randomRange(-10, 10), this.y + randomRange(-10, 10), DROP_TYPE.NANITE_REPAIR, {
           healValue: 25,
+        })
+      );
+    }
+
+    // World weapon drops disabled by default (crateDropChance = 0).
+    // Allows explicit override for testing and backward compatibility:
+    if (this.crateDropChance > 0 && Math.random() < this.crateDropChance) {
+      const weaponPool = [WEAPON_ARCHETYPES.KERNEL_PISTOL, WEAPON_ARCHETYPES.CODE_SWEEPER];
+      if (clearanceRing <= 2) weaponPool.push(WEAPON_ARCHETYPES.FLAK_SUBMACHINE);
+      if (clearanceRing <= 1) weaponPool.push(WEAPON_ARCHETYPES.VECTOR_RAILGUN);
+      const chosenWeapon = weaponPool[Math.floor(Math.random() * weaponPool.length)];
+      drops.push(
+        new Drop(this.x + randomRange(-8, 8), this.y + randomRange(-8, 8), DROP_TYPE.WEAPON, {
+          weapon: chosenWeapon,
         })
       );
     }

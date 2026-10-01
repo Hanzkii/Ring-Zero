@@ -185,9 +185,15 @@ export class CollisionSystem {
           }
 
           if (evaded) {
-            this.particleSystem.emitImpact(player.x, player.y, proj.rotation, 8, COLOR.GREEN);
+            this.particleSystem.emitBurst(player.x, player.y, 8, COLOR.CYAN, 240);
+            this.particleSystem.emitBurst(player.x, player.y, 6, '#FF0077', 280);
           } else {
-            player.takeDamage(finalDamage);
+            player.takeDamage(finalDamage, this.cheatManager, {
+              sourceEntity: proj,
+              projectilePool: this.projectilePool,
+              camera: this.camera,
+              soundBank: this.soundBank,
+            });
             this.camera.addTrauma(0.28);
             this.particleSystem.emitBurst(player.x, player.y, 10, COLOR.RED, 220);
           }
@@ -246,9 +252,15 @@ export class CollisionSystem {
           }
 
           if (evaded) {
-            this.particleSystem.emitImpact(player.x, player.y, player.rotation, 10, COLOR.GREEN);
+            this.particleSystem.emitBurst(player.x, player.y, 10, COLOR.CYAN, 260);
+            this.particleSystem.emitBurst(player.x, player.y, 6, '#FF0077', 300);
           } else {
-            player.takeDamage(finalDamage);
+            player.takeDamage(finalDamage, this.cheatManager, {
+              sourceEntity: enemy,
+              projectilePool: this.projectilePool,
+              camera: this.camera,
+              soundBank: this.soundBank,
+            });
             this.camera.addTrauma(0.35);
             this.particleSystem.emitBurst(player.x, player.y, 14, COLOR.RED, 240);
 

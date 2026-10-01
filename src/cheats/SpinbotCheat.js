@@ -91,17 +91,59 @@ export class SpinbotCheat extends CheatInterceptor {
     ctx.lineTo(0, ringRadius + 4);
     ctx.stroke();
 
-    // 2. Glitch slice effect on successful evasion
+    // 2. Instant Anti-Aim Evasion Vector FX (zero floating text)
     if (this.evasionTriggeredTimer > 0) {
-      ctx.strokeStyle = COLOR.GREEN;
-      ctx.lineWidth = 2;
-      const sliceW = 28;
-      ctx.strokeRect(-sliceW * 0.5, -4, sliceW, 8);
+      const progress = 1.0 - (this.evasionTriggeredTimer / 0.25); // 0 to 1
+      const rippleR = player.radius + 10 + progress * 32;
+      const alpha = Math.max(0, 1.0 - progress);
 
-      ctx.font = '9px monospace';
-      ctx.fillStyle = COLOR.GREEN;
-      ctx.textAlign = 'center';
-      ctx.fillText('ANTI-AIM//DESYNC_EVADED', 0, -player.radius - 16);
+      // (a) Expanding cyan & magenta holographic shield ripple
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = 2;
+
+      ctx.strokeStyle = COLOR.CYAN;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.arc(0, 0, rippleR, -Math.PI * 0.75, Math.PI * 0.75);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#FF0077'; // Magenta chromatic split
+      ctx.beginPath();
+      ctx.arc(0, 0, rippleR + 4, Math.PI * 0.25, Math.PI * 1.75);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // (b) Tangential spark bursts at deflection perimeter
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = 1.5;
+      const sparkCount = 8;
+      for (let i = 0; i < sparkCount; i++) {
+        const a = (i * Math.PI * 2) / sparkCount + this.spinAngle;
+        const inner = rippleR * 0.85;
+        const outer = rippleR * 1.25;
+        ctx.strokeStyle = i % 2 === 0 ? COLOR.CYAN : '#FF0077';
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+        ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // (c) Micro-second chromatic glitch phantom hulls
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.lineWidth = 1;
+      const glitchOffset = (1.0 - progress) * 6;
+
+      ctx.strokeStyle = COLOR.CYAN;
+      ctx.strokeRect(-player.radius - glitchOffset, -player.radius, player.radius * 2, player.radius * 2);
+
+      ctx.strokeStyle = '#FF0077';
+      ctx.strokeRect(-player.radius + glitchOffset, -player.radius, player.radius * 2, player.radius * 2);
+      ctx.restore();
     }
 
     ctx.restore();

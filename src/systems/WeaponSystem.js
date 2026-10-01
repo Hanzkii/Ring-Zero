@@ -7,41 +7,85 @@ import { COLOR, COLLISION_LAYER } from '../core/Constants.js';
 import { randomRange } from '../core/VectorMath.js';
 
 export const WEAPON_ARCHETYPES = {
+  // --- TIER 0: Baseline Starters ---
+  PISTOL_SYS: {
+    id: 'pistol_sys',
+    name: 'Pistol.sys',
+    tier: 0,
+    mode: 'semi',
+    damage: 22,
+    pellets: 1,
+    spreadDeg: 1.0,
+    speed: 1100,
+    fireRate: 4.2,
+    clipSize: 10,
+    reloadTime: 0.9,
+    pierce: 1,
+    color: COLOR.CYAN,
+    knockback: 100,
+    recoilTrauma: 0.05,
+    description: 'Single-shot semi-auto, reliable precision.',
+  },
+  PULSE_SMG: {
+    id: 'pulse_smg',
+    name: 'Pulse SMG',
+    tier: 0,
+    mode: 'auto',
+    damage: 11,
+    pellets: 1,
+    spreadDeg: 8.5,
+    speed: 950,
+    fireRate: 11.0,
+    clipSize: 28,
+    reloadTime: 1.2,
+    pierce: 1,
+    color: COLOR.CYAN,
+    knockback: 60,
+    recoilTrauma: 0.04,
+    description: 'High fire-rate kinetic spray, wider spread.',
+  },
+  SCRAP_BLASTER: {
+    id: 'scrap_blaster',
+    name: 'Scrap Blaster',
+    tier: 0,
+    mode: 'semi',
+    damage: 14,
+    pellets: 3,
+    spreadDeg: 14.0,
+    speed: 850,
+    fireRate: 2.2,
+    clipSize: 6,
+    reloadTime: 1.4,
+    pierce: 1,
+    color: COLOR.AMBER,
+    knockback: 260,
+    recoilTrauma: 0.16,
+    description: 'Short-range triple pellet cone, heavy point-blank knockback.',
+  },
+
+  // --- TIER 1: Mil-Spec Hardware ---
   KERNEL_PISTOL: {
     id: 'kernel_pistol',
-    name: 'KERNEL PISTOL',
+    name: 'Kernel Pistol',
+    tier: 1,
     mode: 'semi',
     damage: 28,
     pellets: 1,
     spreadDeg: 1.5,
     speed: 1200,
-    fireRate: 4.5, // Shots per second
+    fireRate: 4.5,
     clipSize: 12,
     reloadTime: 0.9,
     pierce: 1,
     color: COLOR.CYAN,
     knockback: 120,
     recoilTrauma: 0.08,
+    description: 'Precision military-spec sidearm with elevated kinetic punch.',
   },
-  FLAK_SUBMACHINE: {
-    id: 'flak_submachine',
-    name: 'FLAK SUBMACHINE',
-    mode: 'auto',
-    damage: 14,
-    pellets: 1,
-    spreadDeg: 7.0,
-    speed: 980,
-    fireRate: 12.0,
-    clipSize: 35,
-    reloadTime: 1.2,
-    pierce: 1,
-    color: COLOR.CYAN,
-    knockback: 70,
-    recoilTrauma: 0.05,
-  },
-  COMBAT_SWEEPER: {
-    id: 'combat_sweeper',
-    name: 'COMBAT SWEEPER',
+  CODE_SWEEPER: {
+    id: 'code_sweeper',
+    name: 'Code Sweeper',
+    tier: 1,
     mode: 'semi',
     damage: 12,
     pellets: 8,
@@ -54,10 +98,48 @@ export const WEAPON_ARCHETYPES = {
     color: COLOR.AMBER,
     knockback: 220,
     recoilTrauma: 0.22,
+    description: 'Wide-angle flak scattergun clearing dense swarms.',
+  },
+  COMBAT_SWEEPER: {
+    id: 'combat_sweeper',
+    name: 'Code Sweeper',
+    tier: 1,
+    mode: 'semi',
+    damage: 12,
+    pellets: 8,
+    spreadDeg: 18.0,
+    speed: 880,
+    fireRate: 1.4,
+    clipSize: 6,
+    reloadTime: 1.8,
+    pierce: 1,
+    color: COLOR.AMBER,
+    knockback: 220,
+    recoilTrauma: 0.22,
+    description: 'Wide-angle flak scattergun clearing dense swarms.',
+  },
+  FLAK_SUBMACHINE: {
+    id: 'flak_submachine',
+    name: 'Flak Submachine',
+    tier: 1,
+    mode: 'auto',
+    damage: 14,
+    pellets: 1,
+    spreadDeg: 7.0,
+    speed: 980,
+    fireRate: 12.0,
+    clipSize: 35,
+    reloadTime: 1.2,
+    pierce: 1,
+    color: COLOR.CYAN,
+    knockback: 70,
+    recoilTrauma: 0.05,
+    description: 'Rapid-cycling submachine gun with high sustained suppression.',
   },
   ROTARY_MINIGUN: {
     id: 'rotary_minigun',
-    name: 'ROTARY MINIGUN',
+    name: 'Rotary Minigun',
+    tier: 1,
     mode: 'auto',
     damage: 16,
     pellets: 1,
@@ -70,10 +152,14 @@ export const WEAPON_ARCHETYPES = {
     color: COLOR.AMBER,
     knockback: 90,
     recoilTrauma: 0.04,
+    description: 'Gatling barrel system spinning up massive lead output.',
   },
+
+  // --- TIER 2: Kernel-Grade Prototypes ---
   VECTOR_RAILGUN: {
     id: 'vector_railgun',
-    name: 'VECTOR RAILGUN',
+    name: 'Vector Railgun',
+    tier: 2,
     mode: 'semi',
     damage: 180,
     pellets: 1,
@@ -86,8 +172,49 @@ export const WEAPON_ARCHETYPES = {
     color: COLOR.WHITE,
     knockback: 450,
     recoilTrauma: 0.35,
+    description: 'Relativistic slug penetrator boring through walls and swarms.',
+  },
+  MEMORY_CORRUPTOR: {
+    id: 'memory_corruptor',
+    name: 'Memory Corruptor',
+    tier: 2,
+    mode: 'auto',
+    damage: 42,
+    pellets: 1,
+    spreadDeg: 2.5,
+    speed: 1600,
+    fireRate: 6.0,
+    clipSize: 16,
+    reloadTime: 1.5,
+    pierce: 3,
+    color: COLOR.RED,
+    knockback: 180,
+    recoilTrauma: 0.12,
+    description: 'Corrupted payload projector piercing multiple daemons with reality distortion.',
   },
 };
+
+export const WEAPON_TIERS = {
+  TIER_0: [WEAPON_ARCHETYPES.PISTOL_SYS, WEAPON_ARCHETYPES.PULSE_SMG, WEAPON_ARCHETYPES.SCRAP_BLASTER],
+  TIER_1: [WEAPON_ARCHETYPES.KERNEL_PISTOL, WEAPON_ARCHETYPES.COMBAT_SWEEPER, WEAPON_ARCHETYPES.FLAK_SUBMACHINE, WEAPON_ARCHETYPES.ROTARY_MINIGUN],
+  TIER_2: [WEAPON_ARCHETYPES.VECTOR_RAILGUN, WEAPON_ARCHETYPES.MEMORY_CORRUPTOR],
+};
+
+/**
+ * Returns weapons unlocked up to a given milestone wave
+ * @param {number} waveNum
+ * @returns {Array<Object>}
+ */
+export function getUnlockedWeaponsForWave(waveNum) {
+  const list = [...WEAPON_TIERS.TIER_0];
+  if (waveNum >= 3) {
+    list.push(...WEAPON_TIERS.TIER_1);
+  }
+  if (waveNum >= 6) {
+    list.push(...WEAPON_TIERS.TIER_2);
+  }
+  return list;
+}
 
 export class WeaponInstance {
   /**
@@ -97,6 +224,8 @@ export class WeaponInstance {
     this.config = config;
     this.id = config.id;
     this.name = config.name;
+    this.tier = config.tier ?? 1;
+    this.description = config.description || '';
     this.mode = config.mode;
     this.damage = config.damage;
     this.pellets = config.pellets;
@@ -114,11 +243,19 @@ export class WeaponInstance {
     this.cooldownTimer = 0;
     this.isReloading = false;
     this.reloadTimer = 0;
+    this.hasInfiniteAmmo = false;
   }
 
-  update(dt) {
+  update(dt, hasInfiniteAmmo = false) {
+    this.hasInfiniteAmmo = hasInfiniteAmmo;
     if (this.cooldownTimer > 0) {
       this.cooldownTimer = Math.max(0, this.cooldownTimer - dt);
+    }
+
+    if (hasInfiniteAmmo) {
+      this.isReloading = false;
+      this.currentAmmo = this.clipSize;
+      return;
     }
 
     if (this.isReloading) {
@@ -135,7 +272,7 @@ export class WeaponInstance {
   }
 
   startReload() {
-    if (this.isReloading || this.currentAmmo >= this.clipSize) return false;
+    if (this.hasInfiniteAmmo || this.isReloading || this.currentAmmo >= this.clipSize) return false;
     this.isReloading = true;
     this.reloadTimer = this.reloadTime;
     if (this.onReloadStart) this.onReloadStart();
@@ -143,11 +280,12 @@ export class WeaponInstance {
   }
 
   get reloadProgress() {
-    if (!this.isReloading) return 1.0;
+    if (this.hasInfiniteAmmo || !this.isReloading) return 1.0;
     return 1.0 - this.reloadTimer / this.reloadTime;
   }
 
   get canFire() {
+    if (this.hasInfiniteAmmo) return this.cooldownTimer <= 0;
     return this.cooldownTimer <= 0 && !this.isReloading && this.currentAmmo > 0;
   }
 }
@@ -173,6 +311,8 @@ export class WeaponSystem {
 
     // Optional fire interceptor hook for Cheats (Phase 3)
     this.fireInterceptor = null;
+    this.cheatManager = null;
+    this.hasInfiniteAmmo = false;
   }
 
   _wireInstance(instance) {
@@ -226,12 +366,18 @@ export class WeaponSystem {
    * @param {import('../core/Camera2D.js').Camera2D} camera
    * @param {boolean} [autoFire=false]
    * @param {number} [aimAngleOverride=null] - Overrides raw mouse aim angle (e.g. from Aimbot lock)
+   * @param {import('../systems/CheatManager.js').CheatManager} [cheatManager=null]
    */
-  update(dt, input, player, camera, autoFire = false, aimAngleOverride = null) {
+  update(dt, input, player, camera, autoFire = false, aimAngleOverride = null, cheatManager = null) {
     const weapon = this.activeWeapon;
     if (!weapon) return;
 
-    weapon.update(dt);
+    if (cheatManager) this.cheatManager = cheatManager;
+    const infiniteCheat = this.cheatManager?.getCheat?.('infiniteammo');
+    const isInfinite = Boolean((infiniteCheat && infiniteCheat.enabled) || this.hasInfiniteAmmo);
+    this.hasInfiniteAmmo = isInfinite;
+
+    weapon.update(dt, this.hasInfiniteAmmo);
 
     // Swap weapons with [Q] or number keys
     if (input.isKeyJustPressed('KeyQ')) {
@@ -241,7 +387,7 @@ export class WeaponSystem {
     if (input.isKeyJustPressed('Digit2') && this.slots[1]) this.activeSlot = 1;
 
     // Manual reload with [R]
-    if (input.isKeyJustPressed('KeyR')) {
+    if (input.isKeyJustPressed('KeyR') && !this.hasInfiniteAmmo) {
       weapon.startReload();
     }
 
@@ -253,7 +399,7 @@ export class WeaponSystem {
         : input.isMouseButtonJustPressed(0));
 
     if (wantsFire) {
-      if (weapon.currentAmmo <= 0) {
+      if (!this.hasInfiniteAmmo && weapon.currentAmmo <= 0) {
         weapon.startReload();
       } else if (weapon.canFire) {
         const fireAngle = typeof aimAngleOverride === 'number' ? aimAngleOverride : input.aimAngle;
@@ -270,11 +416,17 @@ export class WeaponSystem {
    * @param {import('../core/Camera2D.js').Camera2D} camera
    */
   _fireWeapon(weapon, player, baseAimAngle, camera) {
-    weapon.currentAmmo--;
-    weapon.cooldownTimer = weapon.fireInterval;
+    const hasInf = Boolean(this.hasInfiniteAmmo || this.cheatManager?.isActive?.('infiniteammo'));
+    if (!hasInf) {
+      weapon.currentAmmo--;
+    }
+
+    const infiniteCheat = this.cheatManager?.getCheat?.('infiniteammo');
+    const fireRateMult = (hasInf && infiniteCheat) ? (infiniteCheat.fireRateMultiplier || 1.0) : 1.0;
+    weapon.cooldownTimer = weapon.fireInterval / fireRateMult;
     if (this.onFire) this.onFire(weapon);
 
-    if (weapon.currentAmmo <= 0) {
+    if (!hasInf && weapon.currentAmmo <= 0) {
       weapon.startReload();
     }
 
@@ -314,8 +466,6 @@ export class WeaponSystem {
         this._spawnBullet(bulletParams);
       }
     }
-
-    // Screen shake when shooting has been removed for absolute combat precision
   }
 
   _spawnBullet(params) {

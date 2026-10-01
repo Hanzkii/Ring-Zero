@@ -148,14 +148,30 @@ export class InputManager {
     e.preventDefault(); // Prevent default browser context menu on right click
   }
 
-  _onBlur() {
-    // Reset key states when window loses focus
+  get isMouseDown() {
+    return this.isMouseButtonDown(0);
+  }
+
+  set isMouseDown(val) {
+    this.mouseButtons.set(0, Boolean(val));
+  }
+
+  /**
+   * Resets all key states, mouse button latches, and fire requests
+   * Prevents sticky firing across pause, draft, settings, and modal screens.
+   */
+  resetInputs() {
     this.keys.clear();
     this.keysJustPressed.clear();
     this.keysJustReleased.clear();
     this.mouseButtons.clear();
     this.buttonsJustPressed.clear();
     this.buttonsJustReleased.clear();
+    this._hasPrevMouse = false;
+  }
+
+  _onBlur() {
+    this.resetInputs();
   }
 
   /**

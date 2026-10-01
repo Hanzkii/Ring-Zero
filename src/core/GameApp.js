@@ -30,17 +30,19 @@ import { SoundBank } from '../audio/SoundBank.js';
 import { StorageService } from '../services/StorageService.js';
 import { LeaderboardService } from '../services/LeaderboardService.js';
 import { TerminalUI } from '../ui/TerminalUI.js';
-import { WEAPON_ARCHETYPES, WeaponInstance } from '../systems/WeaponSystem.js';
+import { WEAPON_ARCHETYPES, WeaponInstance, getUnlockedWeaponsForWave } from '../systems/WeaponSystem.js';
 import { PickupSystem } from '../systems/PickupSystem.js';
 import { SynthMusic, MUSIC_INTENSITY } from '../audio/SynthMusic.js';
 import { DebugRenderer } from '../ui/DebugRenderer.js';
 import { DebugConsole } from '../ui/DebugConsole.js';
+import { ArsenalModal } from '../ui/ArsenalModal.js';
 
 export const APP_STATE = {
   BOOT: 'BOOT',
   RUN: 'RUN',
   DRAFT: 'DRAFT',
   PAUSED: 'PAUSED',
+  ARSENAL: 'ARSENAL',
   GAMEOVER: 'GAMEOVER',
 };
 
@@ -89,6 +91,11 @@ export class GameApp {
       document.body,
       (chosenDef) => this.onExploitDrafted(chosenDef),
       () => this.onDraftReroll()
+    );
+
+    this.arsenalModal = new ArsenalModal(
+      document.body,
+      (slot1Config, slot2Config) => this.onArsenalConfirmed(slot1Config, slot2Config)
     );
 
     this.settingsModal = new SettingsModal({
@@ -199,6 +206,11 @@ export class GameApp {
       this.particleSystem.emitBurst(this.player.x, this.player.y, 20, COLOR.GREEN, 320);
 
       this.soundBank.playWallhackPulse();
+
+      // Milestone waves (Wave 3, Wave 6, Wave 10) trigger Arsenal Selection
+      if (waveNum === 3 || waveNum === 6 || waveNum === 10) {
+        this.openArsenalModal(waveNum);
+      }
     };
 
     // Collision Arbiter
@@ -338,6 +350,7 @@ export class GameApp {
 
   pauseSimulation() {
     if (this.state !== APP_STATE.RUN) return;
+    this.input.resetInputs();
     this.state = APP_STATE.PAUSED;
     this.synthMusic?.setIntensity(MUSIC_INTENSITY.AMBIENT);
     this.pauseOverlay.open();
@@ -345,6 +358,7 @@ export class GameApp {
 
   resumeSimulation() {
     if (this.state !== APP_STATE.PAUSED) return;
+    this.input.resetInputs();
     if (this.debugConsole && this.debugConsole.isOpen) {
       this.debugConsole.close();
     }
@@ -357,13 +371,40 @@ export class GameApp {
   }
 
   openSettings() {
+    this.input.resetInputs();
     this.settingsModal.open();
   }
 
   openDebugConsole() {
+    this.input.resetInputs();
     if (this.debugConsole) {
       this.debugConsole.open();
     }
+  }
+
+  openArsenalModal(waveNum) {
+    this.state = APP_STATE.ARSENAL;
+    this.input.resetInputs();
+    this.synthMusic?.setIntensity(MUSIC_INTENSITY.AMBIENT);
+    this.soundBank.playLevelUp();
+
+    const unlocked = getUnlockedWeaponsForWave(waveNum);
+    this.arsenalModal.open(waveNum, unlocked, this.weaponSystem.slots, (s1, s2) => {
+      this.onArsenalConfirmed(s1, s2);
+    });
+  }
+
+  onArsenalConfirmed(slot1Config, slot2Config) {
+    if (slot1Config) {
+      this.weaponSystem.slots[0] = this.weaponSystem._wireInstance(new WeaponInstance(slot1Config));
+    }
+    if (slot2Config) {
+      this.weaponSystem.slots[1] = this.weaponSystem._wireInstance(new WeaponInstance(slot2Config));
+    }
+    this.weaponSystem.activeSlot = 0;
+    this.input.resetInputs();
+    this.state = APP_STATE.RUN;
+    this.synthMusic?.setIntensity(MUSIC_INTENSITY.COMBAT);
   }
 
   abortRun() {
@@ -435,10 +476,14 @@ export class GameApp {
     this.cheatManager.reset();
     this.cheatManager.clearanceRing = this.storage.clearanceRing;
 
-    // 3. Reset weapons
-    this.weaponSystem.slots[0] = this.weaponSystem._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.KERNEL_PISTOL));
-    this.weaponSystem.slots[1] = null;
+    // 3. Reset weapons with Tier 0 baseline sidearms
+    this.weaponSystem.cheatManager = this.cheatManager;
+    this.weaponSystem.slots[0] = this.weaponSystem._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.PISTOL_SYS));
+    this.weaponSystem.slots[1] = this.weaponSystem._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.PULSE_SMG));
     this.weaponSystem.activeSlot = 0;
+
+    // Clear any latched inputs
+    this.input.resetInputs();
 
     // 4. Clear active entities, pools, and spatial grid
     for (const e of this.enemies) this.spatialGrid.remove(e);
@@ -453,6 +498,7 @@ export class GameApp {
     this.camera.prevPos.set(0, 0);
     this.camera.targetPos.set(0, 0);
     this.camera.trauma = 0;
+    this.camera.screenFlash = 0;
 
     // 6. Reset wave timers and wave director back to Wave 1
     this.waveManager.reset();
@@ -461,9 +507,10 @@ export class GameApp {
     this.loadMap('facility', 1337);
     this.spatialGrid.update(this.player);
 
-    // 8. Close pause/draft modals if open
+    // 8. Close pause/draft/arsenal modals if open
     if (this.pauseOverlay && this.pauseOverlay.isOpen) this.pauseOverlay.close();
     if (this.draftModal && this.draftModal.isOpen) this.draftModal.close();
+    if (this.arsenalModal && this.arsenalModal.isOpen) this.arsenalModal.close();
 
     // 9. Transition state, update music, and launch game loop
     this.state = APP_STATE.RUN;
@@ -490,6 +537,7 @@ export class GameApp {
    * @param {Object} chosenDef
    */
   onExploitDrafted(chosenDef) {
+    this.input.resetInputs();
     this.soundBank.playLevelUp();
     this.cheatManager.addOrUpgradeCheat(chosenDef.id);
     this.player.pendingLevelUps--;
@@ -498,12 +546,14 @@ export class GameApp {
     if (this.player.pendingLevelUps > 0) {
       const nextOptions = this.cheatManager.generateDraftOptions(3);
       if (nextOptions.length > 0) {
+        this.input.resetInputs();
         this.draftModal.open(nextOptions, this.draftRerollTokens);
         return;
       }
     }
 
     // Resume simulation
+    this.input.resetInputs();
     this.state = APP_STATE.RUN;
     this.synthMusic?.setIntensity(MUSIC_INTENSITY.COMBAT);
   }
@@ -562,6 +612,7 @@ export class GameApp {
     if (this.player.pendingLevelUps > 0 && this.state === APP_STATE.RUN) {
       const options = this.cheatManager.generateDraftOptions(3);
       if (options.length > 0) {
+        this.input.resetInputs();
         this.soundBank.playLevelUp();
         this.state = APP_STATE.DRAFT;
         this.synthMusic?.setIntensity(MUSIC_INTENSITY.AMBIENT);
@@ -616,6 +667,7 @@ export class GameApp {
         hasWallhack: canShootThroughWalls,
         backtrackCheat: this.cheatManager.getCheat('backtrack'),
         penetrationCheat: this.cheatManager.getCheat('penetrationbucker'),
+        silentAimCheat: this.cheatManager.getCheat('silentaim'),
       }
     );
 
@@ -632,7 +684,7 @@ export class GameApp {
     const autoFire = this.cheatManager.wantsAutoFire(dt, this.weaponSystem.activeWeapon);
 
     // Weapon Ballistics Update (passes autoFire state and aimbot-modified aim angle)
-    this.weaponSystem.update(dt, this.input, this.player, this.camera, autoFire, modifiedAimAngle);
+    this.weaponSystem.update(dt, this.input, this.player, this.camera, autoFire, modifiedAimAngle, this.cheatManager);
 
     // Player Kinematics
     this.player.updateKinematics(dt, moveDir, modifiedAimAngle);
@@ -679,7 +731,7 @@ export class GameApp {
         enemy.updateAI(dt, this.player, this.spatialGrid, (pulseParams) => {
           const p = this.projectilePool.obtain();
           if (p) p.spawn(pulseParams);
-        });
+        }, this.cheatManager);
       }
       this.cheatManager.updateEnemy(enemy, dt, { player: this.player });
       this.spatialGrid.update(enemy);
@@ -700,7 +752,7 @@ export class GameApp {
       if (freezeWorld && proj.layer === COLLISION_LAYER.PROJECTILE_ENEMY) {
         return;
       }
-      proj.update(dt);
+      proj.update(dt, this.cheatManager);
       if (proj.markedForRemoval) {
         this.projectilePool.release(proj);
       }
@@ -873,6 +925,15 @@ export class GameApp {
 
     // End camera world coordinate space
     this.camera.end(ctx);
+
+    // Screen Flash overlay (Kernel Panic / intense feedback)
+    if (this.camera.screenFlash > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.9, this.camera.screenFlash * 0.75)})`;
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      ctx.restore();
+    }
 
     // 10. Render Screen-Space Vector HUD & Telemetry
     this._renderScreenHUD(ctx);
@@ -1111,13 +1172,29 @@ export class GameApp {
       // Numeric ammo label
       ctx.font = '11px monospace';
       ctx.fillStyle = COLOR.WHITE;
-      const ammoStr = weapon.isReloading
-        ? `RELOADING... (${(weapon.reloadTime - weapon.reloadTimer).toFixed(1)}s)`
-        : `AMMO: ${weapon.currentAmmo} / ${weapon.clipSize}`;
+      const isInfiniteAmmo = this.cheatManager.isActive('infiniteammo');
+      let ammoStr = '';
+      if (isInfiniteAmmo) {
+        ammoStr = 'AMMO: INF / INF [DMA_LOCK]';
+      } else if (weapon.isReloading) {
+        ammoStr = `RELOADING... (${(weapon.reloadTime - weapon.reloadTimer).toFixed(1)}s)`;
+      } else {
+        ammoStr = `AMMO: ${weapon.currentAmmo} / ${weapon.clipSize}`;
+      }
       ctx.fillText(ammoStr, w - 26, brY + 30);
 
       // Cartridge Bullet Pips
-      if (!weapon.isReloading) {
+      if (isInfiniteAmmo) {
+        const maxDisplayPips = 24;
+        const pipW = Math.max(3, Math.floor((brW - 40) / maxDisplayPips) - 2);
+        const pipH = 8;
+        const startX = brX + 20;
+        const pipY = brY + 46;
+        for (let i = 0; i < maxDisplayPips; i++) {
+          ctx.fillStyle = COLOR.RED;
+          ctx.fillRect(startX + i * (pipW + 2), pipY, pipW, pipH);
+        }
+      } else if (!weapon.isReloading) {
         const maxDisplayPips = Math.min(24, weapon.clipSize);
         const pipW = Math.max(3, Math.floor((brW - 40) / maxDisplayPips) - 2);
         const pipH = 8;

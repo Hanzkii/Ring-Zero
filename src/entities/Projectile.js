@@ -76,6 +76,8 @@ export class Projectile extends Entity {
     this.maxLifetime = maxLifetime;
     this.color = color;
     this.layer = layer;
+    this.owner = layer === COLLISION_LAYER.PROJECTILE_ENEMY ? 'enemy' : 'player';
+    this.isHostile = layer === COLLISION_LAYER.PROJECTILE_ENEMY;
     this.knockback = knockback;
     this.isCritical = isCritical;
 
@@ -97,9 +99,13 @@ export class Projectile extends Entity {
   /**
    * Advances bullet trajectory
    * @param {number} dt
+   * @param {import('../systems/CheatManager.js').CheatManager} [cheatManager=null]
    */
-  update(dt) {
+  update(dt, cheatManager = null) {
     if (!this.active) return;
+    if (cheatManager && cheatManager.isActive('lagswitch') && (this.isHostile || this.owner === 'enemy')) {
+      return;
+    }
 
     this.preStep();
     this.x += this.vx * dt;

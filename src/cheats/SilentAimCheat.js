@@ -19,36 +19,20 @@ export class SilentAimCheat extends CheatInterceptor {
     this.currentLockedAngle = 0;
     this.hasTarget = false;
     this.isBacktrackTarget = false;
-    this.autoShootTimer = 0;
     this.redirectedCount = 0;
   }
 
-  /**
-   * Autonomous triggerbot: Periodically auto-shoots locked targets.
-   * Only fires when an enemy or backtrack tick is actively targeted and shootable.
-   * @param {number} dt
-   * @param {Object} weapon
-   * @returns {boolean}
-   */
-  shouldAutoShoot(dt, weapon) {
-    if (!this.hasTarget || !this.currentTarget || this.currentTarget.markedForRemoval) {
-      this.autoShootTimer = 0;
-      return false;
-    }
+  reset() {
+    this.currentTarget = null;
+    this.targetLeadPos = new Vec2();
+    this.currentLockedAngle = 0;
+    this.hasTarget = false;
+    this.isBacktrackTarget = false;
+    this.redirectedCount = 0;
+  }
 
-    if (weapon && (weapon.isReloading || weapon.currentAmmo <= 0)) {
-      return false;
-    }
-
-    this.autoShootTimer -= dt;
-    if (this.autoShootTimer <= 0) {
-      // Hyper-speed cadence scaling with rank (faster than standard Aimbot)
-      const mult = this.level === 1 ? 1.0 : this.level === 2 ? 0.85 : 0.7;
-      const interval = weapon ? weapon.fireInterval * mult : 0.2;
-      this.autoShootTimer = interval;
-      return true;
-    }
-    return false;
+  teardown() {
+    this.reset();
   }
 
   /**

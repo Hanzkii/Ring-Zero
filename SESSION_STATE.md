@@ -1,7 +1,7 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 12:55 EEST  
-**Test Suite Health:** 486 / 486 passing across 9 test suites (0 failures)
+**Last Updated:** 2026-10-01 13:25 EEST  
+**Test Suite Health:** 537 / 537 passing across 9 test suites (0 failures)
 
 ---
 
@@ -125,6 +125,20 @@
     3. Raycast line-of-sight and target acquisition vectors.
     4. 90-tick Backtrack ghost history trails.
   - Toggled dynamically via console commands (`debug hitboxes`, `debug spatial`, `debug backtrack`, `debug all`, `debug none`).
+* **Critical Stability & Bug Remediation**:
+  - **Lagswitch Simulation Freeze/Crash Fix**: Never alters `GameLoop.js` physics accumulator or fixed timestep. Implemented freeze strictly as an entity update gate in `Enemy.js` and hostile `Projectile.js` (`cheatManager.isActive('lagswitch') && (this.isHostile || this.owner === 'enemy')`). Player motion, shooting, particles, and timers run continuously.
+  - **Kernel Panic Inactivity Fix**: Connected `cheatManager.trigger('onTakeDamage', ...)` from `Player.js`. Triggers radial ring of 16–32 piercing laser beams, purges screen-space hostile projectiles, triggers camera flash, and synthesizes audio cue `soundBank.playKernelPanic()`.
+  - **Mouse Input Latch Fix**: Explicitly invoke `inputManager.resetInputs()` across `PAUSED`, `DRAFT`, `ARSENAL`, `SETTINGS`, `GAMEOVER`, modal dismissals, and window blur, clearing all key/button buffers and `isMouseDown`.
+  - **SilentAim & Triggerbot Decoupling**: Removed all auto-shooting logic (`shouldAutoShoot`) from `SilentAimCheat.js`. SilentAim strictly curves fired bullets with 100% crit chance. Triggerbot detects targets in SilentAim's FOV acquisition cone and autonomously commands trigger pulls.
+  - **Anti-Aim Desync FX**: Replaced textual floating notifications with instant expanding cyan/magenta holographic shield ripples and tangential spark bursts.
+* **Tiered Arsenal Progression & Ring 0 Kernel Additions**:
+  - **InfiniteAmmo.sys** (`InfiniteAmmoCheat.js`): Registered in `RING_TIER.RING_0`. Bypasses weapon ammo depletion, reload cycles, and displays `AMMO: INF / INF [DMA_LOCK]` with red cartridge pips on the HUD.
+  - **Tiered Weapon Archetypes** (`WeaponSystem.js`):
+    - Tier 0: `Pistol.sys` (Single-shot semi-auto), `Pulse SMG` (High fire-rate kinetic spray), `Scrap Blaster` (Short-range triple pellet cone).
+    - Tier 1: `Kernel Pistol`, `Code Sweeper`, `Flak Submachine`, `Rotary Minigun`.
+    - Tier 2: `Vector Railgun`, `Memory Corruptor`.
+  - **Zero World Weapon Crates**: Enemies exclusively drop Crypto Bounties, XP Frags, and Nanite Repair packs.
+  - **Milestone Arsenal Modal** (`ArsenalModal.js`): Interactive vector modal triggered at milestone waves (Waves 3, 6, 10) to choose and equip unlocked weapons in Slot 1 and Slot 2.
 
 ---
 
@@ -135,41 +149,43 @@ src/
 ├── core/
 │   ├── GameApp.js          # Central orchestrator: state machine, vector bounding panels & HUD
 │   ├── GameLoop.js         # 60Hz physics accumulator & render alpha dispatcher, timescale control
-│   ├── InputManager.js     # Keyboard & mouse tracking, sensitivity delta scaling, aim vectors
-│   ├── Camera2D.js         # World-to-screen transforms, trauma shake (T^2), mouse leading
+│   ├── InputManager.js     # Keyboard & mouse tracking, sensitivity delta scaling, resetInputs()
+│   ├── Camera2D.js         # World-to-screen transforms, trauma shake (T^2), screenFlash, mouse leading
 │   ├── ObjectPool.js       # Preallocated zero-GC object recycling
 │   └── VectorMath.js       # 2D vector operations, geometric line intersections, PRNG
 ├── audio/
 │   ├── SynthAudio.js       # Native AudioContext nodes (oscillators, noise buffers, biquad filters, music bus)
 │   ├── SynthMusic.js       # Procedural 4-channel cyber BGM step-sequencer (130 BPM, Dm pentatonic)
-│   └── SoundBank.js        # Procedural sound effects and weapon audio presets
+│   └── SoundBank.js        # Procedural sound effects and weapon audio presets, playKernelPanic()
 ├── cheats/
-│   ├── CheatDefinition.js  # CHEAT_REGISTRY (16 exploits), RING_TIER hierarchy, interceptor base
+│   ├── CheatDefinition.js  # CHEAT_REGISTRY (17 exploits), RING_TIER hierarchy, interceptor base
+│   ├── InfiniteAmmoCheat.js # Kernel execution DMA ammo lock with rank-scaled fire rate multipliers
 │   └── [16 Exploit Files] # Interceptor implementations for physics, aim, ballistics, and damage
 ├── entities/
 │   ├── Player.js           # Cyber-chassis with layered hulls, thruster plumes, shield aura, godMode, noclip
-│   ├── Enemy.js            # Security daemons with animated scanning lasers, radar rings, and cores
-│   ├── Projectile.js       # High-speed ballistic pulses with pierce, crit, and wall penetration
-│   └── Drop.js             # Memory fragments (XP), crypto bounties, weapon crates, Nanite Repair
+│   ├── Enemy.js            # Security daemons with lagswitch update gate and zero weapon crate drops
+│   ├── Projectile.js       # Ballistic pulses with lagswitch gate, pierce, crit, and wall penetration
+│   └── Drop.js             # Memory fragments (XP), crypto bounties, Nanite Repair (+25 HP)
 ├── services/
 │   ├── StorageService.js   # localStorage schema, firmware micro-upgrades, risk modifiers
 │   └── LeaderboardService.js # High scores, seeded global rankings, SHA-256 run verification
 ├── systems/
-│   ├── CheatManager.js     # Interceptor pipeline dispatcher, drafting card generator, reset()
+│   ├── CheatManager.js     # Interceptor pipeline dispatcher, drafting card generator, reset(), trigger()
 │   ├── CollisionSystem.js  # Spatial hash querying, circle-vs-AABB, bullet wall pierce, noclip, nanite pickup
 │   ├── PickupSystem.js     # Magnetic attraction dynamics with Cache Magnet firmware scaling
 │   ├── SpatialHashGrid.js  # 128px uniform spatial hash partitioning
-│   ├── WeaponSystem.js     # Dual weapon slots, ammo clips, reloading, firing interceptor hook
-│   ├── WaveManager.js      # Procedural wave director, difficulty scaling, biome switching
+│   ├── WeaponSystem.js     # Tiered arsenal (Tiers 0, 1, 2), dual slots, DMA lock bypass, firing interceptor
+│   ├── WaveManager.js      # Procedural wave director, difficulty scaling, biome switching, milestone triggers
 │   └── ParticleSystem.js   # Preallocated vector debris emitter
 └── ui/
     ├── VectorRenderer.js   # Wireframe drawing utilities (brackets, crosshairs, gauges, grids)
-    ├── VectorIcons.js      # Procedural vector icon synthesizer for 16 exploits
+    ├── VectorIcons.js      # Procedural vector icon synthesizer for 17 exploits
     ├── TerminalUI.js       # Interactive boot terminal, briefing, shop, firmware lab, leaderboard
     ├── DraftModal.js       # Exploit card drafting dialog with procedural vector icon headers
+    ├── ArsenalModal.js     # Milestone wave weapon loadout selection modal (Slot 1 & Slot 2)
     ├── PauseOverlay.js     # [ESC]/[P] pause menu with hardware telemetry, exploit icon badges & DEV CONSOLE launcher
     ├── SettingsModal.js    # Vector sliders for volume, screen shake trauma, and debug grid
-    ├── DebugConsole.js     # Authenticated (`null404`) developer terminal overlay with close button
+    ├── DebugConsole.js     # Authenticated (`null404`) developer terminal overlay with autocomplete & syntax hints
     └── DebugRenderer.js    # Zero-GC Canvas 2D diagnostics for hitboxes, spatial grid, LOS, backtrack trails
 ```
 
@@ -178,14 +194,14 @@ src/
 ## 3. Test Suites
 
 All 9 automated test suites passing cleanly:
-1. `test/phase1_test.js`: Core physics, math, camera, spatial hash, object pool (19 tests)
-2. `test/phase2_test.js`: Weapons, ballistics, swarm AI, particles (45 tests)
-3. `test/phase3_test.js`: Interceptor pipeline, cheats, backtrack, silent aim (64 tests)
-4. `test/phase4_test.js`: Procedural BSP, cellular caverns, fog of war, props (40 tests)
-5. `test/phase5_test.js`: Web Audio API, storage, risk multipliers, leaderboard (44 tests)
-6. `test/phase5_5_visual_test.js`: Vector icons, cyber-chassis, daemons, HUD, firmware UI (50 tests)
-7. `test/arsenal_expansion_test.js`: 16-exploit matrix, settings, firmware, rerolls (89 tests)
+1. `test/phase1_test.js`: Core physics, math, camera, spatial hash, object pool (28 tests)
+2. `test/phase2_test.js`: Weapons, ballistics, swarm AI, particles (37 tests)
+3. `test/phase3_test.js`: Interceptor pipeline, cheats, backtrack, silent aim, triggerbot synergy (63 tests)
+4. `test/phase4_test.js`: Procedural BSP, cellular caverns, fog of war, props (44 tests)
+5. `test/phase5_test.js`: Web Audio API, storage, risk multipliers, leaderboard, weapon drop filtering (56 tests)
+6. `test/phase5_5_visual_test.js`: Vector icons, cyber-chassis, daemons, HUD, firmware UI (33 tests)
+7. `test/arsenal_expansion_test.js`: 17-exploit matrix, settings, firmware, rerolls (89 tests)
 8. `test/phase6_test.js`: Lagswitch/KernelPanic hardening, wall penetration synergy, BGM, magnetics (46 tests)
-9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer (89 tests)
+9. `test/phase7_test.js`: Respawn desync fixes, Triggerbot per-tick hit validation, Nanite repair, timescale, authenticated Debug Console, Pause menu launcher, input isolation, autocomplete, Debug Renderer, InfiniteAmmo DMA lock, SilentAim/Triggerbot decoupling, Lagswitch gate, Kernel Panic hook, Tiered Arsenal, and zero world weapon crates (141 tests)
 
-**Total: 486 tests passing, 0 failing.**
+**Total: 537 tests passing, 0 failing.**

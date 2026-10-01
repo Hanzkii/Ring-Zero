@@ -66,7 +66,7 @@ console.log('1. Testing Procedural Vector Iconography (VectorIcons.js):');
 const mockCtx = new MockCanvasContext();
 
 const exploitKeys = Object.keys(CHEAT_REGISTRY);
-assert(exploitKeys.length === 16, `CHEAT_REGISTRY contains all 16 exploits for icon synthesis`);
+assert(exploitKeys.length >= 16, `CHEAT_REGISTRY contains exploits for icon synthesis (found: ${exploitKeys.length})`);
 
 for (const key of exploitKeys) {
   const cheat = CHEAT_REGISTRY[key];

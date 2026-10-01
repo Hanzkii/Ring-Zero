@@ -33,6 +33,7 @@ export class Camera2D {
     this.maxShakeAngle = 0.05;// Maximum rotation in radians at trauma = 1
     this.shakeOffset = new Vec2(0, 0);
     this.shakeAngle = 0;
+    this.screenFlash = 0;
 
     // World bounds clamping (optional)
     this.bounds = null; // { minX, minY, maxX, maxY }
@@ -124,6 +125,10 @@ export class Camera2D {
     } else {
       this.shakeOffset.set(0, 0);
       this.shakeAngle = 0;
+    }
+
+    if (this.screenFlash > 0) {
+      this.screenFlash = Math.max(0, this.screenFlash - dt * 3.5);
     }
   }
 

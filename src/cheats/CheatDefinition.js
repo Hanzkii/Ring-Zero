@@ -370,4 +370,19 @@ export const CHEAT_REGISTRY = {
       'Rank 3: Every 5th shot unleashes a ring of 32 critical piercing lasers',
     ],
   },
+  INFINITEAMMO: {
+    id: 'infiniteammo',
+    name: 'INFINITE AMMO',
+    filename: 'InfiniteAmmo.sys',
+    tier: RING_TIER.RING_0,
+    rarity: CHEAT_RARITY.KERNEL,
+    color: COLOR.RED,
+    maxLevel: 3,
+    description: 'Hardware DMA override locking weapon magazines: infinite ammunition with zero reload delays.',
+    rankDescriptions: [
+      'Rank 1: Weapon ammo does not deplete; reload cycles bypassed',
+      'Rank 2: +15% weapon firing rate bonus under infinite ammo lock',
+      'Rank 3: +30% weapon firing rate bonus under infinite ammo lock',
+    ],
+  },
 };

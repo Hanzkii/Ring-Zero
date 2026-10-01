@@ -71,12 +71,16 @@ export class Player extends Entity {
    * @param {number} amount
    * @returns {boolean} Whether player was destroyed
    */
-  takeDamage(amount) {
+  takeDamage(amount, cheatManager = null, context = {}) {
     if (this.godMode || this.iFramesTimer > 0 || this.isDashing) return false;
 
     this.health = Math.max(0, this.health - amount);
     this.iFramesTimer = 0.45; // 450ms invulnerability window
     this.hitFlashTimer = 0.12;
+
+    if (cheatManager && typeof cheatManager.trigger === 'function') {
+      cheatManager.trigger('onTakeDamage', amount, { player: this, ...context });
+    }
 
     if (this.health <= 0) {
       this.markedForRemoval = true;

@@ -21,6 +21,7 @@ import { RapidFireCheat } from '../cheats/RapidFireCheat.js';
 import { NoclipCheat } from '../cheats/NoclipCheat.js';
 import { LagswitchCheat } from '../cheats/LagswitchCheat.js';
 import { KernelPanicCheat } from '../cheats/KernelPanicCheat.js';
+import { InfiniteAmmoCheat } from '../cheats/InfiniteAmmoCheat.js';
 
 export class CheatManager {
   constructor() {
@@ -116,6 +117,9 @@ export class CheatManager {
       case 'kernelpanic':
         cheat = new KernelPanicCheat();
         break;
+      case 'infiniteammo':
+        cheat = new InfiniteAmmoCheat();
+        break;
       default:
         console.warn(`CheatManager: Unknown cheat id "${cheatId}"`);
         return null;
@@ -132,6 +136,35 @@ export class CheatManager {
    */
   hasCheat(cheatId) {
     return this.activeCheats.has(cheatId);
+  }
+
+  /**
+   * Queries if a specific cheat is active and currently executing its effect
+   * @param {string} cheatId
+   * @returns {boolean}
+   */
+  isActive(cheatId) {
+    const cheat = this.activeCheats.get(cheatId.toLowerCase());
+    if (!cheat || !cheat.enabled) return false;
+    if (typeof cheat.isActive === 'boolean') return cheat.isActive;
+    return true;
+  }
+
+  /**
+   * Dispatches an event to all active enabled cheats
+   * @param {string} eventName
+   * @param  {...any} args
+   */
+  trigger(eventName, ...args) {
+    for (const cheat of this.activeCheats.values()) {
+      if (cheat.enabled) {
+        if (typeof cheat[eventName] === 'function') {
+          cheat[eventName](...args);
+        } else if (typeof cheat.trigger === 'function' && eventName === 'trigger') {
+          cheat.trigger(...args);
+        }
+      }
+    }
   }
 
   getCheat(cheatId) {
