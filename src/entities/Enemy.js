@@ -10,6 +10,18 @@ import { VectorRenderer } from '../ui/VectorRenderer.js';
 import { Drop, DROP_TYPE } from './Drop.js';
 import { WeaponInstance, WEAPON_ARCHETYPES } from '../systems/WeaponSystem.js';
 
+// Preallocated scratch object for ranged pulse attack to avoid 60Hz heap allocations
+const SENTINEL_PULSE_SCRATCH = {
+  x: 0,
+  y: 0,
+  angle: 0,
+  speed: 550,
+  damage: 16,
+  pierce: 1,
+  color: COLOR.RED,
+  layer: COLLISION_LAYER.PROJECTILE_ENEMY,
+};
+
 export const ENEMY_ARCHETYPES = {
   BIT_SCANNER: {
     type: 'BIT_SCANNER',
@@ -220,16 +232,15 @@ export class Enemy extends Entity {
         this.attackCooldown = randomRange(1.8, 2.6);
         if (onShootProjectile) {
           const aimAngle = Math.atan2(dy, dx);
-          onShootProjectile({
-            x: this.x,
-            y: this.y,
-            angle: aimAngle,
-            speed: 550,
-            damage: 16,
-            pierce: 1,
-            color: COLOR.RED,
-            layer: COLLISION_LAYER.PROJECTILE_ENEMY,
-          });
+          SENTINEL_PULSE_SCRATCH.x = this.x;
+          SENTINEL_PULSE_SCRATCH.y = this.y;
+          SENTINEL_PULSE_SCRATCH.angle = aimAngle;
+          SENTINEL_PULSE_SCRATCH.speed = 550;
+          SENTINEL_PULSE_SCRATCH.damage = 16;
+          SENTINEL_PULSE_SCRATCH.pierce = 1;
+          SENTINEL_PULSE_SCRATCH.color = COLOR.RED;
+          SENTINEL_PULSE_SCRATCH.layer = COLLISION_LAYER.PROJECTILE_ENEMY;
+          onShootProjectile(SENTINEL_PULSE_SCRATCH);
         }
       }
     } else {

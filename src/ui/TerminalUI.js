@@ -903,7 +903,20 @@ export class TerminalUI {
       this.soundBank.playLevelUp();
     });
 
+    if (this._onDiagKeyDown) {
+      window.removeEventListener('keydown', this._onDiagKeyDown);
+      this._onDiagKeyDown = null;
+    }
+
+    const cleanupDiag = () => {
+      if (this._onDiagKeyDown) {
+        window.removeEventListener('keydown', this._onDiagKeyDown);
+        this._onDiagKeyDown = null;
+      }
+    };
+
     const triggerRedeploy = () => {
+      cleanupDiag();
       this.diagnosticModal.style.display = 'none';
       this.soundBank.playUIClick();
       if (this.onRestartRun) {
@@ -914,6 +927,7 @@ export class TerminalUI {
     };
 
     const triggerMainMenu = () => {
+      cleanupDiag();
       this.diagnosticModal.style.display = 'none';
       this.soundBank.playUIClick();
       if (this.bootOverlay) {
@@ -931,6 +945,7 @@ export class TerminalUI {
 
     // Hook clearance shop button
     document.getElementById('btn-open-shop')?.addEventListener('click', () => {
+      cleanupDiag();
       this.diagnosticModal.style.display = 'none';
       this.soundBank.playUIClick();
       if (this.bootOverlay) {
@@ -941,21 +956,21 @@ export class TerminalUI {
     });
 
     // Keyboard navigation when diagnostic modal is active
-    const onDiagKeyDown = (e) => {
+    this._onDiagKeyDown = (e) => {
       if (this.diagnosticModal.style.display !== 'none' && this.diagnosticModal.style.display !== '') {
         if (e.code === 'Enter' && document.activeElement !== callsignInput) {
           e.preventDefault();
-          window.removeEventListener('keydown', onDiagKeyDown);
+          cleanupDiag();
           triggerRedeploy();
         } else if (e.code === 'Escape') {
           e.preventDefault();
-          window.removeEventListener('keydown', onDiagKeyDown);
+          cleanupDiag();
           triggerMainMenu();
         }
       } else {
-        window.removeEventListener('keydown', onDiagKeyDown);
+        cleanupDiag();
       }
     };
-    window.addEventListener('keydown', onDiagKeyDown);
+    window.addEventListener('keydown', this._onDiagKeyDown);
   }
 }

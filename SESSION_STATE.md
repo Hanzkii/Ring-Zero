@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 18:40 EEST  
-**Git Head:** `52bde0e` (origin/main)  
-**Test Suite Health:** All 12 test suites 100% passing (0 failures across all suites)
+**Last Updated:** 2026-10-01 18:45 EEST  
+**Git Head:** Handover ready (all 12 test suites passing)  
+**Test Suite Health:** All 12 test suites 100% passing (0 failures across all suites, 139+ phase tests verified)
 
 ---
 
@@ -332,6 +332,14 @@ Ring Zero is hosted as a static client on GitHub Pages. To deliver a genuine, ze
 * **Procedural Dark Synthwave OST (`SynthMusic.js`)**: 140–165 BPM high-tempo cyber/darksynth engine with detuned sawtooth bass, resonant lowpass sweeps, 150Hz -> 35Hz kick punch, and 3 procedural tracks (`OVERCLOCK_PULSE`, `CYBER_PURGE`, `KERNEL_BREACH`) dynamically rotating across waves.
 * **Procedural Vector Iconography (`VectorIcons.js`)**: Synthesized custom `_drawRootkit` vector icon with concentric EMP shockwave burst spikes, kernel diamond core, root bus conduits, and central high-voltage spark.
 * **Leaderboard Top 100 & Pinned Personal Rank**: monospaced Cyber-Terminal leaderboard table displaying Rank, Call-Sign, Score, Wave, and Tier with scrollable list and pinned personal rank footer.
+* **Zero-Allocation Hot-Path & Memory Hardening Sweep**:
+  - `GameApp.js`: Replaced inline per-enemy anonymous closures in the 60Hz tick loop with preallocated `this._onSentinelShoot` callback.
+  - `Enemy.js`: Reused static `SENTINEL_PULSE_SCRATCH` projectile parameter instance for ranged attacks, preventing 60Hz heap allocations.
+  - `AimbotCheat.js`: Bound `this._boundCheckLOS` in constructor; eliminated per-tick inline `checkLOS` closure.
+  - `TriggerbotCheat.js`: Refactored per-tick inline `isUnblocked` closure into member method `_isUnblocked()`.
+  - `TerminalUI.js`: Guarded diagnostic modal `_onDiagKeyDown` listener lifecycle, guaranteeing clean detachment on all dismissal paths (redeploy, main menu, clearance shop, modal re-open).
+  - `SynthMusic.js`: Added explicit `onended` node disconnection handlers across bass, arp, kick, snare, and hi-hat voices to ensure immediate Web Audio graph garbage collection.
+  - Edge-Case Verification: Validated 0-integrity player death game over transition without RAF loop corruption, verified simultaneous enemy death wave advance, and confirmed incognito/blocked `localStorage` graceful fallback across all services.
 
 ---
 

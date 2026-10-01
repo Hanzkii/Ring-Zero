@@ -199,6 +199,10 @@ export class GameApp {
     };
 
     this._lastMusicWave = 0;
+    this._onSentinelShoot = (pulseParams) => {
+      const p = this.projectilePool.obtain();
+      if (p) p.spawn(pulseParams);
+    };
     this.waveManager = new WaveManager({
       onSpawnEnemy: (enemy) => this.spawnEnemy(enemy),
     });
@@ -762,10 +766,7 @@ export class GameApp {
     // Enemy AI & Kinematics
     for (let i = 0; i < this.enemies.length; i++) {
       const enemy = this.enemies[i];
-      enemy.updateAI(dt, this.player, this.spatialGrid, (pulseParams) => {
-        const p = this.projectilePool.obtain();
-        if (p) p.spawn(pulseParams);
-      }, this.cheatManager);
+      enemy.updateAI(dt, this.player, this.spatialGrid, this._onSentinelShoot);
       this.cheatManager.updateEnemy(enemy, dt, { player: this.player });
       this.spatialGrid.update(enemy);
     }

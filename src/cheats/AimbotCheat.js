@@ -25,6 +25,19 @@ export class AimbotCheat extends CheatInterceptor {
     this._bestTargetX = 0;
     this._bestTargetY = 0;
     this._bestIsBacktrack = false;
+
+    // Preallocated line-of-sight evaluator
+    this._losRaycaster = null;
+    this._losWallSegments = null;
+    this._losHasWallhack = false;
+    this._losMaxPierce = 0;
+    this._boundCheckLOS = (x1, y1, x2, y2) => {
+      if (this._losHasWallhack || !this._losRaycaster || !this._losWallSegments || this._losWallSegments.length === 0) return true;
+      if (this._losMaxPierce > 0 && typeof this._losRaycaster.countInterveningWalls === 'function') {
+        return this._losRaycaster.countInterveningWalls(x1, y1, x2, y2, this._losWallSegments) <= this._losMaxPierce;
+      }
+      return this._losRaycaster.hasLineOfSight(x1, y1, x2, y2, this._losWallSegments);
+    };
   }
 
   /**
@@ -141,13 +154,10 @@ export class AimbotCheat extends CheatInterceptor {
           ? (penetrationCheat.extraPierce || 2)
           : 0);
 
-    const checkLOS = (x1, y1, x2, y2) => {
-      if (hasWallhack || !raycaster || !wallSegments || wallSegments.length === 0) return true;
-      if (maxPierce > 0 && typeof raycaster.countInterveningWalls === 'function') {
-        return raycaster.countInterveningWalls(x1, y1, x2, y2, wallSegments) <= maxPierce;
-      }
-      return raycaster.hasLineOfSight(x1, y1, x2, y2, wallSegments);
-    };
+    this._losRaycaster = raycaster;
+    this._losWallSegments = wallSegments;
+    this._losHasWallhack = hasWallhack;
+    this._losMaxPierce = maxPierce;
 
     // Candidates can come from spatialGrid query or enemies array
     const candidates = spatialGrid
@@ -155,7 +165,7 @@ export class AimbotCheat extends CheatInterceptor {
       : enemies;
 
     // Strictly distance-based closest enemy acquisition with backtrack support
-    const bestTarget = this.acquireTarget(player, candidates, maxRange, checkLOS, backtrackCheat);
+    const bestTarget = this.acquireTarget(player, candidates, maxRange, this._boundCheckLOS, backtrackCheat);
 
     this.currentTarget = bestTarget;
     this.hasTarget = bestTarget !== null;

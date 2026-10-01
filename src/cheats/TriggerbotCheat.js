@@ -73,14 +73,6 @@ export class TriggerbotCheat extends CheatInterceptor {
           ? (penetrationCheat.extraPierce || 2)
           : 0);
 
-    const isUnblocked = (tx, ty) => {
-      if (hasWallhack || !raycaster || !wallSegments || wallSegments.length === 0) return true;
-      if (maxPierce > 0 && typeof raycaster.countInterveningWalls === 'function') {
-        return raycaster.countInterveningWalls(player.x, player.y, tx, ty, wallSegments) <= maxPierce;
-      }
-      return raycaster.hasLineOfSight(player.x, player.y, tx, ty, wallSegments);
-    };
-
     // Primary active enemy check
     for (let i = 0; i < enemies.length; i++) {
       const enemy = enemies[i];
@@ -96,7 +88,7 @@ export class TriggerbotCheat extends CheatInterceptor {
 
       const perpDist = Math.sqrt(Math.max(0, distSq - proj * proj));
       if (perpDist <= enemy.radius + tolerance) {
-        if (isUnblocked(enemy.x, enemy.y)) {
+        if (this._isUnblocked(player.x, player.y, enemy.x, enemy.y, hasWallhack, raycaster, wallSegments, maxPierce)) {
           hitFound = true;
           break;
         }
@@ -120,7 +112,7 @@ export class TriggerbotCheat extends CheatInterceptor {
           if (projSnap <= 0) continue;
           const perpDistSnap = Math.sqrt(Math.max(0, distSnapSq - projSnap * projSnap));
           if (perpDistSnap <= enemy.radius + tolerance) {
-            if (isUnblocked(snap.x, snap.y)) {
+            if (this._isUnblocked(player.x, player.y, snap.x, snap.y, hasWallhack, raycaster, wallSegments, maxPierce)) {
               hitFound = true;
               this.backtrackTarget = enemy;
               break;
@@ -148,7 +140,7 @@ export class TriggerbotCheat extends CheatInterceptor {
             const angleToTarget = Math.atan2(dy, dx);
             let diff = Math.abs(aimAngle - angleToTarget) % (Math.PI * 2);
             if (diff > Math.PI) diff = Math.PI * 2 - diff;
-            if (diff <= fovHalfAngle && isUnblocked(enemy.x, enemy.y)) {
+            if (diff <= fovHalfAngle && this._isUnblocked(player.x, player.y, enemy.x, enemy.y, hasWallhack, raycaster, wallSegments, maxPierce)) {
               hitFound = true;
               break;
             }
@@ -168,6 +160,14 @@ export class TriggerbotCheat extends CheatInterceptor {
       this.backtrackCheat.rewindEnemy(this.backtrackTarget);
     }
     return true;
+  }
+
+  _isUnblocked(px, py, tx, ty, hasWallhack, raycaster, wallSegments, maxPierce) {
+    if (hasWallhack || !raycaster || !wallSegments || wallSegments.length === 0) return true;
+    if (maxPierce > 0 && typeof raycaster.countInterveningWalls === 'function') {
+      return raycaster.countInterveningWalls(px, py, tx, ty, wallSegments) <= maxPierce;
+    }
+    return raycaster.hasLineOfSight(px, py, tx, ty, wallSegments);
   }
 
   onRenderHUD(ctx, x, y) {

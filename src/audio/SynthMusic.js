@@ -491,6 +491,13 @@ export class SynthMusic {
     filter.connect(gain);
     gain.connect(this.masterGain);
 
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        filter.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
     osc.start(time);
     osc.stop(time + dur);
   }
@@ -526,6 +533,13 @@ export class SynthMusic {
     filter.connect(gain);
     gain.connect(this.masterGain);
 
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        filter.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
     osc.start(time);
     osc.stop(time + dur);
   }
@@ -549,6 +563,12 @@ export class SynthMusic {
     osc.connect(gain);
     gain.connect(this.masterGain);
 
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
     osc.start(time);
     osc.stop(time + dur);
   }
@@ -578,6 +598,13 @@ export class SynthMusic {
     noiseFilter.connect(noiseGain);
     noiseGain.connect(this.masterGain);
 
+    noiseSource.onended = () => {
+      try {
+        noiseSource.disconnect();
+        noiseFilter.disconnect();
+        noiseGain.disconnect();
+      } catch (_) {}
+    };
     noiseSource.start(time);
     noiseSource.stop(time + dur);
 
@@ -595,6 +622,12 @@ export class SynthMusic {
     toneOsc.connect(toneGain);
     toneGain.connect(this.masterGain);
 
+    toneOsc.onended = () => {
+      try {
+        toneOsc.disconnect();
+        toneGain.disconnect();
+      } catch (_) {}
+    };
     toneOsc.start(time);
     toneOsc.stop(time + 0.06);
   }
@@ -622,6 +655,13 @@ export class SynthMusic {
     filter.connect(gain);
     gain.connect(this.masterGain);
 
+    noiseSource.onended = () => {
+      try {
+        noiseSource.disconnect();
+        filter.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
     noiseSource.start(time);
     noiseSource.stop(time + dur);
   }
