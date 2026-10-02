@@ -24,9 +24,14 @@ export const MUSIC_INTENSITY = {
 };
 
 export const MUSIC_TRACKS = {
-  OVERCLOCK_PULSE: 'OVERCLOCK_PULSE',
-  CYBER_PURGE: 'CYBER_PURGE',
-  KERNEL_BREACH: 'KERNEL_BREACH',
+  OVERCLOCK_PULSE: 'OVERCLOCK_PULSE', // Ring 3: Userland (138 BPM, D minor)
+  BUS_COLLISION: 'BUS_COLLISION',     // Ring 2: Hardware Drivers (148 BPM, A minor)
+  SANDBOX_PURGE: 'SANDBOX_PURGE',     // Ring 1: Hypervisor (158 BPM, C# Phrygian)
+  KERNEL_PANIC: 'KERNEL_PANIC',       // Ring 0: Kernel Execution (168 BPM, F minor)
+
+  // Backward compatibility aliases
+  CYBER_PURGE: 'SANDBOX_PURGE',
+  KERNEL_BREACH: 'KERNEL_PANIC',
 };
 
 const NOTE = {
@@ -96,12 +101,12 @@ const NOTE = {
   G5: 783.99,
 };
 
-// 32-step patterns for the 3 distinct tracks
+// 32-step patterns for the 4 distinct procedural tracks
 export const TRACK_CONFIGS = {
   [MUSIC_TRACKS.OVERCLOCK_PULSE]: {
     id: MUSIC_TRACKS.OVERCLOCK_PULSE,
     name: 'OVERCLOCK_PULSE',
-    bpm: 145,
+    bpm: 138,
     mode: 'D_MINOR',
     resonance: 6.5,
     // Driving 16th industrial techno bassline (D minor)
@@ -135,12 +140,49 @@ export const TRACK_CONFIGS = {
     ],
   },
 
-  [MUSIC_TRACKS.CYBER_PURGE]: {
-    id: MUSIC_TRACKS.CYBER_PURGE,
-    name: 'CYBER_PURGE',
+  [MUSIC_TRACKS.BUS_COLLISION]: {
+    id: MUSIC_TRACKS.BUS_COLLISION,
+    name: 'BUS_COLLISION',
+    bpm: 148,
+    mode: 'A_MINOR',
+    resonance: 7.0,
+    // Driving 16th hardware bus bassline (A minor)
+    bass: [
+      NOTE.A1, NOTE.A1, NOTE.C2, NOTE.A1, NOTE.D2, NOTE.A1, NOTE.E2, NOTE.D2,
+      NOTE.A1, NOTE.A1, NOTE.G2, NOTE.E2, NOTE.D2, NOTE.C2, NOTE.D2, NOTE.E2,
+      NOTE.A1, NOTE.A1, NOTE.C2, NOTE.A1, NOTE.D2, NOTE.A1, NOTE.G2, NOTE.A2,
+      NOTE.C3, NOTE.A2, NOTE.G2, NOTE.E2, NOTE.D2, NOTE.C2, NOTE.B1, NOTE.A1,
+    ],
+    // Sharp amber bus lead
+    lead: [
+      NOTE.A4, NOTE.C5, NOTE.E5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.E4,
+      NOTE.A4, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5,
+      NOTE.E5, NOTE.G5, NOTE.E5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.E4,
+      NOTE.D4, NOTE.E4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5, NOTE.C5, NOTE.A4,
+    ],
+    // Driving punchy kick groove
+    kick: [
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
+    ],
+    // Snappy snare/clap
+    snare: [
+      0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+      0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
+    ],
+    // Driving 16th hats
+    hats: [
+      1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
+      1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 2, 2,
+    ],
+  },
+
+  [MUSIC_TRACKS.SANDBOX_PURGE]: {
+    id: MUSIC_TRACKS.SANDBOX_PURGE,
+    name: 'SANDBOX_PURGE',
     bpm: 158,
     mode: 'CSHARP_PHRYGIAN',
-    resonance: 7.5,
+    resonance: 7.8,
     // Aggressive C# Phrygian EBM chugging bass
     bass: [
       NOTE.CS2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.CS2, NOTE.E2, NOTE.D2, NOTE.CS2,
@@ -148,7 +190,7 @@ export const TRACK_CONFIGS = {
       NOTE.CS2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.CS2, NOTE.GS2, NOTE.FS2, NOTE.E2,
       NOTE.D2, NOTE.E2, NOTE.D2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.B1, NOTE.CS2,
     ],
-    // Menacing synth lead
+    // Menacing toxic green synth lead
     lead: [
       NOTE.CS4, NOTE.E4, NOTE.D4, NOTE.CS4, NOTE.GS4, NOTE.A4, NOTE.GS4, NOTE.E4,
       NOTE.D4, NOTE.CS4, NOTE.D4, NOTE.E4, NOTE.FS4, NOTE.E4, NOTE.D4, NOTE.CS4,
@@ -172,32 +214,32 @@ export const TRACK_CONFIGS = {
     ],
   },
 
-  [MUSIC_TRACKS.KERNEL_BREACH]: {
-    id: MUSIC_TRACKS.KERNEL_BREACH,
-    name: 'KERNEL_BREACH',
-    bpm: 165,
-    mode: 'RELENTLESS_BREAKBEAT',
+  [MUSIC_TRACKS.KERNEL_PANIC]: {
+    id: MUSIC_TRACKS.KERNEL_PANIC,
+    name: 'KERNEL_PANIC',
+    bpm: 168,
+    mode: 'F_MINOR_BREAKBEAT',
     resonance: 8.5,
-    // Relentless rolling reese/saw bassline for boss encounters
+    // Relentless high-speed rolling saw bassline in F minor for kernel execution
     bass: [
-      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.DS2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2,
-      NOTE.D2, NOTE.D2, NOTE.GS2, NOTE.G2, NOTE.F2, NOTE.D2, NOTE.C3, NOTE.DS2,
-      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.DS2, NOTE.D2, NOTE.D2, NOTE.A2, NOTE.GS2,
-      NOTE.F2, NOTE.DS2, NOTE.F2, NOTE.G2, NOTE.GS2, NOTE.A2, NOTE.C3, NOTE.D2,
+      NOTE.F1, NOTE.F1, NOTE.GS1, NOTE.F1, NOTE.AS1, NOTE.F1, NOTE.C2, NOTE.AS1,
+      NOTE.F1, NOTE.F1, NOTE.CS2, NOTE.C2, NOTE.AS1, NOTE.GS1, NOTE.AS1, NOTE.C2,
+      NOTE.F1, NOTE.F1, NOTE.GS1, NOTE.F1, NOTE.AS1, NOTE.F1, NOTE.DS2, NOTE.F2,
+      NOTE.GS2, NOTE.F2, NOTE.DS2, NOTE.CS2, NOTE.C2, NOTE.AS1, NOTE.GS1, NOTE.F1,
     ],
-    // Relentless piercing cyber arp
+    // Relentless piercing cyber lead
     lead: [
-      NOTE.D5, NOTE.A4, NOTE.F5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F5, NOTE.GS4,
-      NOTE.A4, NOTE.F5, NOTE.D5, NOTE.C5, NOTE.DS5, NOTE.D5, NOTE.C5, NOTE.A4,
-      NOTE.D5, NOTE.F5, NOTE.GS5, NOTE.A5, NOTE.F5, NOTE.D5, NOTE.C5, NOTE.DS5,
-      NOTE.F5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.D4,
+      NOTE.F4, NOTE.GS4, NOTE.C5, NOTE.AS4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.C4,
+      NOTE.F4, NOTE.AS4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.F4, NOTE.GS4, NOTE.AS4,
+      NOTE.C5, NOTE.DS5, NOTE.C5, NOTE.AS4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.C4,
+      NOTE.AS3, NOTE.C4, NOTE.DS4, NOTE.F4, NOTE.GS4, NOTE.AS4, NOTE.GS4, NOTE.F4,
     ],
     // Syncopated breakbeat kick
     kick: [
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
       1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
     ],
-    // Hard breakbeat snare with ghost hits on 7, 15, 23
+    // Hard breakbeat snare with ghost hits
     snare: [
       0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1,
       0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1,
@@ -209,6 +251,10 @@ export const TRACK_CONFIGS = {
     ],
   },
 };
+
+// Aliases for legacy configurations
+TRACK_CONFIGS['CYBER_PURGE'] = TRACK_CONFIGS[MUSIC_TRACKS.SANDBOX_PURGE];
+TRACK_CONFIGS['KERNEL_BREACH'] = TRACK_CONFIGS[MUSIC_TRACKS.KERNEL_PANIC];
 
 export class SynthMusic {
   /**
@@ -265,6 +311,7 @@ export class SynthMusic {
 
   /**
    * Smoothly crossfades to a target procedural darksynth track over duration seconds
+   * Uses safe linear gain ramps with a 0.001 floor to prevent WebAudio exceptions
    * @param {string} trackId
    * @param {number} [duration=1.0]
    */
@@ -285,7 +332,7 @@ export class SynthMusic {
     try {
       this.masterGain.gain.cancelScheduledValues(now);
       this.masterGain.gain.setValueAtTime(Math.max(0.001, this.masterGain.gain.value), now);
-      this.masterGain.gain.exponentialRampToValueAtTime(0.001, now + half);
+      this.masterGain.gain.linearRampToValueAtTime(0.001, now + half);
 
       setTimeout(() => {
         this.setTrack(trackId);
@@ -293,7 +340,7 @@ export class SynthMusic {
           const resumeTime = this.ctx.currentTime;
           this.masterGain.gain.cancelScheduledValues(resumeTime);
           this.masterGain.gain.setValueAtTime(0.001, resumeTime);
-          this.masterGain.gain.exponentialRampToValueAtTime(curVol, resumeTime + half);
+          this.masterGain.gain.linearRampToValueAtTime(curVol, resumeTime + half);
         }
       }, half * 1000);
     } catch (_) {
@@ -303,19 +350,26 @@ export class SynthMusic {
 
   /**
    * Dynamically rotates tracks according to clearance ring and wave progression
-   * @param {number|string} ring - 2, 1, 0 or 'RING_2', 'RING_1', 'RING_0'
+   * @param {number|string} ring - 3, 2, 1, 0 or 'RING_3', 'RING_2', 'RING_1', 'RING_0'
    * @param {number} waveNumber
    */
   setTrackForRing(ring, waveNumber) {
-    if (waveNumber === 5 || waveNumber === 10 || waveNumber === 15 || waveNumber === 30 || waveNumber % 5 === 0) {
-      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
+    const r = typeof ring === 'string'
+      ? (ring === 'RING_0' ? 0 : ring === 'RING_1' ? 1 : ring === 'RING_2' ? 2 : 3)
+      : Number(ring);
+
+    // Milestone boss encounters (Waves 10, 20, 30, 40)
+    if (waveNumber === 10 || waveNumber === 20 || waveNumber === 30 || waveNumber === 40 || (waveNumber > 40 && waveNumber % 10 === 0)) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
       return;
     }
 
-    if (ring === 0 || ring === 'RING_0') {
-      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
-    } else if (ring === 1 || ring === 'RING_1') {
-      this.crossfadeToTrack(MUSIC_TRACKS.CYBER_PURGE, 1.0);
+    if (r === 0) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
+    } else if (r === 1) {
+      this.crossfadeToTrack(MUSIC_TRACKS.SANDBOX_PURGE, 1.0);
+    } else if (r === 2) {
+      this.crossfadeToTrack(MUSIC_TRACKS.BUS_COLLISION, 1.0);
     } else {
       this.crossfadeToTrack(MUSIC_TRACKS.OVERCLOCK_PULSE, 1.0);
     }
@@ -326,16 +380,16 @@ export class SynthMusic {
    * @param {number} waveNumber
    */
   setTrackForWave(waveNumber) {
-    if (waveNumber === 5 || waveNumber === 10 || waveNumber === 15 || waveNumber === 30 || waveNumber % 5 === 0) {
-      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
-    } else if (waveNumber >= 30) {
-      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
-    } else if (waveNumber >= 15) {
-      this.crossfadeToTrack(MUSIC_TRACKS.CYBER_PURGE, 1.0);
-    } else if (waveNumber % 2 === 1) {
-      this.crossfadeToTrack(MUSIC_TRACKS.OVERCLOCK_PULSE, 1.0);
+    if (waveNumber === 10 || waveNumber === 20 || waveNumber === 30 || waveNumber === 40 || (waveNumber > 40 && waveNumber % 10 === 0)) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
+    } else if (waveNumber >= 31) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
+    } else if (waveNumber >= 21) {
+      this.crossfadeToTrack(MUSIC_TRACKS.SANDBOX_PURGE, 1.0);
+    } else if (waveNumber >= 11) {
+      this.crossfadeToTrack(MUSIC_TRACKS.BUS_COLLISION, 1.0);
     } else {
-      this.crossfadeToTrack(MUSIC_TRACKS.CYBER_PURGE, 1.0);
+      this.crossfadeToTrack(MUSIC_TRACKS.OVERCLOCK_PULSE, 1.0);
     }
   }
 

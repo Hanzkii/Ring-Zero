@@ -7,11 +7,11 @@ import { COLOR, COLLISION_LAYER } from '../core/Constants.js';
 import { randomRange } from '../core/VectorMath.js';
 
 export const WEAPON_ARCHETYPES = {
-  // --- TIER 0: Baseline Starters ---
+  // --- TIER 3: Baseline Starters (Ring 3 Userland) ---
   PISTOL_SYS: {
     id: 'pistol_sys',
     name: 'Pistol.sys',
-    tier: 0,
+    tier: 3,
     mode: 'semi',
     damage: 22,
     pellets: 1,
@@ -29,7 +29,7 @@ export const WEAPON_ARCHETYPES = {
   PULSE_SMG: {
     id: 'pulse_smg',
     name: 'Pulse SMG',
-    tier: 0,
+    tier: 3,
     mode: 'auto',
     damage: 11,
     pellets: 1,
@@ -47,7 +47,7 @@ export const WEAPON_ARCHETYPES = {
   SCRAP_BLASTER: {
     id: 'scrap_blaster',
     name: 'Scrap Blaster',
-    tier: 0,
+    tier: 3,
     mode: 'semi',
     damage: 14,
     pellets: 3,
@@ -63,11 +63,11 @@ export const WEAPON_ARCHETYPES = {
     description: 'Short-range triple pellet cone, heavy point-blank knockback.',
   },
 
-  // --- TIER 1: Mil-Spec Hardware ---
+  // --- TIER 2: Hardware Driver Medium Hardware (Ring 2) ---
   KERNEL_PISTOL: {
     id: 'kernel_pistol',
     name: 'Kernel Pistol',
-    tier: 1,
+    tier: 2,
     mode: 'semi',
     damage: 28,
     pellets: 1,
@@ -85,7 +85,7 @@ export const WEAPON_ARCHETYPES = {
   CODE_SWEEPER: {
     id: 'code_sweeper',
     name: 'Code Sweeper',
-    tier: 1,
+    tier: 2,
     mode: 'semi',
     damage: 12,
     pellets: 8,
@@ -103,7 +103,7 @@ export const WEAPON_ARCHETYPES = {
   COMBAT_SWEEPER: {
     id: 'combat_sweeper',
     name: 'Code Sweeper',
-    tier: 1,
+    tier: 2,
     mode: 'semi',
     damage: 12,
     pellets: 8,
@@ -121,7 +121,7 @@ export const WEAPON_ARCHETYPES = {
   FLAK_SUBMACHINE: {
     id: 'flak_submachine',
     name: 'Flak Submachine',
-    tier: 1,
+    tier: 2,
     mode: 'auto',
     damage: 14,
     pellets: 1,
@@ -139,7 +139,7 @@ export const WEAPON_ARCHETYPES = {
   ROTARY_MINIGUN: {
     id: 'rotary_minigun',
     name: 'Rotary Minigun',
-    tier: 1,
+    tier: 2,
     mode: 'auto',
     damage: 16,
     pellets: 1,
@@ -155,11 +155,11 @@ export const WEAPON_ARCHETYPES = {
     description: 'Gatling barrel system spinning up massive lead output.',
   },
 
-  // --- TIER 2: Kernel-Grade Prototypes ---
+  // --- TIER 1: Hypervisor Mil-Spec Prototypes (Ring 1) ---
   VECTOR_RAILGUN: {
     id: 'vector_railgun',
     name: 'Vector Railgun',
-    tier: 2,
+    tier: 1,
     mode: 'semi',
     damage: 180,
     pellets: 1,
@@ -178,7 +178,7 @@ export const WEAPON_ARCHETYPES = {
   MEMORY_CORRUPTOR: {
     id: 'memory_corruptor',
     name: 'Memory Corruptor',
-    tier: 2,
+    tier: 1,
     mode: 'auto',
     damage: 42,
     pellets: 1,
@@ -295,46 +295,92 @@ export const WEAPON_ARCHETYPES = {
 };
 
 export const WEAPON_TIERS = {
-  TIER_0: [WEAPON_ARCHETYPES.PISTOL_SYS, WEAPON_ARCHETYPES.PULSE_SMG, WEAPON_ARCHETYPES.SCRAP_BLASTER],
-  TIER_1: [WEAPON_ARCHETYPES.KERNEL_PISTOL, WEAPON_ARCHETYPES.COMBAT_SWEEPER, WEAPON_ARCHETYPES.FLAK_SUBMACHINE, WEAPON_ARCHETYPES.ROTARY_MINIGUN, WEAPON_ARCHETYPES.PLASMA_FLAMER, WEAPON_ARCHETYPES.CRYO_INJECTOR],
-  TIER_2: [WEAPON_ARCHETYPES.VECTOR_RAILGUN, WEAPON_ARCHETYPES.MEMORY_CORRUPTOR, WEAPON_ARCHETYPES.QUANTUM_BEAM, WEAPON_ARCHETYPES.HOMING_SWARM, WEAPON_ARCHETYPES.DESYNC_GRENADE],
+  TIER_3: [WEAPON_ARCHETYPES.PISTOL_SYS, WEAPON_ARCHETYPES.PULSE_SMG, WEAPON_ARCHETYPES.SCRAP_BLASTER],
+  TIER_2: [WEAPON_ARCHETYPES.KERNEL_PISTOL, WEAPON_ARCHETYPES.CODE_SWEEPER, WEAPON_ARCHETYPES.FLAK_SUBMACHINE, WEAPON_ARCHETYPES.ROTARY_MINIGUN],
+  TIER_1: [WEAPON_ARCHETYPES.VECTOR_RAILGUN, WEAPON_ARCHETYPES.MEMORY_CORRUPTOR, WEAPON_ARCHETYPES.PLASMA_FLAMER, WEAPON_ARCHETYPES.CRYO_INJECTOR],
+  TIER_0: [WEAPON_ARCHETYPES.QUANTUM_BEAM, WEAPON_ARCHETYPES.HOMING_SWARM, WEAPON_ARCHETYPES.DESYNC_GRENADE],
 };
 
+// Aliases for legacy compatibility
+WEAPON_TIERS.TIER_STARTERS = WEAPON_TIERS.TIER_3;
+WEAPON_TIERS.TIER_MEDIUM = WEAPON_TIERS.TIER_2;
+WEAPON_TIERS.TIER_MILSPEC = WEAPON_TIERS.TIER_1;
+WEAPON_TIERS.TIER_GLITCH = WEAPON_TIERS.TIER_0;
+
 /**
- * Returns weapons unlocked up to a given milestone wave
+ * Returns weapons unlocked up to a given milestone wave for Arsenal selection
  * @param {number} waveNum
  * @returns {Array<Object>}
  */
 export function getUnlockedWeaponsForWave(waveNum) {
-  const list = [...WEAPON_TIERS.TIER_0];
+  const list = [...WEAPON_TIERS.TIER_3];
   if (waveNum >= 3) {
-    list.push(...WEAPON_TIERS.TIER_1);
+    list.push(...WEAPON_TIERS.TIER_2);
   }
   if (waveNum >= 6) {
+    list.push(...WEAPON_TIERS.TIER_1);
+  }
+  if (waveNum >= 10) {
+    list.push(...WEAPON_TIERS.TIER_0);
+  }
+  return list;
+}
+
+/**
+ * Returns cumulative unlocked weapon pool for a target Protection Ring
+ * @param {number|string} targetRing - 3, 2, 1, 0 or 'RING_3', 'RING_2', 'RING_1', 'RING_0'
+ * @returns {Array<Object>}
+ */
+export function getCumulativeWeaponsForRing(targetRing) {
+  const ring = typeof targetRing === 'string'
+    ? (targetRing === 'RING_0' ? 0 : targetRing === 'RING_1' ? 1 : targetRing === 'RING_2' ? 2 : 3)
+    : Number(targetRing);
+
+  const list = [...WEAPON_TIERS.TIER_3];
+  if (ring <= 2) {
     list.push(...WEAPON_TIERS.TIER_2);
+  }
+  if (ring <= 1) {
+    list.push(...WEAPON_TIERS.TIER_1);
+  }
+  if (ring === 0) {
+    list.push(...WEAPON_TIERS.TIER_0);
   }
   return list;
 }
 
 /**
  * Returns 3 tier-appropriate weapons for Ring Clearance Escalation Draft
- * @param {number|string} targetRing - 1 or 0 ('RING_1' or 'RING_0')
+ * @param {number|string} targetRing - 2, 1, or 0 ('RING_2', 'RING_1', 'RING_0')
  * @returns {Array<Object>}
  */
 export function getEscalationWeaponsForRing(targetRing) {
-  if (targetRing === 0 || targetRing === 'RING_0') {
+  const ring = typeof targetRing === 'string'
+    ? (targetRing === 'RING_0' ? 0 : targetRing === 'RING_1' ? 1 : targetRing === 'RING_2' ? 2 : 3)
+    : Number(targetRing);
+
+  if (ring === 0) {
+    // Ring 0: Glitch prototypes
     return [
       WEAPON_ARCHETYPES.QUANTUM_BEAM,
       WEAPON_ARCHETYPES.HOMING_SWARM,
       WEAPON_ARCHETYPES.DESYNC_GRENADE,
     ];
+  } else if (ring === 1) {
+    // Ring 1: Hypervisor mil-spec prototypes
+    return [
+      WEAPON_ARCHETYPES.VECTOR_RAILGUN,
+      WEAPON_ARCHETYPES.MEMORY_CORRUPTOR,
+      WEAPON_ARCHETYPES.PLASMA_FLAMER,
+    ];
+  } else {
+    // Ring 2: Hardware Driver prototypes
+    return [
+      WEAPON_ARCHETYPES.KERNEL_PISTOL,
+      WEAPON_ARCHETYPES.FLAK_SUBMACHINE,
+      WEAPON_ARCHETYPES.ROTARY_MINIGUN,
+    ];
   }
-  // Default to Ring 1 (Supervisor)
-  return [
-    WEAPON_ARCHETYPES.VECTOR_RAILGUN,
-    WEAPON_ARCHETYPES.PLASMA_FLAMER,
-    WEAPON_ARCHETYPES.CRYO_INJECTOR,
-  ];
 }
 
 export class WeaponInstance {
@@ -345,13 +391,14 @@ export class WeaponInstance {
     this.config = config;
     this.id = config.id;
     this.name = config.name;
-    this.tier = config.tier ?? 1;
+    this.tier = config.tier ?? 3;
     this.description = config.description || '';
     this.mode = config.mode;
     this.damage = config.damage;
     this.pellets = config.pellets;
     this.spreadRad = (config.spreadDeg * Math.PI) / 180;
     this.speed = config.speed;
+    this.fireRate = config.fireRate;
     this.fireInterval = 1 / config.fireRate;
     this.clipSize = config.clipSize;
     this.currentAmmo = config.clipSize;
@@ -364,10 +411,25 @@ export class WeaponInstance {
     this.isCluster = Boolean(config.isCluster);
     this.clusterCount = config.clusterCount || 0;
 
+    this.overclockLevel = 0;
     this.cooldownTimer = 0;
     this.isReloading = false;
     this.reloadTimer = 0;
     this.hasInfiniteAmmo = false;
+  }
+
+  /**
+   * Applies permanent overclock multiplier to weapon stats (+15% per rank)
+   * @param {number} [multiplier=1.15]
+   * @returns {this}
+   */
+  applyOverclock(multiplier = 1.15) {
+    this.overclockLevel = (this.overclockLevel || 0) + 1;
+    this.damage = Math.round(this.damage * multiplier);
+    this.speed = Math.round(this.speed * multiplier);
+    this.fireInterval = this.fireInterval / multiplier;
+    this.fireRate = 1 / this.fireInterval;
+    return this;
   }
 
   update(dt, hasInfiniteAmmo = false) {

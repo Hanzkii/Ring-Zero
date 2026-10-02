@@ -72,47 +72,82 @@ export const PLAYER_CONFIG = {
 };
 
 export const CLEARANCE_RING = {
-  RING_2: 'RING_2', // Userland (Waves 1-14)
-  RING_1: 'RING_1', // Supervisor (Waves 15-29)
-  RING_0: 'RING_0', // Pure Kernel (Waves 30+)
+  RING_3: 'RING_3', // Userland (Waves 1-10)
+  RING_2: 'RING_2', // Hardware Drivers (Waves 11-20)
+  RING_1: 'RING_1', // Hypervisor (Waves 21-30)
+  RING_0: 'RING_0', // Kernel Execution (Waves 31+)
 };
 
+export const WAVES_PER_RING = 10;
+
 export const SECTOR_THEMES = {
-  [CLEARANCE_RING.RING_2]: {
-    ring: 2,
-    id: CLEARANCE_RING.RING_2,
-    name: 'RING 2: USERLAND',
+  [CLEARANCE_RING.RING_3]: {
+    ring: 3,
+    id: CLEARANCE_RING.RING_3,
+    name: 'RING 3: USERLAND',
     accent: '#00F0FF',
+    accentSecondary: '#0055FF',
     accentDim: 'rgba(0, 240, 255, 0.35)',
     gridMajor: 'rgba(0, 240, 255, 0.12)',
     gridMinor: 'rgba(0, 240, 255, 0.04)',
     track: 'OVERCLOCK_PULSE',
-    bpm: 145,
+    bpm: 138,
     description: 'USER SPACE SANDBOX. UNRESTRICTED PERIMETER.',
+    width: 1920,
+    height: 1080,
+  },
+  [CLEARANCE_RING.RING_2]: {
+    ring: 2,
+    id: CLEARANCE_RING.RING_2,
+    name: 'RING 2: HARDWARE DRIVERS',
+    accent: '#FFD000',
+    accentSecondary: '#FF8800',
+    accentDim: 'rgba(255, 208, 0, 0.35)',
+    gridMajor: 'rgba(255, 208, 0, 0.14)',
+    gridMinor: 'rgba(255, 208, 0, 0.04)',
+    track: 'BUS_COLLISION',
+    bpm: 148,
+    description: 'DMA/PCIE BUS CORRIDOR. SEGMENTED CHOKEPOINTS DETECTED.',
+    width: 1920,
+    height: 1080,
   },
   [CLEARANCE_RING.RING_1]: {
     ring: 1,
     id: CLEARANCE_RING.RING_1,
-    name: 'RING 1: SUPERVISOR',
-    accent: '#FFB000',
-    accentDim: 'rgba(255, 176, 0, 0.35)',
-    gridMajor: 'rgba(255, 176, 0, 0.14)',
-    gridMinor: 'rgba(255, 176, 0, 0.04)',
-    track: 'CYBER_PURGE',
+    name: 'RING 1: HYPERVISOR',
+    accent: '#00FF66',
+    accentSecondary: '#1AFF00',
+    accentDim: 'rgba(0, 255, 102, 0.35)',
+    gridMajor: 'rgba(0, 255, 102, 0.14)',
+    gridMinor: 'rgba(0, 255, 102, 0.04)',
+    track: 'SANDBOX_PURGE',
     bpm: 158,
-    description: 'PRIVILEGED DRIVER SUBSYSTEM. FIREWALL CHOKEPOINTS DETECTED.',
+    description: 'VIRTUAL SANDBOX COMPARTMENTS. BROKEN FIREWALL BARRIERS.',
+    width: 1920,
+    height: 1080,
   },
   [CLEARANCE_RING.RING_0]: {
     ring: 0,
     id: CLEARANCE_RING.RING_0,
-    name: 'RING 0: PURE KERNEL',
+    name: 'RING 0: KERNEL EXECUTION',
     accent: '#FF003C',
+    accentSecondary: '#FF2200',
     accentDim: 'rgba(255, 0, 60, 0.35)',
     gridMajor: 'rgba(255, 0, 60, 0.16)',
     gridMinor: 'rgba(255, 0, 60, 0.05)',
-    track: 'KERNEL_BREACH',
-    bpm: 165,
-    description: 'MONOLITHIC KERNEL CORE. CRITICAL HEAT & RESTRICTED SECTORS.',
+    track: 'KERNEL_PANIC',
+    bpm: 168,
+    description: 'COMPACT CPU CORE. CRITICAL HEAT & HAZARD MARGIN ACTIVE.',
+    width: 1536,
+    height: 864,
+    hazardMargin: 60,
+    hazardDPS: 15,
   },
 };
+
+// Numeric lookup aliases for convenience
+SECTOR_THEMES[3] = SECTOR_THEMES[CLEARANCE_RING.RING_3];
+SECTOR_THEMES[2] = SECTOR_THEMES[CLEARANCE_RING.RING_2];
+SECTOR_THEMES[1] = SECTOR_THEMES[CLEARANCE_RING.RING_1];
+SECTOR_THEMES[0] = SECTOR_THEMES[CLEARANCE_RING.RING_0];
 

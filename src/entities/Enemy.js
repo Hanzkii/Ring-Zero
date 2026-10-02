@@ -67,26 +67,73 @@ export const ENEMY_ARCHETYPES = {
     xpValue: 45,
     crateDropChance: 0.20,
   },
+  // --- 4-Tier Protection Ring Milestone Boss Archetypes ---
+  DAEMON_OVERSEER: {
+    type: 'DAEMON_OVERSEER',
+    name: 'DAEMON OVERSEER [W10 BOSS]',
+    maxHealth: 800,
+    speed: 110,
+    radius: 28,
+    contactDamage: 40,
+    color: '#00F0FF',
+    xpValue: 250,
+    isBoss: true,
+  },
+  BUS_ARBITER: {
+    type: 'BUS_ARBITER',
+    name: 'BUS ARBITER [W20 BOSS]',
+    maxHealth: 1800,
+    speed: 95,
+    radius: 32,
+    contactDamage: 55,
+    color: '#FFD000',
+    xpValue: 500,
+    isBoss: true,
+  },
+  HYPERVISOR_SENTINEL: {
+    type: 'HYPERVISOR_SENTINEL',
+    name: 'HYPERVISOR SENTINEL [W30 BOSS]',
+    maxHealth: 3200,
+    speed: 90,
+    radius: 36,
+    contactDamage: 70,
+    color: '#00FF66',
+    xpValue: 800,
+    isBoss: true,
+  },
+  ROOTKIT_COLOSSUS: {
+    type: 'ROOTKIT_COLOSSUS',
+    name: 'ROOTKIT COLOSSUS [W40 BOSS]',
+    maxHealth: 6000,
+    speed: 85,
+    radius: 42,
+    contactDamage: 90,
+    color: '#FF003C',
+    xpValue: 1500,
+    isBoss: true,
+  },
+
+  // Legacy Boss Aliases for backward compatibility
   KERNEL_WATCHER: {
     type: 'KERNEL_WATCHER',
     name: 'KERNEL-WATCHER [BOSS]',
-    maxHealth: 650,
+    maxHealth: 800,
     speed: 110,
-    radius: 26,
-    contactDamage: 45,
-    color: '#FF0055',
-    xpValue: 200,
+    radius: 28,
+    contactDamage: 40,
+    color: '#00F0FF',
+    xpValue: 250,
     isBoss: true,
   },
   ZERO_DAY_COLOSSUS: {
     type: 'ZERO_DAY_COLOSSUS',
     name: 'ZERO-DAY COLOSSUS [BOSS]',
-    maxHealth: 1600,
-    speed: 80,
-    radius: 34,
-    contactDamage: 60,
-    color: '#FF3300',
-    xpValue: 500,
+    maxHealth: 3200,
+    speed: 90,
+    radius: 36,
+    contactDamage: 70,
+    color: '#FF003C',
+    xpValue: 800,
     isBoss: true,
   },
 };
@@ -615,6 +662,10 @@ export class Enemy extends Entity {
         break;
       }
 
+      case 'DAEMON_OVERSEER':
+      case 'BUS_ARBITER':
+      case 'HYPERVISOR_SENTINEL':
+      case 'ROOTKIT_COLOSSUS':
       case 'KERNEL_WATCHER':
       case 'ZERO_DAY_COLOSSUS': {
         // Multi-ring Boss Core with rotating hazard brackets

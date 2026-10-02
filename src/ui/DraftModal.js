@@ -151,9 +151,16 @@ export class DraftModal {
     this.keepCurrentCallback = onKeepCurrent;
     this.currentOptions = weapons;
 
-    const isRing0 = targetRing === 0 || targetRing === 'RING_0';
-    const ringName = isRing0 ? 'RING 0: PURE KERNEL' : 'RING 1: SUPERVISOR';
-    const accentColor = isRing0 ? '#FF003C' : COLOR.AMBER;
+    const r = typeof targetRing === 'string'
+      ? (targetRing === 'RING_0' ? 0 : targetRing === 'RING_1' ? 1 : targetRing === 'RING_2' ? 2 : 3)
+      : Number(targetRing);
+
+    const ringName = r === 0 ? 'RING 0: KERNEL EXECUTION'
+      : r === 1 ? 'RING 1: HYPERVISOR'
+      : r === 2 ? 'RING 2: HARDWARE DRIVERS'
+      : 'RING 3: USERLAND';
+
+    const accentColor = r === 0 ? '#FF003C' : r === 1 ? '#00FF66' : r === 2 ? '#FFD000' : '#00F0FF';
 
     const subHeader = this.modalEl.querySelector('.draft-sub');
     const titleHeader = this.modalEl.querySelector('.draft-title');
@@ -171,7 +178,7 @@ export class DraftModal {
     if (!cardsContainer) return;
     cardsContainer.innerHTML = '';
 
-    // Render 3 new weapons
+    // Render 3 weapons from cumulative unlocked pool
     weapons.forEach((wpn, idx) => {
       const card = document.createElement('div');
       card.className = 'draft-card';
@@ -200,30 +207,31 @@ export class DraftModal {
       cardsContainer.appendChild(card);
     });
 
-    // 4th Choice: KEEP CURRENT WEAPON (+2500 CRYPTO BOUNTY)
+    // 4th Choice: KEEP CURRENT WEAPON (+15% KERNEL OVERCLOCK)
     const keepCard = document.createElement('div');
     keepCard.className = 'draft-card';
     keepCard.style.borderColor = COLOR.GREEN;
     keepCard.style.minWidth = '220px';
 
     const curName = currentWeapon?.name || 'CURRENT WEAPON';
+    const nextOverclock = (currentWeapon?.overclockLevel || 0) + 1;
     keepCard.innerHTML = `
       <div class="card-hotkey">[ 4 ]</div>
       <div class="card-badge" style="color: ${COLOR.GREEN}; border-color: ${COLOR.GREEN}">
-        TACTICAL PRESERVATION &bull; BONUS
+        KERNEL OVERCLOCK &bull; RANK ${nextOverclock}
       </div>
       <div style="margin: 12px 0 8px 0;">
-        <div class="card-filename" style="margin-bottom: 2px;">RETAIN ARSENAL</div>
+        <div class="card-filename" style="margin-bottom: 2px;">RETAIN LOADOUT</div>
         <div class="card-name" style="margin-bottom: 0; font-size: 16px; color: #FFFFFF;">KEEP CURRENT WEAPON</div>
       </div>
       <div class="card-desc" style="font-size: 11px; margin-bottom: 12px;">
-        Maintain active loadout (${curName}). Receive cryptographic bounty to fuel hardware overclocking.
+        Maintain active loadout (${curName}). Apply irreversible +15% Kernel Overclock to damage, velocity, and cycling rate.
       </div>
       <div class="card-perk" style="border-left: 2px solid ${COLOR.GREEN}; padding-left: 8px; margin-bottom: 16px; font-size: 11px; color: ${COLOR.WHITE};">
-        <strong>REWARD:</strong> +2500 CRYPTO BOUNTY
+        <strong>OVERCLOCK:</strong> +15% STAT MULTIPLIER (RANK ${nextOverclock})
       </div>
       <button class="btn-inject" style="color: ${COLOR.GREEN}; border-color: ${COLOR.GREEN}">
-        KEEP ${curName.toUpperCase()}
+        OVERCLOCK ${curName.toUpperCase()}
       </button>
     `;
     keepCard.addEventListener('click', () => this.selectEscalationIndex(3));

@@ -201,6 +201,10 @@ export class StorageService {
     this.save();
   }
 
+  setClearanceRing(val) {
+    this.clearanceRing = val;
+  }
+
   getClearanceName() {
     switch (this.clearanceRing) {
       case RING_TIER.RING_0:

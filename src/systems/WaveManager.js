@@ -104,30 +104,53 @@ export class WaveManager {
    * @param {import('../entities/Player.js').Player} player
    */
   _spawnNextBatch(player) {
-    // Milestone Boss spawn gates (Wave 5, 10, 15, 30)
-    if ((this.waveNumber === 5 || this.waveNumber === 15) && !this.bossSpawned) {
+    // 4-Tier Protection Ring Milestone Boss Gates (Waves 10, 20, 30, 40)
+    if (this.waveNumber === 10 && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
-      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.KERNEL_WATCHER);
-      if (this.waveNumber === 15) {
-        boss.maxHealth = Math.round(boss.maxHealth * 2.2);
-        boss.health = boss.maxHealth;
-      }
+      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.DAEMON_OVERSEER);
       this.onSpawnEnemy(boss);
-      this.budgetSpent += ENEMY_ARCHETYPES.KERNEL_WATCHER.xpValue;
+      this.budgetSpent += ENEMY_ARCHETYPES.DAEMON_OVERSEER.xpValue;
       return;
     }
 
-    if ((this.waveNumber === 10 || this.waveNumber === 30) && !this.bossSpawned) {
+    if (this.waveNumber === 20 && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
-      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.ZERO_DAY_COLOSSUS);
-      if (this.waveNumber === 30) {
-        boss.maxHealth = Math.round(boss.maxHealth * 2.5);
-        boss.health = boss.maxHealth;
-      }
+      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.BUS_ARBITER);
       this.onSpawnEnemy(boss);
-      this.budgetSpent += ENEMY_ARCHETYPES.ZERO_DAY_COLOSSUS.xpValue;
+      this.budgetSpent += ENEMY_ARCHETYPES.BUS_ARBITER.xpValue;
+      return;
+    }
+
+    if (this.waveNumber === 30 && !this.bossSpawned) {
+      this.bossSpawned = true;
+      const pos = this._calculateSpawnPosition(player);
+      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.HYPERVISOR_SENTINEL);
+      this.onSpawnEnemy(boss);
+      this.budgetSpent += ENEMY_ARCHETYPES.HYPERVISOR_SENTINEL.xpValue;
+      return;
+    }
+
+    if (this.waveNumber === 40 && !this.bossSpawned) {
+      this.bossSpawned = true;
+      const pos = this._calculateSpawnPosition(player);
+      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.ROOTKIT_COLOSSUS);
+      this.onSpawnEnemy(boss);
+      this.budgetSpent += ENEMY_ARCHETYPES.ROOTKIT_COLOSSUS.xpValue;
+      return;
+    }
+
+    // Post-Wave 40 endless recurring colossus every 10 waves
+    if (this.waveNumber > 40 && this.waveNumber % 10 === 0 && !this.bossSpawned) {
+      this.bossSpawned = true;
+      const pos = this._calculateSpawnPosition(player);
+      const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.ROOTKIT_COLOSSUS);
+      const endlessScale = 1 + (this.waveNumber - 40) * 0.08;
+      boss.maxHealth = Math.round(boss.maxHealth * endlessScale);
+      boss.health = boss.maxHealth;
+      this.onSpawnEnemy(boss);
+      this.budgetSpent += ENEMY_ARCHETYPES.ROOTKIT_COLOSSUS.xpValue;
       return;
     }
 
@@ -221,9 +244,11 @@ export class WaveManager {
     let sx = player.x + Math.cos(angle) * dist;
     let sy = player.y + Math.sin(angle) * dist;
 
-    // Clamp inside arena walls
-    const hw = WORLD.DEFAULT_WIDTH * 0.5 - 64;
-    const hh = WORLD.DEFAULT_HEIGHT * 0.5 - 64;
+    // Clamp inside arena walls (Ring 0 is compact 1536x864, others 1920x1080)
+    const arenaW = this.waveNumber >= 31 ? 1536 : 1920;
+    const arenaH = this.waveNumber >= 31 ? 864 : 1080;
+    const hw = arenaW * 0.5 - 64;
+    const hh = arenaH * 0.5 - 64;
     sx = Math.max(-hw, Math.min(hw, sx));
     sy = Math.max(-hh, Math.min(hh, sy));
 

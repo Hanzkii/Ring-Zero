@@ -1,7 +1,7 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-02 19:30 EEST  
-**Git Head:** Phase 9 Kernel Escalation & Audio Pipeline Complete  
+**Last Updated:** 2026-10-02 19:50 EEST  
+**Git Head:** Phase 9 Kernel Escalation & 4-Tier Protection Ring Architecture Complete  
 **ES6 Module Verification:** 100% syntactically verified across all src modules via node --check (0 errors)
 
 ---
@@ -354,27 +354,28 @@ Ring Zero is hosted as a static client on GitHub Pages. To deliver a genuine, ze
   - Dev/cheat invalidation (`cheatedThisRun`): privileged console commands permanently void leaderboard submissions with red security override banner.
 * **Rootkit Screen Purge Crash Fix**:
   - Resolved `projectilePool.release()` mutation crash during traversal loops by marking `proj.markedForRemoval = true` and letting `GameApp` safely purge spatial hash and recycle pooled entities.
-* **Exponential Difficulty Scaling & Soft-Cap Coalescence**:
-  - Scaled post-wave 20 HP exponentially: $HP = 4.0 \times 1.08^{W-20}$, $Speed = \min(2.2, 1 + 0.025W)$, $Cadence = \max(0.1, 1.0 \times 0.95^W)$.
-  - Soft-cap: When active hostiles reach 60, upcoming spawns coalesce into Elites (+300% HP, +100% damage) to preserve 60Hz performance without losing encounter pressure.
+* **Diagnosed & Repaired Wave 15 Fatal Crash Bug**:
+  - Removed deprecated `wave === 15` boss spawn and mid-frame biome regeneration triggers.
+  - Cleaned Wave 15 into a balanced mid-Ring 2 combat stage with standard 15% elite daemon rolls without spatial grid or Web Audio exceptions.
+* **4-Tier x86 Protection Ring Escalation Architecture (`WAVES_PER_RING = 10`)**:
+  - **Ring 3: Userland (Waves 1–10)**: Cyber Blue (`#00F0FF` / `#0055FF`), 1920x1080 arena with 4 corner memory cache pillars at $(\pm 550, \pm 320)$ size $120 \times 120$, Tier 3 starters only (`Pistol.sys`, `Pulse SMG`, `Scrap Blaster`), Wave 10 Boss `DAEMON_OVERSEER` (800 HP), OST `OVERCLOCK_PULSE` (138 BPM, D minor).
+  - **Ring 2: Hardware Drivers (Waves 11–20)**: Warning Amber (`#FFD000` / `#FF8800`), DMA/PCIe bus corridor arena with segmented chokepoints and vertical dividers, Tier 2 medium (`Kernel Pistol`, `Code Sweeper`, `Flak Submachine`, `Rotary Minigun`) + Tier 3 weapons, Wave 20 Boss `BUS_ARBITER` (1800 HP), OST `BUS_COLLISION` (148 BPM, A minor).
+  - **Ring 1: Hypervisor (Waves 21–30)**: Toxic Sandbox Green (`#00FF66` / `#1AFF00`), virtual sandbox partitioned compartments with broken firewall obstacles, Tier 1 mil-spec (`Vector Railgun`, `Memory Corruptor`, `Plasma Flamer`, `Cryo Injector`) + Tiers 2 & 3 weapons, Wave 30 Boss `HYPERVISOR_SENTINEL` (3200 HP), OST `SANDBOX_PURGE` (158 BPM, C# Phrygian).
+  - **Ring 0: Kernel Execution (Waves 31+)**: Critical Crimson (`#FF003C` / `#FF2200`), compact CPU core arena (bounds shrunk 20% to $1536 \times 864$) with 4 central sub-core pillars and outer 60px pulsating hazard margin (15 DPS + red edge flash), Tier 0 glitch prototypes (`Quantum Beam`, `Homing Swarm`, `Desync Grenade`) + all tiers, Wave 40 Boss `ROOTKIT_COLOSSUS` (6000 HP, endless scaling loop past W40), OST `KERNEL_PANIC` (168 BPM, F minor).
+* **Clearance Escalation Draft Modal & Kernel Overclock**:
+  - Milestone boss defeats (W10, W20, W30) trigger the Escalation Draft Modal.
+  - Presents 3 random weapons drawn from cumulative unlocked tiers.
+  - 4th Card: `[4] KEEP CURRENT WEAPON (+15% KERNEL OVERCLOCK)` applying irreversible `+15%` multipliers to damage, projectile velocity, and cycling fire rate via `WeaponInstance.applyOverclock(1.15)`.
+* **Zero-Allocation Dynamic Arena Geometry (`src/world/SectorArenaMap.js`)**:
+  - Preallocates static collision AABBs (`WallRect`) and raycast line segments (`WallSegment`) across all 4 sectors at initialization.
+  - Zero-heap pointer swap in `SpatialHashGrid` upon clearance ring elevation.
+* **Safe Audio Crossfade Engine**:
+  - Refactored `crossfadeToTrack(trackId, duration)` in `SynthMusic.js` using safe linear gain ramps (`linearRampToValueAtTime`) clamped to a `0.001` floor, preventing WebAudio `InvalidStateError` and NaN crashes.
 * **New Elite Archetypes & Visuals**:
   - `Phase Teleporter` (`PHASE_TELEPORTER`): 150px periodic blink every 3.5s with chromatic glitch trails.
   - `Shield Vanguard` (`SHIELD_VANGUARD`): Forward 120° directional energy barrier blocking all projectile fire until flanked or broken.
   - `Volatile Kamikaze` (`VOLATILE_KAMIKAZE`): +60% movement acceleration within 320px of player; detonates upon death creating lingering 3.0s area hazards.
   - All Elites feature 3x base HP, 75% knockback resistance, 1.25x physical radius, rotating vector target brackets, and double XP/bounty drops.
-* **Clearance Ring Progression, CRT Sector Palettes & Dynamic Arenas**:
-  - Ring 2 (Userland, Waves 1-14): Cyan `#00F0FF`, open arena, `OVERCLOCK_PULSE` (145 BPM).
-  - Ring 1 (Supervisor, Waves 15-29): Amber `#FFB000`, firewall chokepoints, `CYBER_PURGE` (158 BPM).
-  - Ring 0 (Pure Kernel, Waves 30+): Crimson `#FF003C`, high-density arena, `KERNEL_BREACH` (165 BPM).
-  - Full-screen CRT chromatic glitch flash and tactical elevation banner upon clearance advancement.
-  - Dynamic procedural arena layout shifts preserving active player and drop state.
-* **Sector Audio Seamless Crossfade (1.0s)**:
-  - Added `crossfadeToTrack(trackId, duration)` in `SynthMusic.js` using exponential gain ramps for smooth sector transitions.
-* **Boss Milestones & Clearance Escalation Weapon Draft**:
-  - Wave 15 Gate Boss (`KERNEL_WATCHER`) unlocking Ring 1 (Supervisor).
-  - Wave 30 Gate Boss (`ZERO_DAY_COLOSSUS`) unlocking Ring 0 (Pure Kernel).
-  - Escalation Draft Modal presenting 3 tier-appropriate weapons (`PLASMA_FLAMER`, `CRYO_INJECTOR`, `QUANTUM_BEAM`, `HOMING_SWARM`, `DESYNC_GRENADE`) plus `[4] KEEP CURRENT WEAPON (+2500 CRYPTO BOUNTY)`.
-  - Full player integrity recovery on clearance advancement.
 * **Zero-Allocation 60Hz Loop Audit**:
   - Validated zero heap allocations, zero anonymous closures, and recycled vector math across all modified tick/render paths.
 

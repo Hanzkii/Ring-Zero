@@ -23,6 +23,7 @@ import { Enemy } from '../entities/Enemy.js';
 import { Drop } from '../entities/Drop.js';
 import { VectorRenderer } from '../ui/VectorRenderer.js';
 import { Vec2 } from './VectorMath.js';
+import { SectorArenaMap } from '../world/SectorArenaMap.js';
 import { BSPFacilityMap } from '../world/BSPFacilityMap.js';
 import { CellularCavernMap } from '../world/CellularCavernMap.js';
 import { Raycaster2D } from '../world/Raycaster2D.js';
@@ -30,7 +31,7 @@ import { SoundBank } from '../audio/SoundBank.js';
 import { StorageService } from '../services/StorageService.js';
 import { LeaderboardService } from '../services/LeaderboardService.js';
 import { TerminalUI } from '../ui/TerminalUI.js';
-import { WEAPON_ARCHETYPES, WeaponInstance, getUnlockedWeaponsForWave, getEscalationWeaponsForRing } from '../systems/WeaponSystem.js';
+import { WEAPON_ARCHETYPES, WeaponInstance, getUnlockedWeaponsForWave, getCumulativeWeaponsForRing, getEscalationWeaponsForRing } from '../systems/WeaponSystem.js';
 import { PickupSystem } from '../systems/PickupSystem.js';
 import { SynthMusic, MUSIC_INTENSITY } from '../audio/SynthMusic.js';
 import { DebugRenderer } from '../ui/DebugRenderer.js';
@@ -201,10 +202,16 @@ export class GameApp {
 
     this._lastMusicWave = 0;
     this.cheatedThisRun = false;
-    this.clearanceRing = 2;
-    this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_2];
+    this.clearanceRing = 3;
+    this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_3];
     this.ringTransitionTimer = 0;
     this.hazards = [];
+    this.hazardFlash = 0;
+
+    this.sectorArenaMap = new SectorArenaMap();
+    this.map = this.sectorArenaMap;
+    this.props = this.sectorArenaMap.props;
+    this.sectorArenaMap.setRing(3, this.spatialGrid);
 
     this._onSentinelShoot = (pulseParams) => {
       const p = this.projectilePool.obtain();
@@ -232,10 +239,16 @@ export class GameApp {
       this.achievementSystem?.onWaveCompleted(waveNum, acc, hasSilent, fwCount);
       this.achievementSystem?.onBountiesUpdated(this.storage.cryptoBounties + (this.player.bounties || 0));
 
-      // Milestone waves (Wave 3, Wave 6, Wave 10) trigger Arsenal Selection
-      if (waveNum === 3 || waveNum === 6 || waveNum === 10) {
+      // Milestone waves:
+      // Waves 3, 6: Arsenal Loadout Selection
+      // Wave 10: Clearance Ring 2 (Hardware Drivers)
+      // Wave 20: Clearance Ring 1 (Hypervisor)
+      // Wave 30: Clearance Ring 0 (Kernel Execution)
+      if (waveNum === 3 || waveNum === 6) {
         this.openArsenalModal(waveNum);
-      } else if (waveNum === 15) {
+      } else if (waveNum === 10) {
+        this.elevateClearance(2);
+      } else if (waveNum === 20) {
         this.elevateClearance(1);
       } else if (waveNum === 30) {
         this.elevateClearance(0);
@@ -351,13 +364,12 @@ export class GameApp {
   }
 
   /**
-   * Elevates clearance ring (Supervisor Ring 1 or Pure Kernel Ring 0)
-   * @param {number} targetRing - 1 (Supervisor) or 0 (Pure Kernel)
+   * Elevates clearance ring (Ring 2 Drivers, Ring 1 Hypervisor, or Ring 0 Kernel)
+   * @param {number} targetRing - 2, 1, or 0
    */
   elevateClearance(targetRing) {
     this.clearanceRing = targetRing;
-    const ringKey = targetRing === 0 ? CLEARANCE_RING.RING_0 : CLEARANCE_RING.RING_1;
-    this.currentSectorTheme = SECTOR_THEMES[ringKey];
+    this.currentSectorTheme = SECTOR_THEMES[targetRing];
     this.ringTransitionTimer = 0.5;
 
     // Full integrity restore & camera punch
@@ -373,9 +385,19 @@ export class GameApp {
     this.cheatManager.clearanceRing = targetRing;
     this.storage.setClearanceRing(targetRing);
 
-    // Dynamic arena shift: Supervisor -> Cavern chokepoints; Kernel -> High-density Facility core
-    const newBiome = targetRing === 0 ? 'facility' : 'cavern';
-    this.loadMap(newBiome, 8192 + targetRing);
+    // Dynamic arena shift with zero runtime GC allocations
+    this.sectorArenaMap.setRing(targetRing, this.spatialGrid);
+    this.map = this.sectorArenaMap;
+    this.props = this.sectorArenaMap.props;
+
+    // Clamp player inside new arena bounds
+    const arenaW = this.currentSectorTheme.width || 1920;
+    const arenaH = this.currentSectorTheme.height || 1080;
+    const hw = arenaW * 0.5 - 32;
+    const hh = arenaH * 0.5 - 32;
+    this.player.x = Math.max(-hw, Math.min(hw, this.player.x));
+    this.player.y = Math.max(-hh, Math.min(hh, this.player.y));
+    this.spatialGrid.update(this.player);
 
     // Trigger Clearance Escalation Weapon Draft
     this.state = APP_STATE.ESCALATION_DRAFT;
@@ -389,8 +411,12 @@ export class GameApp {
         this.state = APP_STATE.RUN;
       },
       onKeepCurrent: () => {
-        this.storage.addCrypto(2500);
-        this.soundBank?.playPurchase();
+        const active = this.weaponSystem.activeWeapon;
+        if (active && typeof active.applyOverclock === 'function') {
+          active.applyOverclock(1.15);
+        }
+        this.soundBank?.playLevelUp();
+        this.particleSystem.emitBurst(this.player.x, this.player.y, 25, COLOR.CYAN, 300);
         this.state = APP_STATE.RUN;
       },
     });
@@ -576,17 +602,18 @@ export class GameApp {
     this.stats = { shotsFired: 0, shotsHit: 0, enemiesKilled: 0 };
     this.runStartTime = Date.now();
     this.cheatedThisRun = false;
-    this.clearanceRing = 2;
-    this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_2];
+    this.clearanceRing = 3;
+    this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_3];
     this.ringTransitionTimer = 0;
     this.hazards.length = 0;
+    this.hazardFlash = 0;
     this.achievementSystem?.resetRun();
 
     // 2. Clear and teardown cheats
     this.cheatManager.reset();
-    this.cheatManager.clearanceRing = 2;
+    this.cheatManager.clearanceRing = 3;
 
-    // 3. Reset weapons with Tier 0 baseline sidearms
+    // 3. Reset weapons with Tier 3 baseline sidearms
     this.weaponSystem.cheatManager = this.cheatManager;
     this.weaponSystem.slots[0] = this.weaponSystem._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.PISTOL_SYS));
     this.weaponSystem.slots[1] = this.weaponSystem._wireInstance(new WeaponInstance(WEAPON_ARCHETYPES.PULSE_SMG));
@@ -613,8 +640,10 @@ export class GameApp {
     // 6. Reset wave timers and wave director back to Wave 1
     this.waveManager.reset();
 
-    // 7. Rebuild / reseed procedural map and update player cell
-    this.loadMap('facility', 1337);
+    // 7. Reset sector arena map to Ring 3 (Userland)
+    this.sectorArenaMap.setRing(3, this.spatialGrid);
+    this.map = this.sectorArenaMap;
+    this.props = this.sectorArenaMap.props;
     this.spatialGrid.update(this.player);
 
     // 8. Close pause/draft/arsenal modals if open
@@ -626,9 +655,9 @@ export class GameApp {
     this.state = APP_STATE.RUN;
     if (this.synthMusic) {
       this.synthMusic.start();
-      this.synthMusic.setTrackForWave(this.waveManager.waveNumber || 1);
+      this.synthMusic.setTrackForRing(3, 1);
       this.synthMusic.setIntensity(MUSIC_INTENSITY.COMBAT);
-      this._lastMusicWave = this.waveManager.waveNumber || 1;
+      this._lastMusicWave = 1;
     }
     if (!this.loop.isRunning) {
       this.loop.start();
@@ -846,11 +875,38 @@ export class GameApp {
     });
 
     // Clamp player to arena perimeter
-    const halfW = WORLD.DEFAULT_WIDTH * 0.5 - 32;
-    const halfH = WORLD.DEFAULT_HEIGHT * 0.5 - 32;
+    const arenaW = this.currentSectorTheme.width || 1920;
+    const arenaH = this.currentSectorTheme.height || 1080;
+    const halfW = arenaW * 0.5 - 32;
+    const halfH = arenaH * 0.5 - 32;
     this.player.x = Math.max(-halfW, Math.min(halfW, this.player.x));
     this.player.y = Math.max(-halfH, Math.min(halfH, this.player.y));
     this.spatialGrid.update(this.player);
+
+    // Ring 0 outer 60px pulsating hazard margin check (15 DPS + red edge flash)
+    if (this.clearanceRing === 0) {
+      const m = 60;
+      if (
+        this.player.x < -halfW + m ||
+        this.player.x > halfW - m ||
+        this.player.y < -halfH + m ||
+        this.player.y > halfH - m
+      ) {
+        this.player.takeDamage(15 * dt, this.cheatManager, {
+          isHazard: true,
+          camera: this.camera,
+          soundBank: this.soundBank,
+        });
+        this.hazardFlash = Math.min(1.0, (this.hazardFlash || 0) + dt * 4);
+        if (Math.random() < 0.25) {
+          this.particleSystem.emitBurst(this.player.x, this.player.y, 2, '#FF003C', 140);
+        }
+      } else if (this.hazardFlash > 0) {
+        this.hazardFlash = Math.max(0, this.hazardFlash - dt * 2.5);
+      }
+    } else {
+      this.hazardFlash = 0;
+    }
 
     // Dynamic music track rotation per wave progression and clearance ring
     if (this.waveManager.waveNumber !== this._lastMusicWave) {
@@ -860,14 +916,6 @@ export class GameApp {
 
     // Wave Director Update
     this.waveManager.update(dt, this.player, this.enemies.length);
-
-    // Dynamic Biome Progression: Waves 1-5 Facility, Wave 6+ Decrypted Caverns
-    const targetBiome = this.waveManager.currentWave >= 6 ? 'cavern' : 'facility';
-    if (this.currentBiome !== targetBiome) {
-      this.loadMap(targetBiome, 2048 + this.waveManager.currentWave);
-      this.camera.addTrauma(0.4);
-      this.particleSystem.emitBurst(0, 0, 40, COLOR.CYAN, 360);
-    }
 
     // Destructible Props Update
     for (let i = this.props.length - 1; i >= 0; i--) {
@@ -1011,7 +1059,7 @@ export class GameApp {
 
     // 3. Render Procedural Map Architecture (walls, floor accents, props)
     if (this.map) {
-      this.map.render(ctx, this.camera);
+      this.map.render(ctx, this.camera, this.currentSectorTheme);
     }
 
     // 4. Render Dynamic Smoke Cooling Plumes
@@ -1107,13 +1155,15 @@ export class GameApp {
   }
 
   _renderWorldBoundaries(ctx) {
-    const hw = WORLD.DEFAULT_WIDTH * 0.5;
-    const hh = WORLD.DEFAULT_HEIGHT * 0.5;
+    const w = this.currentSectorTheme.width || 1920;
+    const h = this.currentSectorTheme.height || 1080;
+    const hw = w * 0.5;
+    const hh = h * 0.5;
 
     ctx.save();
     ctx.strokeStyle = this.currentSectorTheme.accentDim;
     ctx.lineWidth = 2;
-    ctx.strokeRect(-hw, -hh, WORLD.DEFAULT_WIDTH, WORLD.DEFAULT_HEIGHT);
+    ctx.strokeRect(-hw, -hh, w, h);
 
     // Perimeter warning accents
     VectorRenderer.drawTargetBracket(ctx, -hw, -hh, 32, this.currentSectorTheme.accent);
@@ -1430,6 +1480,15 @@ export class GameApp {
       ctx.font = '13px monospace';
       ctx.fillStyle = this.currentSectorTheme.accent;
       ctx.fillText(this.currentSectorTheme.description, w * 0.5, h * 0.35 + 28);
+      ctx.restore();
+    }
+
+    // 9. Ring 0 Hazard Perimeter Edge Flash Vignette
+    if (this.hazardFlash > 0) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 0, 60, ${this.hazardFlash * 0.65})`;
+      ctx.lineWidth = 14;
+      ctx.strokeRect(0, 0, w, h);
       ctx.restore();
     }
 
