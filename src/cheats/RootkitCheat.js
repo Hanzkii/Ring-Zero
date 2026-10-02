@@ -75,14 +75,11 @@ export class RootkitCheat extends CheatInterceptor {
       soundBank.playKernelPanic();
     }
 
-    // 4. Purge all hostile projectiles across the arena
+    // 4. Purge all hostile projectiles across the arena safely
     if (projectilePool) {
       const purgeFn = (proj) => {
-        if (proj.isHostile || proj.owner === 'enemy' || proj.layer === COLLISION_LAYER.PROJECTILE_ENEMY) {
+        if (proj && (proj.isHostile || proj.owner === 'enemy' || proj.layer === COLLISION_LAYER.PROJECTILE_ENEMY)) {
           proj.markedForRemoval = true;
-          if (typeof projectilePool.release === 'function') {
-            projectilePool.release(proj);
-          }
         }
       };
 

@@ -70,3 +70,49 @@ export const PLAYER_CONFIG = {
   DASH_COOLDOWN: 1.1,
   DASH_DURATION: 0.16,
 };
+
+export const CLEARANCE_RING = {
+  RING_2: 'RING_2', // Userland (Waves 1-14)
+  RING_1: 'RING_1', // Supervisor (Waves 15-29)
+  RING_0: 'RING_0', // Pure Kernel (Waves 30+)
+};
+
+export const SECTOR_THEMES = {
+  [CLEARANCE_RING.RING_2]: {
+    ring: 2,
+    id: CLEARANCE_RING.RING_2,
+    name: 'RING 2: USERLAND',
+    accent: '#00F0FF',
+    accentDim: 'rgba(0, 240, 255, 0.35)',
+    gridMajor: 'rgba(0, 240, 255, 0.12)',
+    gridMinor: 'rgba(0, 240, 255, 0.04)',
+    track: 'OVERCLOCK_PULSE',
+    bpm: 145,
+    description: 'USER SPACE SANDBOX. UNRESTRICTED PERIMETER.',
+  },
+  [CLEARANCE_RING.RING_1]: {
+    ring: 1,
+    id: CLEARANCE_RING.RING_1,
+    name: 'RING 1: SUPERVISOR',
+    accent: '#FFB000',
+    accentDim: 'rgba(255, 176, 0, 0.35)',
+    gridMajor: 'rgba(255, 176, 0, 0.14)',
+    gridMinor: 'rgba(255, 176, 0, 0.04)',
+    track: 'CYBER_PURGE',
+    bpm: 158,
+    description: 'PRIVILEGED DRIVER SUBSYSTEM. FIREWALL CHOKEPOINTS DETECTED.',
+  },
+  [CLEARANCE_RING.RING_0]: {
+    ring: 0,
+    id: CLEARANCE_RING.RING_0,
+    name: 'RING 0: PURE KERNEL',
+    accent: '#FF003C',
+    accentDim: 'rgba(255, 0, 60, 0.35)',
+    gridMajor: 'rgba(255, 0, 60, 0.16)',
+    gridMinor: 'rgba(255, 0, 60, 0.05)',
+    track: 'KERNEL_BREACH',
+    bpm: 165,
+    description: 'MONOLITHIC KERNEL CORE. CRITICAL HEAT & RESTRICTED SECTORS.',
+  },
+};
+

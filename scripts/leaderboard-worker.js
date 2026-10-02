@@ -90,7 +90,7 @@ export default {
           );
         }
 
-        const runHash = signature.slice(0, 16);
+        const runHash = body.run_hash || body.runHash || signature.slice(0, 16);
         const entry = {
           playerName,
           callsign: playerName,
@@ -105,20 +105,74 @@ export default {
           timestamp,
           signature,
           runHash,
+          run_hash: runHash,
           verified: true,
         };
 
+        // 1. D1 Database Storage & Deduplication
+        if (env?.DB) {
+          try {
+            await env.DB.prepare(`
+              CREATE TABLE IF NOT EXISTS leaderboard (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                wave INTEGER NOT NULL,
+                clearance_ring TEXT NOT NULL,
+                run_hash TEXT UNIQUE,
+                duration_seconds INTEGER DEFAULT 0,
+                timestamp INTEGER NOT NULL
+              )
+            `).run();
+
+            const existing = await env.DB.prepare(`
+              SELECT id, player_name, score, wave, run_hash FROM leaderboard
+              WHERE run_hash = ? OR (player_name = ? AND score = ? AND wave = ?)
+              LIMIT 1
+            `).bind(runHash, playerName, score, waveNumber).first();
+
+            if (existing) {
+              return new Response(
+                JSON.stringify({ success: true, duplicate: true, message: 'TELEMETRY_ALREADY_RECORDED', runHash, entry }),
+                { headers: CORS_HEADERS }
+              );
+            }
+
+            await env.DB.prepare(`
+              INSERT INTO leaderboard (player_name, score, wave, clearance_ring, run_hash, duration_seconds, timestamp)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).bind(playerName, score, waveNumber, `RING_${clearanceRing}`, runHash, durationSeconds, timestamp).run();
+          } catch (d1Err) {
+            console.warn('D1 operation fallback:', d1Err.message);
+          }
+        }
+
+        // 2. KV Storage & Deduplication Fallback
         let records = [];
         if (env?.LEADERBOARD_KV) {
           const raw = await env.LEADERBOARD_KV.get('top_scores');
           if (raw) records = JSON.parse(raw);
+
+          const existingKv = records.find(
+            (r) => (r.runHash && r.runHash === runHash) ||
+                   (r.run_hash && r.run_hash === runHash) ||
+                   (r.playerName === playerName && r.score === score && r.waveNumber === waveNumber)
+          );
+
+          if (existingKv) {
+            return new Response(
+              JSON.stringify({ success: true, duplicate: true, message: 'TELEMETRY_ALREADY_RECORDED', runHash, entry }),
+              { headers: CORS_HEADERS }
+            );
+          }
+
           records.push(entry);
           records.sort((a, b) => b.score - a.score);
           records = records.slice(0, 200);
           await env.LEADERBOARD_KV.put('top_scores', JSON.stringify(records));
         }
 
-        const rankIndex = records.findIndex((r) => r.signature === entry.signature);
+        const rankIndex = records.findIndex((r) => r.runHash === runHash || r.signature === entry.signature);
         const rank = rankIndex !== -1 ? rankIndex + 1 : 1;
 
         return new Response(

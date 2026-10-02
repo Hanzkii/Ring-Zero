@@ -21,7 +21,7 @@ export class CollisionSystem {
    * @param {import('../audio/SoundBank.js').SoundBank} [options.soundBank]
    * @param {import('./AchievementSystem.js').AchievementSystem} [options.achievementSystem]
    */
-  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera, cheatManager = null, soundBank = null, achievementSystem = null }) {
+  constructor({ spatialGrid, projectilePool, particleSystem, weaponSystem, camera, cheatManager = null, soundBank = null, achievementSystem = null, onSpawnHazard = null }) {
     this.spatialGrid = spatialGrid;
     this.projectilePool = projectilePool;
     this.particleSystem = particleSystem;
@@ -30,6 +30,7 @@ export class CollisionSystem {
     this.cheatManager = cheatManager;
     this.soundBank = soundBank;
     this.achievementSystem = achievementSystem;
+    this.onSpawnHazard = onSpawnHazard;
 
     // Reusable candidate query arrays
     this._candidateList = [];
@@ -127,6 +128,13 @@ export class CollisionSystem {
           // Destruction explosion
           this.particleSystem.emitBurst(enemy.x, enemy.y, 16, enemy.color, 280);
           this.soundBank?.playExplosion(false);
+
+          // Volatile Kamikaze area hazard detonation
+          if (enemy.elite === 'VOLATILE_KAMIKAZE' && this.onSpawnHazard) {
+            this.onSpawnHazard(enemy.x, enemy.y, 55, 3.0, 30);
+            this.particleSystem.emitBurst(enemy.x, enemy.y, 24, '#FF3300', 360);
+            this.camera?.addTrauma(0.22);
+          }
 
           // Generate memory fragments, bounties, and weapon crates
           const clearance = this.cheatManager?.clearanceRing ?? 3;
@@ -309,6 +317,16 @@ export class CollisionSystem {
             if (dist > 0.1) {
               player.vx += (dx / dist) * 260;
               player.vy += (dy / dist) * 260;
+            }
+
+            // Volatile Kamikaze detonates on player contact
+            if (enemy.elite === 'VOLATILE_KAMIKAZE') {
+              enemy.markedForRemoval = true;
+              this.particleSystem.emitBurst(enemy.x, enemy.y, 24, '#FF3300', 360);
+              this.soundBank?.playExplosion(false);
+              if (this.onSpawnHazard) {
+                this.onSpawnHazard(enemy.x, enemy.y, 55, 3.0, 30);
+              }
             }
           }
         }

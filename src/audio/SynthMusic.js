@@ -264,19 +264,78 @@ export class SynthMusic {
   }
 
   /**
+   * Smoothly crossfades to a target procedural darksynth track over duration seconds
+   * @param {string} trackId
+   * @param {number} [duration=1.0]
+   */
+  crossfadeToTrack(trackId, duration = 1.0) {
+    if (this.currentTrack === trackId) return;
+    const config = TRACK_CONFIGS[trackId];
+    if (!config) return;
+
+    if (!this.ctx || !this.masterGain || !this.isPlaying) {
+      this.setTrack(trackId);
+      return;
+    }
+
+    const now = this.ctx.currentTime;
+    const half = Math.max(0.1, duration * 0.5);
+    const curVol = Math.max(0.001, this.volume);
+
+    try {
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.setValueAtTime(Math.max(0.001, this.masterGain.gain.value), now);
+      this.masterGain.gain.exponentialRampToValueAtTime(0.001, now + half);
+
+      setTimeout(() => {
+        this.setTrack(trackId);
+        if (this.ctx && this.masterGain && this.isPlaying) {
+          const resumeTime = this.ctx.currentTime;
+          this.masterGain.gain.cancelScheduledValues(resumeTime);
+          this.masterGain.gain.setValueAtTime(0.001, resumeTime);
+          this.masterGain.gain.exponentialRampToValueAtTime(curVol, resumeTime + half);
+        }
+      }, half * 1000);
+    } catch (_) {
+      this.setTrack(trackId);
+    }
+  }
+
+  /**
+   * Dynamically rotates tracks according to clearance ring and wave progression
+   * @param {number|string} ring - 2, 1, 0 or 'RING_2', 'RING_1', 'RING_0'
+   * @param {number} waveNumber
+   */
+  setTrackForRing(ring, waveNumber) {
+    if (waveNumber === 5 || waveNumber === 10 || waveNumber === 15 || waveNumber === 30 || waveNumber % 5 === 0) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
+      return;
+    }
+
+    if (ring === 0 || ring === 'RING_0') {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
+    } else if (ring === 1 || ring === 'RING_1') {
+      this.crossfadeToTrack(MUSIC_TRACKS.CYBER_PURGE, 1.0);
+    } else {
+      this.crossfadeToTrack(MUSIC_TRACKS.OVERCLOCK_PULSE, 1.0);
+    }
+  }
+
+  /**
    * Dynamically rotates tracks according to wave progression and milestone boss encounters
    * @param {number} waveNumber
    */
   setTrackForWave(waveNumber) {
-    if (waveNumber === 5 || waveNumber === 10 || waveNumber % 5 === 0) {
-      // Milestone boss waves: relentless breakbeat
-      this.setTrack(MUSIC_TRACKS.KERNEL_BREACH);
+    if (waveNumber === 5 || waveNumber === 10 || waveNumber === 15 || waveNumber === 30 || waveNumber % 5 === 0) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
+    } else if (waveNumber >= 30) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_BREACH, 1.0);
+    } else if (waveNumber >= 15) {
+      this.crossfadeToTrack(MUSIC_TRACKS.CYBER_PURGE, 1.0);
     } else if (waveNumber % 2 === 1) {
-      // Odd waves: industrial techno
-      this.setTrack(MUSIC_TRACKS.OVERCLOCK_PULSE);
+      this.crossfadeToTrack(MUSIC_TRACKS.OVERCLOCK_PULSE, 1.0);
     } else {
-      // Even waves: aggressive EBM / darksynth
-      this.setTrack(MUSIC_TRACKS.CYBER_PURGE);
+      this.crossfadeToTrack(MUSIC_TRACKS.CYBER_PURGE, 1.0);
     }
   }
 

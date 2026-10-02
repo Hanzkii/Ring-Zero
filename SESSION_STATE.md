@@ -1,8 +1,8 @@
 # Ring Zero — Session Handover & State Persistence
 
-**Last Updated:** 2026-10-01 18:45 EEST  
-**Git Head:** Handover ready (all 12 test suites passing)  
-**Test Suite Health:** All 12 test suites 100% passing (0 failures across all suites, 139+ phase tests verified)
+**Last Updated:** 2026-10-02 19:30 EEST  
+**Git Head:** Phase 9 Kernel Escalation & Audio Pipeline Complete  
+**ES6 Module Verification:** 100% syntactically verified across all src modules via node --check (0 errors)
 
 ---
 
@@ -343,10 +343,47 @@ Ring Zero is hosted as a static client on GitHub Pages. To deliver a genuine, ze
 
 ---
 
-## 6. Backlog & Next Milestone (Phase 9: Mobile Controls, PWA Packaging & Polyphony Capping)
+## 6. Completed Phase 9 Deliverables Summary
+* **Test Decommissioning & CI Optimization**:
+  - Permanently purged obsolete/fragile `test/` directory.
+  - Hardened GitHub Actions CI (`.github/workflows/deploy.yml`) to run high-speed module syntax verification (`node --check`) across the entire `src/` hierarchy.
+* **Deterministic Run Hash (`run_hash`) & Anti-Cheat Hardening**:
+  - SHA-256 fingerprint generated from `sessionStartTime`, `durationSeconds`, `score`, `waveNumber`, and `seed`, strictly excluding `playerName`.
+  - Edge deduplication in `scripts/leaderboard-worker.js` preventing duplicate rows when editing call-signs.
+  - In-memory lock (`submittedRunHashes`) preventing double-posts on slow edge networks.
+  - Dev/cheat invalidation (`cheatedThisRun`): privileged console commands permanently void leaderboard submissions with red security override banner.
+* **Rootkit Screen Purge Crash Fix**:
+  - Resolved `projectilePool.release()` mutation crash during traversal loops by marking `proj.markedForRemoval = true` and letting `GameApp` safely purge spatial hash and recycle pooled entities.
+* **Exponential Difficulty Scaling & Soft-Cap Coalescence**:
+  - Scaled post-wave 20 HP exponentially: $HP = 4.0 \times 1.08^{W-20}$, $Speed = \min(2.2, 1 + 0.025W)$, $Cadence = \max(0.1, 1.0 \times 0.95^W)$.
+  - Soft-cap: When active hostiles reach 60, upcoming spawns coalesce into Elites (+300% HP, +100% damage) to preserve 60Hz performance without losing encounter pressure.
+* **New Elite Archetypes & Visuals**:
+  - `Phase Teleporter` (`PHASE_TELEPORTER`): 150px periodic blink every 3.5s with chromatic glitch trails.
+  - `Shield Vanguard` (`SHIELD_VANGUARD`): Forward 120° directional energy barrier blocking all projectile fire until flanked or broken.
+  - `Volatile Kamikaze` (`VOLATILE_KAMIKAZE`): +60% movement acceleration within 320px of player; detonates upon death creating lingering 3.0s area hazards.
+  - All Elites feature 3x base HP, 75% knockback resistance, 1.25x physical radius, rotating vector target brackets, and double XP/bounty drops.
+* **Clearance Ring Progression, CRT Sector Palettes & Dynamic Arenas**:
+  - Ring 2 (Userland, Waves 1-14): Cyan `#00F0FF`, open arena, `OVERCLOCK_PULSE` (145 BPM).
+  - Ring 1 (Supervisor, Waves 15-29): Amber `#FFB000`, firewall chokepoints, `CYBER_PURGE` (158 BPM).
+  - Ring 0 (Pure Kernel, Waves 30+): Crimson `#FF003C`, high-density arena, `KERNEL_BREACH` (165 BPM).
+  - Full-screen CRT chromatic glitch flash and tactical elevation banner upon clearance advancement.
+  - Dynamic procedural arena layout shifts preserving active player and drop state.
+* **Sector Audio Seamless Crossfade (1.0s)**:
+  - Added `crossfadeToTrack(trackId, duration)` in `SynthMusic.js` using exponential gain ramps for smooth sector transitions.
+* **Boss Milestones & Clearance Escalation Weapon Draft**:
+  - Wave 15 Gate Boss (`KERNEL_WATCHER`) unlocking Ring 1 (Supervisor).
+  - Wave 30 Gate Boss (`ZERO_DAY_COLOSSUS`) unlocking Ring 0 (Pure Kernel).
+  - Escalation Draft Modal presenting 3 tier-appropriate weapons (`PLASMA_FLAMER`, `CRYO_INJECTOR`, `QUANTUM_BEAM`, `HOMING_SWARM`, `DESYNC_GRENADE`) plus `[4] KEEP CURRENT WEAPON (+2500 CRYPTO BOUNTY)`.
+  - Full player integrity recovery on clearance advancement.
+* **Zero-Allocation 60Hz Loop Audit**:
+  - Validated zero heap allocations, zero anonymous closures, and recycled vector math across all modified tick/render paths.
+
+---
+
+## 7. Backlog & Next Milestone (Phase 10: Mobile Virtual Joysticks & PWA Packaging)
 
 ```markdown
-### Phase 9 Execution Plan: Mobile Controls, PWA Packaging & Polyphony Capping
+### Phase 10 Execution Plan: Mobile Virtual Joysticks & PWA Packaging
 
 1. Dual Virtual Touch Joysticks:
    - On touch-enabled devices, render on-screen dual virtual vector joysticks (Left: WASD movement impulse, Right: 360° aim & auto-fire).
@@ -359,3 +396,4 @@ Ring Zero is hosted as a static client on GitHub Pages. To deliver a genuine, ze
    - Add `manifest.json` and service worker caching strategy for full offline playability on mobile/desktop installations.
    - Dynamic vector app icons (192px, 512px).
 ```
+

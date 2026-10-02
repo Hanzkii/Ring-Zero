@@ -44,7 +44,8 @@ export class WaveManager {
     this.totalBudget = 50 + waveNum * 45;
     this.budgetSpent = 0;
     this.enemiesRemaining = 0;
-    this.spawnInterval = Math.max(0.35, 1.2 - waveNum * 0.08);
+    // Exponential cadence scaling: max(0.1, 1.0 * 0.95^W)
+    this.spawnInterval = Math.max(0.1, 1.0 * Math.pow(0.95, waveNum));
     this.spawnTimer = 0.5;
     this.bossSpawned = false;
   }
@@ -103,26 +104,70 @@ export class WaveManager {
    * @param {import('../entities/Player.js').Player} player
    */
   _spawnNextBatch(player) {
-    // Mini-Boss and Major Boss spawn gates
-    if (this.waveNumber === 5 && !this.bossSpawned) {
+    // Milestone Boss spawn gates (Wave 5, 10, 15, 30)
+    if ((this.waveNumber === 5 || this.waveNumber === 15) && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
       const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.KERNEL_WATCHER);
+      if (this.waveNumber === 15) {
+        boss.maxHealth = Math.round(boss.maxHealth * 2.2);
+        boss.health = boss.maxHealth;
+      }
       this.onSpawnEnemy(boss);
       this.budgetSpent += ENEMY_ARCHETYPES.KERNEL_WATCHER.xpValue;
       return;
     }
 
-    if (this.waveNumber === 10 && !this.bossSpawned) {
+    if ((this.waveNumber === 10 || this.waveNumber === 30) && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
       const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.ZERO_DAY_COLOSSUS);
+      if (this.waveNumber === 30) {
+        boss.maxHealth = Math.round(boss.maxHealth * 2.5);
+        boss.health = boss.maxHealth;
+      }
       this.onSpawnEnemy(boss);
       this.budgetSpent += ENEMY_ARCHETYPES.ZERO_DAY_COLOSSUS.xpValue;
       return;
     }
 
-    const batchSize = Math.min(3 + Math.floor(this.waveNumber * 0.5), 8);
+    // Scaling factors: linear <= 20, exponential > 20
+    let hpMult = 1.0;
+    let speedMult = 1.0;
+    if (this.waveNumber <= 20) {
+      hpMult = 1 + 0.15 * this.waveNumber;
+      speedMult = 1 + 0.03 * this.waveNumber;
+    } else {
+      hpMult = 4.0 * Math.pow(1.08, this.waveNumber - 20);
+      speedMult = Math.min(2.2, 1 + 0.025 * this.waveNumber);
+    }
+
+    // Soft-cap coalescence: if active hostiles >= 60, coalesce spawns into Elites
+    const forceCoalesce = this.enemiesRemaining >= 60;
+    const batchSize = forceCoalesce ? 2 : Math.min(3 + Math.floor(this.waveNumber * 0.5), 8);
+
+    // Elite probability curve
+    let eliteChance = 0;
+    if (forceCoalesce) {
+      eliteChance = 1.0;
+    } else if (this.waveNumber >= 35) {
+      eliteChance = 0.50;
+    } else if (this.waveNumber >= 25) {
+      eliteChance = 0.35;
+    } else if (this.waveNumber >= 15) {
+      eliteChance = 0.15;
+    } else if (this.waveNumber >= 3) {
+      eliteChance = 0.10;
+    }
+
+    const elitePool = [
+      ELITE_MODIFIER.SHIELDED,
+      ELITE_MODIFIER.OVERCLOCKED,
+      ELITE_MODIFIER.CLUSTER_SPLITTER,
+      ELITE_MODIFIER.PHASE_TELEPORTER,
+      ELITE_MODIFIER.SHIELD_VANGUARD,
+      ELITE_MODIFIER.VOLATILE_KAMIKAZE,
+    ];
 
     for (let i = 0; i < batchSize; i++) {
       if (this.budgetSpent >= this.totalBudget) break;
@@ -130,18 +175,17 @@ export class WaveManager {
       const archetype = this._chooseArchetype();
       const pos = this._calculateSpawnPosition(player);
 
-      // Elite modifier chance starting Wave 3
       let elite = ELITE_MODIFIER.NONE;
-      if (this.waveNumber >= 3 && Math.random() < 0.22) {
-        const roll = Math.random();
-        if (roll < 0.35) elite = ELITE_MODIFIER.SHIELDED;
-        else if (roll < 0.70) elite = ELITE_MODIFIER.OVERCLOCKED;
-        else elite = ELITE_MODIFIER.CLUSTER_SPLITTER;
+      if (Math.random() < eliteChance) {
+        elite = elitePool[Math.floor(Math.random() * elitePool.length)];
       }
 
       const enemy = new Enemy(pos.x, pos.y, { ...archetype, elite });
-      this.onSpawnEnemy(enemy);
+      enemy.maxHealth = Math.round(enemy.maxHealth * hpMult);
+      enemy.health = enemy.maxHealth;
+      enemy.speed = Math.round(enemy.speed * speedMult);
 
+      this.onSpawnEnemy(enemy);
       this.budgetSpent += archetype.xpValue;
     }
   }

@@ -735,17 +735,24 @@ export class TerminalUI {
 
     const savedCallsign = (typeof localStorage !== 'undefined' && localStorage.getItem('ring0_callsign')) || 'OPERATOR_0';
 
+    const isCheated = Boolean(runSummary.cheatedThisRun);
+
     // Automatically trigger submitRun on run completion (Game Over / Victory)
-    const autoSubmitPromise = this.leaderboard.submitRun({
-      playerName: savedCallsign,
-      score: runSummary.score,
-      waveNumber: runSummary.waveNumber !== undefined ? runSummary.waveNumber : (runSummary.wavesCleared || 0),
-      clearanceRing: runSummary.clearanceRing,
-      durationSeconds: runSummary.durationSeconds || 0,
-      accuracy: runSummary.accuracy,
-      riskMultiplier: runSummary.riskMultiplier,
-      bountiesEarned: runSummary.bountiesEarned,
-    });
+    const autoSubmitPromise = isCheated
+      ? Promise.resolve({ success: false, reason: 'CHEAT_FLAGGED', message: '[SECURITY OVERRIDE: CHEAT / DEV COMMAND DETECTED. TELEMETRY VOIDED. LEADERBOARD BLOCKED.]' })
+      : this.leaderboard.submitRun({
+          playerName: savedCallsign,
+          score: runSummary.score,
+          waveNumber: runSummary.waveNumber !== undefined ? runSummary.waveNumber : (runSummary.wavesCleared || 0),
+          clearanceRing: runSummary.clearanceRing,
+          durationSeconds: runSummary.durationSeconds || 0,
+          accuracy: runSummary.accuracy,
+          riskMultiplier: runSummary.riskMultiplier,
+          bountiesEarned: runSummary.bountiesEarned,
+          sessionStartTime: runSummary.sessionStartTime || 0,
+          seed: runSummary.seed || 0,
+          cheatedThisRun: false,
+        });
 
     // Compute verification checksum for display
     const checksum = await this.leaderboard.computeChecksum(runSummary);
@@ -754,9 +761,17 @@ export class TerminalUI {
     const mult = runSummary.riskMultiplier.toFixed(2);
     const accuracy = runSummary.accuracy.toFixed(1);
 
-    const statusBadge = this.leaderboard.isOnline
-      ? `<span id="diag-link-status" style="color: ${COLOR.CYAN}; font-size: 11px; font-weight: bold; font-family: monospace;">[STATUS: EDGE LINK ACTIVE]</span>`
-      : `<span id="diag-link-status" style="color: ${COLOR.AMBER}; font-size: 11px; font-weight: bold; font-family: monospace;">[STATUS: LOCAL BUFFER / OFFLINE]</span>`;
+    const statusBadge = isCheated
+      ? `<span id="diag-link-status" style="color: ${COLOR.RED}; font-size: 11px; font-weight: bold; font-family: monospace;">[STATUS: TELEMETRY VOIDED]</span>`
+      : (this.leaderboard.isOnline
+          ? `<span id="diag-link-status" style="color: ${COLOR.CYAN}; font-size: 11px; font-weight: bold; font-family: monospace;">[STATUS: EDGE LINK ACTIVE]</span>`
+          : `<span id="diag-link-status" style="color: ${COLOR.AMBER}; font-size: 11px; font-weight: bold; font-family: monospace;">[STATUS: LOCAL BUFFER / OFFLINE]</span>`);
+
+    const cheatBannerHtml = isCheated
+      ? `<div style="background: rgba(255, 0, 60, 0.15); border: 1.5px solid ${COLOR.RED}; color: ${COLOR.RED}; padding: 10px 14px; font-weight: bold; font-size: 11px; letter-spacing: 1px; margin-bottom: 14px; text-align: center; box-shadow: 0 0 15px rgba(255,0,60,0.25);">
+           [SECURITY OVERRIDE: CHEAT / DEV COMMAND DETECTED. TELEMETRY VOIDED. LEADERBOARD BLOCKED.]
+         </div>`
+      : '';
 
     this.diagnosticModal.style.display = 'flex';
     this.diagnosticModal.innerHTML = `
@@ -773,6 +788,7 @@ export class TerminalUI {
         </div>
 
         <div class="terminal-body" style="margin-bottom: 20px;">
+          ${cheatBannerHtml}
           <!-- Telemetry Grid -->
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px;">
             <div style="background: rgba(0,0,0,0.4); padding: 12px; border: 1px solid rgba(0,240,255,0.2);">
@@ -810,12 +826,12 @@ export class TerminalUI {
                 padding: 6px 10px; font-family: monospace; font-size: 12px; text-transform: uppercase; width: 140px;
               ">
             </div>
-            <button id="btn-submit-score" class="btn-vector" style="padding: 8px 16px; font-size: 11px;">
-              TRANSMIT TELEMETRY
+            <button id="btn-submit-score" class="btn-vector" style="padding: 8px 16px; font-size: 11px;" ${isCheated ? 'disabled' : ''}>
+              ${isCheated ? 'TELEMETRY VOIDED' : 'TRANSMIT TELEMETRY'}
             </button>
           </div>
-          <div id="submit-feedback" style="font-size: 11px; margin-top: 8px; color: ${COLOR.CYAN}; display: block; font-family: monospace;">
-            AUTOSYNC: COMMITTING RUN DATA...
+          <div id="submit-feedback" style="font-size: 11px; margin-top: 8px; color: ${isCheated ? COLOR.RED : COLOR.CYAN}; display: block; font-family: monospace;">
+            ${isCheated ? 'TELEMETRY VOIDED — LEADERBOARD BLOCKED DUE TO CHEAT/DEV COMMAND USAGE' : 'AUTOSYNC: COMMITTING RUN DATA...'}
           </div>
         </div>
 
@@ -841,7 +857,22 @@ export class TerminalUI {
 
     // Handle background automatic submit result
     autoSubmitPromise.then((res) => {
-      if (feedback && feedback.textContent.includes('COMMITTING')) {
+      if (!feedback) return;
+      if (res.reason === 'CHEAT_FLAGGED') {
+        feedback.style.color = COLOR.RED;
+        feedback.textContent = res.message;
+        if (diagStatus) {
+          diagStatus.textContent = '[STATUS: TELEMETRY VOIDED]';
+          diagStatus.style.color = COLOR.RED;
+        }
+        return;
+      }
+      if (res.duplicate) {
+        feedback.style.color = COLOR.CYAN;
+        feedback.textContent = `✓ TELEMETRY CONFIRMED (HASH: ${res.runHash})`;
+        return;
+      }
+      if (feedback.textContent.includes('COMMITTING')) {
         if (res.remote) {
           feedback.style.color = COLOR.GREEN;
           feedback.textContent = `✓ AUTO-COMMITTED TO EDGE! LEADERBOARD RANK: #${res.rank} // VERIFIED HASH: ${res.runHash}`;
@@ -861,6 +892,7 @@ export class TerminalUI {
     }).catch(() => {});
 
     submitBtn?.addEventListener('click', async () => {
+      if (isCheated) return;
       const callsign = (callsignInput?.value.trim() || 'OPERATOR_0').toUpperCase().slice(0, 14);
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('ring0_callsign', callsign);
@@ -878,11 +910,20 @@ export class TerminalUI {
         accuracy: runSummary.accuracy,
         riskMultiplier: runSummary.riskMultiplier,
         bountiesEarned: runSummary.bountiesEarned,
+        sessionStartTime: runSummary.sessionStartTime || 0,
+        seed: runSummary.seed || 0,
+        cheatedThisRun: isCheated,
       });
 
       if (feedback) {
         feedback.style.display = 'block';
-        if (result.remote) {
+        if (result.reason === 'CHEAT_FLAGGED') {
+          feedback.style.color = COLOR.RED;
+          feedback.textContent = result.message;
+        } else if (result.duplicate) {
+          feedback.style.color = COLOR.CYAN;
+          feedback.textContent = `✓ TELEMETRY CONFIRMED & ALREADY LOGGED (HASH: ${result.runHash})`;
+        } else if (result.remote) {
           feedback.style.color = COLOR.GREEN;
           feedback.textContent = `✓ TRANSMITTED TO EDGE! LEADERBOARD RANK: #${result.rank} // VERIFIED HASH: ${result.runHash}`;
           if (diagStatus) {
@@ -898,8 +939,8 @@ export class TerminalUI {
           }
         }
       }
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'TRANSMIT TELEMETRY';
+      submitBtn.disabled = isCheated;
+      submitBtn.textContent = isCheated ? 'TELEMETRY VOIDED' : 'TRANSMIT TELEMETRY';
       this.soundBank.playLevelUp();
     });
 

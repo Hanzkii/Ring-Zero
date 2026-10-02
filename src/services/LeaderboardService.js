@@ -28,6 +28,7 @@ export class LeaderboardService {
     this.isOnline = true;
     this.lastFetch = 0;
     this.cachedScores = null;
+    this.submittedRunHashes = new Set();
   }
 
   /**
@@ -149,6 +150,42 @@ export class LeaderboardService {
   }
 
   /**
+   * Deterministic Run Fingerprint (run_hash)
+   * SHA-256 of sessionStartTime_duration_score_waveNumber_seed (strictly excluding player callsign)
+   * @param {Object} params
+   * @returns {Promise<string>} 64-char hex string (first 16 chars used for display)
+   */
+  async computeRunHash({ sessionStartTime = 0, durationSeconds = 0, score = 0, waveNumber = 0, seed = 0 }) {
+    const canonical = `${Math.floor(sessionStartTime)}_${Math.floor(durationSeconds)}_${Math.floor(score)}_${Math.floor(waveNumber)}_${seed}`;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(canonical);
+
+    const subtle = (typeof window !== 'undefined' && window.crypto?.subtle)
+      || (typeof globalThis !== 'undefined' && globalThis.crypto?.subtle);
+
+    if (subtle) {
+      try {
+        const hashBuf = await subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hashBuf))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+      } catch (_) {}
+    }
+
+    try {
+      const nodeCrypto = await import('crypto');
+      return nodeCrypto.createHash('sha256').update(canonical).digest('hex');
+    } catch {
+      let h = 0;
+      for (let i = 0; i < canonical.length; i++) {
+        h = ((h << 5) - h) + canonical.charCodeAt(i);
+        h |= 0;
+      }
+      return Math.abs(h).toString(16).padStart(64, '0');
+    }
+  }
+
+  /**
    * Submits a completed run to Cloudflare Worker edge or queues offline
    * @param {Object} params
    * @param {string} [params.playerName='OPERATOR_0']
@@ -161,6 +198,9 @@ export class LeaderboardService {
    * @param {number} [params.accuracy=0]
    * @param {number} [params.riskMultiplier=1.0]
    * @param {number} [params.bountiesEarned=0]
+   * @param {number} [params.sessionStartTime=0]
+   * @param {number} [params.seed=0]
+   * @param {boolean} [params.cheatedThisRun=false]
    * @returns {Promise<{ success: boolean, runHash: string, rank?: number, remote: boolean, entry: Object }>}
    */
   async submitRun({
@@ -174,7 +214,22 @@ export class LeaderboardService {
     accuracy = 0,
     riskMultiplier = 1.0,
     bountiesEarned = 0,
+    sessionStartTime = 0,
+    seed = 0,
+    cheatedThisRun = false,
   }) {
+    // 1. Telemetry Invalidation on Cheat / Dev Console Usage
+    if (cheatedThisRun) {
+      console.warn('[SECURITY OVERRIDE: CHEAT / DEV COMMAND DETECTED. TELEMETRY VOIDED. LEADERBOARD BLOCKED.]');
+      return {
+        success: false,
+        reason: 'CHEAT_FLAGGED',
+        message: '[SECURITY OVERRIDE: CHEAT / DEV COMMAND DETECTED. TELEMETRY VOIDED. LEADERBOARD BLOCKED.]',
+        remote: false,
+        runHash: null,
+      };
+    }
+
     // Invalidate local cooldown on run submission to guarantee fresh telemetry
     this.lastFetch = 0;
     this.cachedScores = null;
@@ -185,6 +240,31 @@ export class LeaderboardService {
     const finalDuration = Math.floor(durationSeconds || 0);
     const finalRing = clearanceRing !== undefined ? clearanceRing : 3;
     const timestamp = Date.now();
+    const effectiveStartTime = sessionStartTime || (timestamp - finalDuration * 1000);
+
+    // 2. Deterministic Run Fingerprint (run_hash) - excludes player name so renames don't duplicate
+    const fullRunHash = await this.computeRunHash({
+      sessionStartTime: effectiveStartTime,
+      durationSeconds: finalDuration,
+      score: finalScore,
+      waveNumber: finalWave,
+      seed,
+    });
+    const runHash = fullRunHash.slice(0, 16);
+
+    // In-memory duplicate submission lock
+    if (this.submittedRunHashes.has(fullRunHash) || this.submittedRunHashes.has(runHash)) {
+      console.warn('[LEADERBOARD] Telemetry duplicate submission suppressed for run_hash:', runHash);
+      return {
+        success: true,
+        duplicate: true,
+        message: 'TELEMETRY_ALREADY_RECORDED',
+        runHash,
+        remote: false,
+      };
+    }
+    this.submittedRunHashes.add(fullRunHash);
+    this.submittedRunHashes.add(runHash);
 
     // Generate HMAC-SHA256 signature
     const signature = await this.signPayload(
@@ -202,8 +282,6 @@ export class LeaderboardService {
       bountiesEarned,
     });
 
-    const runHash = signature.slice(0, 16);
-
     const payload = {
       playerName: finalPlayerName,
       player_name: finalPlayerName,
@@ -220,15 +298,26 @@ export class LeaderboardService {
       created_at: timestamp,
       signature,
       checksum: legacyChecksum,
+      runHash,
+      run_hash: runHash,
+      full_run_hash: fullRunHash,
       accuracy: Number(Number(accuracy).toFixed(1)),
       riskMultiplier: Number(Number(riskMultiplier).toFixed(2)),
       bountiesEarned: Math.floor(bountiesEarned),
       verified: true,
     };
 
-    // Always update local persistent score history
+    // Update local persistent score history with deduplication (updates record if runHash matches)
     const localList = this.loadLocalScores();
-    localList.push(payload);
+    const existingIdx = localList.findIndex(
+      (item) => item.runHash === runHash || item.run_hash === runHash ||
+                (item.score === finalScore && item.waveNumber === finalWave && item.durationSeconds === finalDuration)
+    );
+    if (existingIdx !== -1) {
+      localList[existingIdx] = payload;
+    } else {
+      localList.push(payload);
+    }
     localList.sort((a, b) => b.score - a.score);
     this.saveLocalScores(localList.slice(0, 50));
 

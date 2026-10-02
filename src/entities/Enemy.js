@@ -96,6 +96,9 @@ export const ELITE_MODIFIER = {
   SHIELDED: 'SHIELDED',
   OVERCLOCKED: 'OVERCLOCKED',
   CLUSTER_SPLITTER: 'CLUSTER_SPLITTER',
+  PHASE_TELEPORTER: 'PHASE_TELEPORTER',
+  SHIELD_VANGUARD: 'SHIELD_VANGUARD',
+  VOLATILE_KAMIKAZE: 'VOLATILE_KAMIKAZE',
 };
 
 export class Enemy extends Entity {
@@ -125,6 +128,13 @@ export class Enemy extends Entity {
     this.maxShield = 0;
     this.isSplitter = false;
 
+    // All Elites receive 3x HP and 1.25x physical footprint
+    if (this.elite !== ELITE_MODIFIER.NONE) {
+      this.maxHealth = Math.round(this.maxHealth * 3);
+      this.health = this.maxHealth;
+      this.radius = Math.round(this.radius * 1.25);
+    }
+
     if (this.elite === ELITE_MODIFIER.SHIELDED) {
       this.maxShield = Math.round(this.maxHealth * 0.5);
       this.shield = this.maxShield;
@@ -133,6 +143,17 @@ export class Enemy extends Entity {
       this.color = COLOR.AMBER;
     } else if (this.elite === ELITE_MODIFIER.CLUSTER_SPLITTER) {
       this.isSplitter = true;
+    } else if (this.elite === ELITE_MODIFIER.PHASE_TELEPORTER) {
+      this.teleportTimer = 3.5;
+      this.glitchTimer = 0;
+      this.color = '#B026FF';
+    } else if (this.elite === ELITE_MODIFIER.SHIELD_VANGUARD) {
+      this.vanguardShield = Math.round(this.maxHealth * 0.5);
+      this.maxVanguardShield = this.vanguardShield;
+      this.color = COLOR.CYAN;
+    } else if (this.elite === ELITE_MODIFIER.VOLATILE_KAMIKAZE) {
+      this.color = '#FF3300';
+      this.isKamikaze = true;
     }
 
     // AI steering vectors
@@ -155,6 +176,28 @@ export class Enemy extends Entity {
    * @returns {boolean} Whether enemy died from this hit
    */
   takeDamage(amount, knockbackDir = null, knockbackImpulse = 120) {
+    // 75% knockback resistance for all elites
+    if (this.elite !== ELITE_MODIFIER.NONE) {
+      knockbackImpulse *= 0.25;
+    }
+
+    // Directional barrier for Shield Vanguard (front 120-degree cone)
+    if (this.elite === ELITE_MODIFIER.SHIELD_VANGUARD && this.vanguardShield > 0 && knockbackDir) {
+      const incomingAngle = Math.atan2(-knockbackDir.y, -knockbackDir.x);
+      const diff = Math.abs(normalizeAngle(incomingAngle - this.rotation));
+      if (diff <= Math.PI / 3) {
+        const absorbed = Math.min(this.vanguardShield, amount);
+        this.vanguardShield -= absorbed;
+        amount -= absorbed;
+        this.hitFlashTimer = 0.08;
+        if (amount <= 0) {
+          this.vx += knockbackDir.x * (knockbackImpulse * 0.2);
+          this.vy += knockbackDir.y * (knockbackImpulse * 0.2);
+          return false;
+        }
+      }
+    }
+
     if (this.shield > 0) {
       const absorbed = Math.min(this.shield, amount);
       this.shield -= absorbed;
@@ -211,6 +254,30 @@ export class Enemy extends Entity {
     const dy = player.y - this.y;
     const distToPlayer = Math.sqrt(dx * dx + dy * dy);
 
+    // Phase Teleporter logic: 150px periodic blink every 3.5s
+    if (this.elite === ELITE_MODIFIER.PHASE_TELEPORTER) {
+      this.teleportTimer -= dt;
+      if (this.teleportTimer <= 0) {
+        this.teleportTimer = 3.5;
+        const blinkAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.8;
+        this.prevX = this.x;
+        this.prevY = this.y;
+        this.x += Math.cos(blinkAngle) * 150;
+        this.y += Math.sin(blinkAngle) * 150;
+        const hw = 1200 - 64;
+        const hh = 1200 - 64;
+        this.x = Math.max(-hw, Math.min(hw, this.x));
+        this.y = Math.max(-hh, Math.min(hh, this.y));
+        this.glitchTimer = 0.25;
+      }
+    }
+
+    // Volatile Kamikaze: +60% speed when within 320px
+    let activeSpeed = this.speed;
+    if (this.elite === ELITE_MODIFIER.VOLATILE_KAMIKAZE && distToPlayer <= 320) {
+      activeSpeed *= 1.6;
+    }
+
     // Desired velocity vector
     let desiredVx = 0;
     let desiredVy = 0;
@@ -219,11 +286,11 @@ export class Enemy extends Entity {
       // Sentinel maintains standoff range (320px) and fires pulses
       const standoff = 320;
       if (distToPlayer > standoff + 40) {
-        desiredVx = (dx / distToPlayer) * this.speed;
-        desiredVy = (dy / distToPlayer) * this.speed;
+        desiredVx = (dx / distToPlayer) * activeSpeed;
+        desiredVy = (dy / distToPlayer) * activeSpeed;
       } else if (distToPlayer < standoff - 40) {
-        desiredVx = -(dx / distToPlayer) * this.speed;
-        desiredVy = -(dy / distToPlayer) * this.speed;
+        desiredVx = -(dx / distToPlayer) * activeSpeed;
+        desiredVy = -(dy / distToPlayer) * activeSpeed;
       }
 
       // Ranged pulse attack
@@ -246,8 +313,8 @@ export class Enemy extends Entity {
     } else {
       // Direct chase for swarmer archetypes
       if (distToPlayer > 1) {
-        desiredVx = (dx / distToPlayer) * this.speed;
-        desiredVy = (dy / distToPlayer) * this.speed;
+        desiredVx = (dx / distToPlayer) * activeSpeed;
+        desiredVy = (dy / distToPlayer) * activeSpeed;
       }
     }
 
@@ -291,13 +358,15 @@ export class Enemy extends Entity {
    */
   generateDrops(clearanceRing = 3) {
     const drops = [];
+    const isElite = this.elite !== ELITE_MODIFIER.NONE;
+    const finalXp = isElite ? this.xpValue * 2 : this.xpValue;
 
     // Always drop Memory Fragment XP
-    drops.push(new Drop(this.x, this.y, DROP_TYPE.XP, { xpValue: this.xpValue }));
+    drops.push(new Drop(this.x, this.y, DROP_TYPE.XP, { xpValue: finalXp }));
 
-    // Chance to drop Crypto Bounties (45% chance)
-    if (Math.random() < 0.45) {
-      const cryptoValue = Math.floor(randomRange(8, 22));
+    // Chance to drop Crypto Bounties (45% chance or 100% on elite)
+    if (isElite || Math.random() < 0.45) {
+      const cryptoValue = Math.floor(randomRange(8, 22)) * (isElite ? 2 : 1);
       drops.push(
         new Drop(this.x + randomRange(-12, 12), this.y + randomRange(-12, 12), DROP_TYPE.CRYPTO, {
           cryptoValue,
@@ -568,6 +637,44 @@ export class Enemy extends Entity {
       }
     }
 
+    // Rotating elite aura / brackets
+    if (this.elite !== ELITE_MODIFIER.NONE) {
+      ctx.save();
+      ctx.rotate(this.pulsePhase * 1.5);
+      const bracketColor = this.elite === ELITE_MODIFIER.PHASE_TELEPORTER ? '#D000FF' :
+                           this.elite === ELITE_MODIFIER.VOLATILE_KAMIKAZE ? '#FF3300' :
+                           this.elite === ELITE_MODIFIER.SHIELD_VANGUARD ? COLOR.CYAN : COLOR.AMBER;
+      VectorRenderer.drawTargetBracket(ctx, 0, 0, r * 1.55, bracketColor, 5);
+      ctx.restore();
+    }
+
+    // Directional forward energy barrier for Shield Vanguard
+    if (this.elite === ELITE_MODIFIER.SHIELD_VANGUARD && this.vanguardShield > 0) {
+      ctx.save();
+      ctx.strokeStyle = COLOR.CYAN;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.45, -Math.PI / 3, Math.PI / 3);
+      ctx.stroke();
+      ctx.strokeStyle = COLOR.WHITE;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.6, -Math.PI / 4, Math.PI / 4);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Chromatic glitch trails for Phase Teleporter
+    if (this.glitchTimer > 0) {
+      this.glitchTimer -= 0.016;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 0, 85, 0.7)';
+      ctx.strokeRect(-r - 3, -r - 1, r * 2, r * 2);
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.7)';
+      ctx.strokeRect(-r + 3, -r + 1, r * 2, r * 2);
+      ctx.restore();
+    }
+
     // Rotating shield perimeter if active
     if (this.shield > 0) {
       ctx.save();
@@ -579,20 +686,25 @@ export class Enemy extends Entity {
       ctx.restore();
     }
 
-    // Health bar overhead if damaged or boss
-    if (this.health < this.maxHealth || this.isBoss || this.shield > 0) {
+    // Health bar overhead if damaged, boss, or elite
+    const hasVanguard = this.elite === ELITE_MODIFIER.SHIELD_VANGUARD && this.vanguardShield > 0;
+    if (this.health < this.maxHealth || this.isBoss || this.shield > 0 || hasVanguard || this.elite !== ELITE_MODIFIER.NONE) {
       ctx.rotate(-this.rotation); // Keep health bar horizontal
       const barW = this.isBoss ? r * 2.5 : r * 1.8;
       const barH = this.isBoss ? 4 : 2;
       const pct = Math.max(0, this.health / this.maxHealth);
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(-barW * 0.5, -r - 12, barW, barH);
-      ctx.fillStyle = this.isBoss ? '#FF0055' : COLOR.RED;
+      ctx.fillStyle = this.isBoss ? '#FF0055' : (this.elite !== ELITE_MODIFIER.NONE ? COLOR.AMBER : COLOR.RED);
       ctx.fillRect(-barW * 0.5, -r - 12, barW * pct, barH);
       if (this.shield > 0) {
         const shieldPct = Math.min(1.0, this.shield / this.maxShield);
         ctx.fillStyle = COLOR.CYAN;
         ctx.fillRect(-barW * 0.5, -r - 15, barW * shieldPct, 2);
+      } else if (hasVanguard) {
+        const vanguardPct = Math.min(1.0, this.vanguardShield / this.maxVanguardShield);
+        ctx.fillStyle = COLOR.CYAN;
+        ctx.fillRect(-barW * 0.5, -r - 15, barW * vanguardPct, 2);
       }
       if (this.isBoss) {
         ctx.font = 'bold 9px monospace';

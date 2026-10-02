@@ -3,7 +3,7 @@
  * State machine, high-DPI canvas orchestration, fixed simulation dispatch, and vector telemetry rendering.
  */
 
-import { SIMULATION, COLOR, WORLD, COLLISION_LAYER, PLAYER_CONFIG } from './Constants.js';
+import { SIMULATION, COLOR, WORLD, COLLISION_LAYER, PLAYER_CONFIG, CLEARANCE_RING, SECTOR_THEMES } from './Constants.js';
 import { GameLoop } from './GameLoop.js';
 import { InputManager } from './InputManager.js';
 import { Camera2D } from './Camera2D.js';
@@ -30,7 +30,7 @@ import { SoundBank } from '../audio/SoundBank.js';
 import { StorageService } from '../services/StorageService.js';
 import { LeaderboardService } from '../services/LeaderboardService.js';
 import { TerminalUI } from '../ui/TerminalUI.js';
-import { WEAPON_ARCHETYPES, WeaponInstance, getUnlockedWeaponsForWave } from '../systems/WeaponSystem.js';
+import { WEAPON_ARCHETYPES, WeaponInstance, getUnlockedWeaponsForWave, getEscalationWeaponsForRing } from '../systems/WeaponSystem.js';
 import { PickupSystem } from '../systems/PickupSystem.js';
 import { SynthMusic, MUSIC_INTENSITY } from '../audio/SynthMusic.js';
 import { DebugRenderer } from '../ui/DebugRenderer.js';
@@ -44,6 +44,7 @@ export const APP_STATE = {
   DRAFT: 'DRAFT',
   PAUSED: 'PAUSED',
   ARSENAL: 'ARSENAL',
+  ESCALATION_DRAFT: 'ESCALATION_DRAFT',
   GAMEOVER: 'GAMEOVER',
 };
 
@@ -199,6 +200,12 @@ export class GameApp {
     };
 
     this._lastMusicWave = 0;
+    this.cheatedThisRun = false;
+    this.clearanceRing = 2;
+    this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_2];
+    this.ringTransitionTimer = 0;
+    this.hazards = [];
+
     this._onSentinelShoot = (pulseParams) => {
       const p = this.projectilePool.obtain();
       if (p) p.spawn(pulseParams);
@@ -228,6 +235,10 @@ export class GameApp {
       // Milestone waves (Wave 3, Wave 6, Wave 10) trigger Arsenal Selection
       if (waveNum === 3 || waveNum === 6 || waveNum === 10) {
         this.openArsenalModal(waveNum);
+      } else if (waveNum === 15) {
+        this.elevateClearance(1);
+      } else if (waveNum === 30) {
+        this.elevateClearance(0);
       }
     };
 
@@ -241,6 +252,7 @@ export class GameApp {
       cheatManager: this.cheatManager,
       soundBank: this.soundBank,
       achievementSystem: this.achievementSystem,
+      onSpawnHazard: (x, y, r, d, dps) => this.spawnHazard(x, y, r, d, dps),
     });
 
     // Procedural World Architecture & Raycasting
@@ -317,6 +329,71 @@ export class GameApp {
     for (const prop of this.props) {
       this.spatialGrid.insert(prop);
     }
+  }
+
+  /**
+   * Spawns a lingering area hazard that damages the player on contact
+   * @param {number} x
+   * @param {number} y
+   * @param {number} [radius=55]
+   * @param {number} [duration=3.0]
+   * @param {number} [dps=30]
+   */
+  spawnHazard(x, y, radius = 55, duration = 3.0, dps = 30) {
+    this.hazards.push({
+      x,
+      y,
+      radius,
+      duration,
+      maxDuration: duration,
+      dps,
+    });
+  }
+
+  /**
+   * Elevates clearance ring (Supervisor Ring 1 or Pure Kernel Ring 0)
+   * @param {number} targetRing - 1 (Supervisor) or 0 (Pure Kernel)
+   */
+  elevateClearance(targetRing) {
+    this.clearanceRing = targetRing;
+    const ringKey = targetRing === 0 ? CLEARANCE_RING.RING_0 : CLEARANCE_RING.RING_1;
+    this.currentSectorTheme = SECTOR_THEMES[ringKey];
+    this.ringTransitionTimer = 0.5;
+
+    // Full integrity restore & camera punch
+    this.player.health = this.player.maxHealth;
+    this.camera.addTrauma(0.5);
+
+    // Crossfade into aggressive sector darksynth OST
+    if (this.synthMusic) {
+      this.synthMusic.crossfadeToTrack(this.currentSectorTheme.track, 1.0);
+    }
+
+    // Elevate cheat manager clearance and persistent storage
+    this.cheatManager.clearanceRing = targetRing;
+    this.storage.setClearanceRing(targetRing);
+
+    // Dynamic arena shift: Supervisor -> Cavern chokepoints; Kernel -> High-density Facility core
+    const newBiome = targetRing === 0 ? 'facility' : 'cavern';
+    this.loadMap(newBiome, 8192 + targetRing);
+
+    // Trigger Clearance Escalation Weapon Draft
+    this.state = APP_STATE.ESCALATION_DRAFT;
+    const weapons = getEscalationWeaponsForRing(targetRing);
+    this.draftModal.openEscalationDraft({
+      targetRing,
+      weapons,
+      currentWeapon: this.weaponSystem.activeWeapon,
+      onSelectWeapon: (chosenWpn) => {
+        this.weaponSystem.setSlot(1, new WeaponInstance(chosenWpn));
+        this.state = APP_STATE.RUN;
+      },
+      onKeepCurrent: () => {
+        this.storage.addCrypto(2500);
+        this.soundBank?.playPurchase();
+        this.state = APP_STATE.RUN;
+      },
+    });
   }
 
   /**
@@ -455,6 +532,9 @@ export class GameApp {
       bountiesEarned: this.player.bounties || 0,
       clearanceRing: this.storage.clearanceRing,
       durationSeconds,
+      sessionStartTime: this.runStartTime,
+      seed: this.currentSeed,
+      cheatedThisRun: this.cheatedThisRun,
     };
 
     this.terminalUI.showRunDiagnostic(summary);
@@ -495,11 +575,16 @@ export class GameApp {
     this.score = 0;
     this.stats = { shotsFired: 0, shotsHit: 0, enemiesKilled: 0 };
     this.runStartTime = Date.now();
+    this.cheatedThisRun = false;
+    this.clearanceRing = 2;
+    this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_2];
+    this.ringTransitionTimer = 0;
+    this.hazards.length = 0;
     this.achievementSystem?.resetRun();
 
     // 2. Clear and teardown cheats
     this.cheatManager.reset();
-    this.cheatManager.clearanceRing = this.storage.clearanceRing;
+    this.cheatManager.clearanceRing = 2;
 
     // 3. Reset weapons with Tier 0 baseline sidearms
     this.weaponSystem.cheatManager = this.cheatManager;
@@ -659,10 +744,50 @@ export class GameApp {
       return;
     }
 
+    // Ring transition screen glitch timer
+    if (this.ringTransitionTimer > 0) {
+      this.ringTransitionTimer = Math.max(0, this.ringTransitionTimer - dt);
+    }
+
+    // Active Area Hazards
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      const h = this.hazards[i];
+      h.duration -= dt;
+      if (h.duration <= 0) {
+        this.hazards.splice(i, 1);
+        continue;
+      }
+
+      const hdx = this.player.x - h.x;
+      const hdy = this.player.y - h.y;
+      const hdistSq = hdx * hdx + hdy * hdy;
+      const hitRadius = h.radius + this.player.radius;
+      if (hdistSq <= hitRadius * hitRadius) {
+        this.player.takeDamage(h.dps * dt, this.cheatManager, {
+          isHazard: true,
+          camera: this.camera,
+          soundBank: this.soundBank,
+        });
+        if (Math.random() < 0.15) {
+          this.particleSystem.emitBurst(this.player.x, this.player.y, 2, '#FF3300', 120);
+        }
+      }
+    }
+
     // Rootkit Kernel EMP Purge KeyF trigger
     if (this.input.isKeyJustPressed('KeyF')) {
-      // HOTFIX: Temporarily disabled to prevent RAF crash until full refactor
-      console.warn('[SECURITY] Rootkit Screen Purge temporarily offline.');
+      const rootkit = this.cheatManager.getCheat('rootkit');
+      if (rootkit && rootkit.trigger({
+        player: this.player,
+        enemies: this.enemies,
+        projectilePool: this.projectilePool,
+        spatialGrid: this.spatialGrid,
+        camera: this.camera,
+        particleSystem: this.particleSystem,
+        soundBank: this.soundBank,
+      })) {
+        this.soundBank.playGlitchTick();
+      }
     }
 
     // Toggle Spatial Grid Debug with 'KeyG'
@@ -727,10 +852,10 @@ export class GameApp {
     this.player.y = Math.max(-halfH, Math.min(halfH, this.player.y));
     this.spatialGrid.update(this.player);
 
-    // Dynamic music track rotation per wave progression
+    // Dynamic music track rotation per wave progression and clearance ring
     if (this.waveManager.waveNumber !== this._lastMusicWave) {
       this._lastMusicWave = this.waveManager.waveNumber;
-      this.synthMusic?.setTrackForWave(this.waveManager.waveNumber);
+      this.synthMusic?.setTrackForRing(this.clearanceRing, this.waveManager.waveNumber);
     }
 
     // Wave Director Update
@@ -840,6 +965,9 @@ export class GameApp {
         bountiesEarned: this.player.bounties || 0,
         clearanceRing: this.storage.clearanceRing,
         durationSeconds,
+        sessionStartTime: this.runStartTime,
+        seed: this.currentSeed,
+        cheatedThisRun: this.cheatedThisRun,
       };
 
       this.terminalUI.showRunDiagnostic(summary);
@@ -868,7 +996,15 @@ export class GameApp {
     this.camera.begin(ctx, alpha);
 
     // 1. Draw World Coordinate Grid
-    VectorRenderer.drawWorldGrid(ctx, bounds, 64, 4);
+    VectorRenderer.drawWorldGrid(
+      ctx,
+      bounds,
+      64,
+      4,
+      this.currentSectorTheme.gridMinor,
+      this.currentSectorTheme.gridMajor,
+      this.currentSectorTheme.accentDim
+    );
 
     // 2. Draw Arena Boundaries
     this._renderWorldBoundaries(ctx);
@@ -893,22 +1029,32 @@ export class GameApp {
       drop.render(ctx, alpha);
     }
 
-    // 7. Render Security Daemons
+    // 7. Render Lingering Area Hazards
+    for (const h of this.hazards) {
+      ctx.save();
+      const alphaPct = Math.max(0.2, h.duration / h.maxDuration);
+      VectorRenderer.strokeCircle(ctx, h.x, h.y, h.radius, `rgba(255, 51, 0, ${alphaPct * 0.8})`, 2);
+      const pulseR = h.radius * (0.3 + 0.6 * (1 - (h.duration % 0.8) / 0.8));
+      VectorRenderer.strokeCircle(ctx, h.x, h.y, pulseR, `rgba(255, 120, 0, ${alphaPct * 0.5})`, 1);
+      ctx.restore();
+    }
+
+    // 8. Render Security Daemons
     for (const enemy of this.enemies) {
       enemy.render(ctx, alpha);
     }
 
-    // 8. Render Player Cyber-Chassis
+    // 9. Render Player Cyber-Chassis
     if (this.player.health > 0) {
       this.player.render(ctx, alpha);
     }
 
-    // 9. Render Projectiles
+    // 10. Render Projectiles
     this.projectilePool.forEachActive((proj) => {
       proj.render(ctx, alpha);
     });
 
-    // 10. Render Vector Particles
+    // 11. Render Vector Particles
     this.particleSystem.render(ctx, alpha);
 
     // 11. 2D Dynamic Line-of-Sight Fog of War (Forward Vision Cone following crosshair)
@@ -965,20 +1111,20 @@ export class GameApp {
     const hh = WORLD.DEFAULT_HEIGHT * 0.5;
 
     ctx.save();
-    ctx.strokeStyle = COLOR.CYAN_DIM;
+    ctx.strokeStyle = this.currentSectorTheme.accentDim;
     ctx.lineWidth = 2;
     ctx.strokeRect(-hw, -hh, WORLD.DEFAULT_WIDTH, WORLD.DEFAULT_HEIGHT);
 
     // Perimeter warning accents
-    VectorRenderer.drawTargetBracket(ctx, -hw, -hh, 32, COLOR.CYAN);
-    VectorRenderer.drawTargetBracket(ctx, hw, -hh, 32, COLOR.CYAN);
-    VectorRenderer.drawTargetBracket(ctx, hw, hh, 32, COLOR.CYAN);
-    VectorRenderer.drawTargetBracket(ctx, -hw, hh, 32, COLOR.CYAN);
+    VectorRenderer.drawTargetBracket(ctx, -hw, -hh, 32, this.currentSectorTheme.accent);
+    VectorRenderer.drawTargetBracket(ctx, hw, -hh, 32, this.currentSectorTheme.accent);
+    VectorRenderer.drawTargetBracket(ctx, hw, hh, 32, this.currentSectorTheme.accent);
+    VectorRenderer.drawTargetBracket(ctx, -hw, hh, 32, this.currentSectorTheme.accent);
 
     ctx.font = '10px monospace';
-    ctx.fillStyle = COLOR.CYAN_MUTED;
+    ctx.fillStyle = this.currentSectorTheme.accentDim;
     ctx.textAlign = 'center';
-    ctx.fillText('// HIGH-FREQUENCY MEMORY BUS // ARENA PERIMETER //', 0, -hh + 20);
+    ctx.fillText(`// HIGH-FREQUENCY MEMORY BUS // ${this.currentSectorTheme.name} //`, 0, -hh + 20);
     ctx.restore();
   }
 
@@ -1069,13 +1215,13 @@ export class GameApp {
     // 1. Top-Left: System Telemetry Card
     const tlW = 280;
     const tlH = 58;
-    this._renderVectorPanel(ctx, 16, 16, tlW, tlH, 'rgba(0, 240, 255, 0.25)');
+    this._renderVectorPanel(ctx, 16, 16, tlW, tlH, this.currentSectorTheme.accentDim);
 
     ctx.font = 'bold 12px monospace';
-    ctx.fillStyle = COLOR.CYAN;
+    ctx.fillStyle = this.currentSectorTheme.accent;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('RING ZERO // KERNEL RUNTIME', 26, 23);
+    ctx.fillText(`${this.currentSectorTheme.name} // RUNTIME`, 26, 23);
 
     ctx.font = '10px monospace';
     ctx.fillStyle = COLOR.WHITE_DIM;
@@ -1255,6 +1401,36 @@ export class GameApp {
     // 7. Cyber-Clearance Achievement Toasts
     if (this.achievementSystem) {
       this.achievementSystem.renderToasts(ctx, w);
+    }
+
+    // 8. Full-screen CRT Glitch Flash & Tactical Elevation Banner
+    if (this.ringTransitionTimer > 0) {
+      const flashAlpha = this.ringTransitionTimer / 0.5;
+      ctx.save();
+      ctx.fillStyle = this.currentSectorTheme.id === CLEARANCE_RING.RING_0
+        ? `rgba(255, 0, 60, ${flashAlpha * 0.35})`
+        : `rgba(255, 176, 0, ${flashAlpha * 0.30})`;
+      ctx.fillRect(0, 0, w, h);
+
+      // Horizontal CRT glitch scanlines
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      const scanCount = 8;
+      for (let s = 0; s < scanCount; s++) {
+        const sy = (Math.sin(s * 1.5 + performance.now() * 0.02) * 0.5 + 0.5) * h;
+        ctx.fillRect(0, sy, w, 2 + Math.random() * 4);
+      }
+
+      // Tactical Elevation Banner
+      ctx.font = 'bold 22px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = this.currentSectorTheme.accent;
+      ctx.shadowBlur = 14;
+      ctx.fillText(`[CLEARANCE ELEVATION: ${this.currentSectorTheme.name} GRANTED]`, w * 0.5, h * 0.35);
+      ctx.font = '13px monospace';
+      ctx.fillStyle = this.currentSectorTheme.accent;
+      ctx.fillText(this.currentSectorTheme.description, w * 0.5, h * 0.35 + 28);
+      ctx.restore();
     }
 
     ctx.restore();

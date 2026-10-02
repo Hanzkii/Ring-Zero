@@ -195,12 +195,109 @@ export const WEAPON_ARCHETYPES = {
     recoilTrauma: 0.12,
     description: 'Volatile cluster ordnance detonating into secondary corrosive sub-munitions.',
   },
+  PLASMA_FLAMER: {
+    id: 'plasma_flamer',
+    name: 'Plasma Flamer',
+    tier: 1,
+    mode: 'auto',
+    damage: 18,
+    pellets: 2,
+    spreadDeg: 12.0,
+    speed: 750,
+    fireRate: 15.0,
+    clipSize: 60,
+    reloadTime: 1.6,
+    pierce: 4,
+    color: '#FF7700',
+    knockback: 40,
+    recoilTrauma: 0.03,
+    description: 'High-temperature thermal stream incinerating approaching swarms.',
+  },
+  CRYO_INJECTOR: {
+    id: 'cryo_injector',
+    name: 'Cryo Injector',
+    tier: 1,
+    mode: 'auto',
+    damage: 26,
+    pellets: 1,
+    spreadDeg: 2.0,
+    speed: 1400,
+    fireRate: 8.0,
+    clipSize: 24,
+    reloadTime: 1.1,
+    pierce: 2,
+    color: COLOR.CYAN,
+    knockback: 110,
+    recoilTrauma: 0.05,
+    description: 'Sub-zero cryo darts penetrating light armor with high muzzle velocity.',
+  },
+
+  // --- KERNEL LEVEL: Pure Ring 0 Hardware ---
+  QUANTUM_BEAM: {
+    id: 'quantum_beam',
+    name: 'Quantum Beam',
+    tier: 0,
+    mode: 'auto',
+    damage: 65,
+    pellets: 1,
+    spreadDeg: 0.0,
+    speed: 3200,
+    fireRate: 8.5,
+    clipSize: 30,
+    reloadTime: 1.8,
+    pierce: 8,
+    canPierceWalls: true,
+    color: '#00F0FF',
+    knockback: 250,
+    recoilTrauma: 0.15,
+    description: 'Relativistic quantum energy beam vaporizing everything along its trajectory.',
+  },
+  HOMING_SWARM: {
+    id: 'homing_swarm',
+    name: 'Homing Swarm',
+    tier: 0,
+    mode: 'auto',
+    damage: 38,
+    pellets: 4,
+    spreadDeg: 25.0,
+    speed: 1200,
+    fireRate: 4.0,
+    clipSize: 20,
+    reloadTime: 1.5,
+    pierce: 2,
+    isCluster: true,
+    clusterCount: 2,
+    color: '#FFB000',
+    knockback: 160,
+    recoilTrauma: 0.10,
+    description: 'Multi-vector guided cluster micro-missiles overwhelming entire hostiles sectors.',
+  },
+  DESYNC_GRENADE: {
+    id: 'desync_grenade',
+    name: 'Desync Grenade',
+    tier: 0,
+    mode: 'semi',
+    damage: 240,
+    pellets: 1,
+    spreadDeg: 1.0,
+    speed: 1000,
+    fireRate: 1.2,
+    clipSize: 4,
+    reloadTime: 2.2,
+    pierce: 1,
+    isCluster: true,
+    clusterCount: 6,
+    color: '#FF003C',
+    knockback: 500,
+    recoilTrauma: 0.40,
+    description: 'Massive temporal distortion explosive detonating into high-yield cluster fragments.',
+  },
 };
 
 export const WEAPON_TIERS = {
   TIER_0: [WEAPON_ARCHETYPES.PISTOL_SYS, WEAPON_ARCHETYPES.PULSE_SMG, WEAPON_ARCHETYPES.SCRAP_BLASTER],
-  TIER_1: [WEAPON_ARCHETYPES.KERNEL_PISTOL, WEAPON_ARCHETYPES.COMBAT_SWEEPER, WEAPON_ARCHETYPES.FLAK_SUBMACHINE, WEAPON_ARCHETYPES.ROTARY_MINIGUN],
-  TIER_2: [WEAPON_ARCHETYPES.VECTOR_RAILGUN, WEAPON_ARCHETYPES.MEMORY_CORRUPTOR],
+  TIER_1: [WEAPON_ARCHETYPES.KERNEL_PISTOL, WEAPON_ARCHETYPES.COMBAT_SWEEPER, WEAPON_ARCHETYPES.FLAK_SUBMACHINE, WEAPON_ARCHETYPES.ROTARY_MINIGUN, WEAPON_ARCHETYPES.PLASMA_FLAMER, WEAPON_ARCHETYPES.CRYO_INJECTOR],
+  TIER_2: [WEAPON_ARCHETYPES.VECTOR_RAILGUN, WEAPON_ARCHETYPES.MEMORY_CORRUPTOR, WEAPON_ARCHETYPES.QUANTUM_BEAM, WEAPON_ARCHETYPES.HOMING_SWARM, WEAPON_ARCHETYPES.DESYNC_GRENADE],
 };
 
 /**
@@ -217,6 +314,27 @@ export function getUnlockedWeaponsForWave(waveNum) {
     list.push(...WEAPON_TIERS.TIER_2);
   }
   return list;
+}
+
+/**
+ * Returns 3 tier-appropriate weapons for Ring Clearance Escalation Draft
+ * @param {number|string} targetRing - 1 or 0 ('RING_1' or 'RING_0')
+ * @returns {Array<Object>}
+ */
+export function getEscalationWeaponsForRing(targetRing) {
+  if (targetRing === 0 || targetRing === 'RING_0') {
+    return [
+      WEAPON_ARCHETYPES.QUANTUM_BEAM,
+      WEAPON_ARCHETYPES.HOMING_SWARM,
+      WEAPON_ARCHETYPES.DESYNC_GRENADE,
+    ];
+  }
+  // Default to Ring 1 (Supervisor)
+  return [
+    WEAPON_ARCHETYPES.VECTOR_RAILGUN,
+    WEAPON_ARCHETYPES.PLASMA_FLAMER,
+    WEAPON_ARCHETYPES.CRYO_INJECTOR,
+  ];
 }
 
 export class WeaponInstance {

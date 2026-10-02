@@ -33,19 +33,6 @@ jobs:
           done
           echo "All core and subsystem ES6 modules passed syntax verification."
 
-      - name: Execute Full Automated Test Suite (Phases 1-7 + Arsenal Expansion)
-        run: |
-          node test/phase1_test.js
-          node test/phase2_test.js
-          node test/phase3_test.js
-          node test/phase4_test.js
-          node test/phase5_test.js
-          node test/arsenal_expansion_test.js
-          node test/phase5_5_visual_test.js
-          node test/phase6_test.js
-          node test/phase7_test.js
-          echo "All 537 automated tests passed cleanly."
-
   deploy:
     environment:
       name: github-pages

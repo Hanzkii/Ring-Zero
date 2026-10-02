@@ -558,6 +558,9 @@ export class DebugConsole {
 
   _executePrivileged(cmd, arg1, arg2) {
     const app = this.gameApp;
+    if (app) {
+      app.cheatedThisRun = true;
+    }
 
     switch (cmd) {
       case 'god': {

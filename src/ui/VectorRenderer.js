@@ -183,8 +183,11 @@ export class VectorRenderer {
    * @param {{minX: number, minY: number, maxX: number, maxY: number}} bounds
    * @param {number} [minorStep=64]
    * @param {number} [majorMultiplier=4]
+   * @param {string} [gridMinor=COLOR.GRID_MINOR]
+   * @param {string} [gridMajor=COLOR.GRID_MAJOR]
+   * @param {string} [crosshairColor=COLOR.CYAN_DIM]
    */
-  static drawWorldGrid(ctx, bounds, minorStep = 64, majorMultiplier = 4) {
+  static drawWorldGrid(ctx, bounds, minorStep = 64, majorMultiplier = 4, gridMinor = COLOR.GRID_MINOR, gridMajor = COLOR.GRID_MAJOR, crosshairColor = COLOR.CYAN_DIM) {
     const majorStep = minorStep * majorMultiplier;
 
     const startX = Math.floor(bounds.minX / minorStep) * minorStep;
@@ -196,7 +199,7 @@ export class VectorRenderer {
     ctx.lineWidth = 1;
 
     // Minor lines
-    ctx.strokeStyle = COLOR.GRID_MINOR;
+    ctx.strokeStyle = gridMinor;
     ctx.beginPath();
     for (let x = startX; x <= endX; x += minorStep) {
       if (x % majorStep !== 0) {
@@ -213,7 +216,7 @@ export class VectorRenderer {
     ctx.stroke();
 
     // Major lines
-    ctx.strokeStyle = COLOR.GRID_MAJOR;
+    ctx.strokeStyle = gridMajor;
     ctx.beginPath();
     for (let x = startX; x <= endX; x += minorStep) {
       if (x % majorStep === 0) {
@@ -230,7 +233,7 @@ export class VectorRenderer {
     ctx.stroke();
 
     // Coordinate crosshairs at major intersections
-    ctx.strokeStyle = COLOR.CYAN_DIM;
+    ctx.strokeStyle = crosshairColor;
     const crossSize = 4;
     ctx.beginPath();
     for (let x = startX; x <= endX; x += majorStep) {
