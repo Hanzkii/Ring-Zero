@@ -408,19 +408,21 @@ export class GameApp {
       currentWeapon: this.weaponSystem.activeWeapon,
       onSelectWeapon: (chosenWpn) => {
         const newWeapon = new WeaponInstance(chosenWpn);
+        const slot = (typeof this.weaponSystem.activeSlot === 'number')
+          ? this.weaponSystem.activeSlot
+          : 0;
 
-        if (typeof this.weaponSystem.setWeapon === 'function') {
-          this.weaponSystem.setWeapon(newWeapon);
-        } else if (typeof this.weaponSystem.equip === 'function') {
-          this.weaponSystem.equip(newWeapon);
-        } else {
-          this.weaponSystem.activeWeapon = newWeapon;
+        if (!Array.isArray(this.weaponSystem.slots)) {
+          this.weaponSystem.slots = [];
         }
+        this.weaponSystem.slots[slot] = newWeapon;
 
         if (this.player) {
           this.player.weapon = newWeapon;
         }
 
+        this.soundBank?.playLevelUp();
+        this.particleSystem?.emitBurst(this.player.x, this.player.y, 25, COLOR?.CYAN || '#00f0ff', 300);
         this.state = APP_STATE.RUN;
       },
       onKeepCurrent: () => {
