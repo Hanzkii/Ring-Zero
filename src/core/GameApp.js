@@ -407,7 +407,20 @@ export class GameApp {
       weapons,
       currentWeapon: this.weaponSystem.activeWeapon,
       onSelectWeapon: (chosenWpn) => {
-        this.weaponSystem.setSlot(1, new WeaponInstance(chosenWpn));
+        const newWeapon = new WeaponInstance(chosenWpn);
+
+        if (typeof this.weaponSystem.setWeapon === 'function') {
+          this.weaponSystem.setWeapon(newWeapon);
+        } else if (typeof this.weaponSystem.equip === 'function') {
+          this.weaponSystem.equip(newWeapon);
+        } else {
+          this.weaponSystem.activeWeapon = newWeapon;
+        }
+
+        if (this.player) {
+          this.player.weapon = newWeapon;
+        }
+
         this.state = APP_STATE.RUN;
       },
       onKeepCurrent: () => {
