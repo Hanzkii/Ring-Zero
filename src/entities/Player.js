@@ -131,7 +131,7 @@ export class Player extends Entity {
 
   /**
    * Applies tactile weapon recoil kick and barrel muzzle climb.
-   * Only pushes along the camera/aim axis and does not zero out player strafing inertia.
+   * Visual kickback does not cancel or zero out player strafing inertia.
    * @param {number} [trauma=0.1]
    * @param {number} [aimAngle=null]
    */
@@ -139,9 +139,9 @@ export class Player extends Entity {
     this.recoilKickOffset = Math.min(8, this.recoilKickOffset + trauma * 16);
     this.recoilClimbAngle += (Math.random() - 0.5) * trauma * 0.25;
 
-    // Recoil impulse along the aim axis without zeroing or damping player strafe inertia
+    // Soft tactile impulse along aim axis that preserves player strafing inertia
     if (aimAngle !== null && typeof aimAngle === 'number') {
-      const impulse = trauma * 8.0;
+      const impulse = trauma * 2.0;
       this.vx -= Math.cos(aimAngle) * impulse;
       this.vy -= Math.sin(aimAngle) * impulse;
     }
@@ -199,21 +199,23 @@ export class Player extends Entity {
 
   /**
    * Updates player kinematics, dash timers, and facing orientation
+   * Clamps dt to prevent teleportation spikes during frame drops.
    * @param {number} dt - Fixed simulation step
    * @param {Vec2} moveDir - Normalized input movement vector
    * @param {number} aimAngle - Aim orientation from mouse pointer
    */
   updateKinematics(dt, moveDir, aimAngle) {
+    const clampedDt = Math.min(dt, 0.1);
     this.preStep();
-    this.animTime += dt;
+    this.animTime += clampedDt;
 
     // Smooth tactile weapon recoil decay
-    this.recoilKickOffset *= Math.exp(-dt * 24);
-    this.recoilClimbAngle *= Math.exp(-dt * 20);
+    this.recoilKickOffset *= Math.exp(-clampedDt * 24);
+    this.recoilClimbAngle *= Math.exp(-clampedDt * 20);
 
     // Dash timer update
     if (this.isDashing) {
-      this.dashTimer -= dt;
+      this.dashTimer -= clampedDt;
       // Record motion trail
       this.dashTrails.push({
         x: this.x,
@@ -228,8 +230,8 @@ export class Player extends Entity {
     } else {
       // Normal movement kinematics
       if (moveDir.magSq() > 0.001) {
-        this.vx += moveDir.x * this.acceleration * dt;
-        this.vy += moveDir.y * this.acceleration * dt;
+        this.vx += moveDir.x * this.acceleration * clampedDt;
+        this.vy += moveDir.y * this.acceleration * clampedDt;
 
         // Clamp to max speed
         const speedSq = this.vx * this.vx + this.vy * this.vy;
@@ -240,7 +242,7 @@ export class Player extends Entity {
         }
       } else {
         // Friction damping
-        const damp = Math.exp(-this.friction * dt);
+        const damp = Math.exp(-this.friction * clampedDt);
         this.vx *= damp;
         this.vy *= damp;
         if (Math.abs(this.vx) < 1) this.vx = 0;
@@ -249,30 +251,30 @@ export class Player extends Entity {
     }
 
     // Advance position
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
+    this.x += this.vx * clampedDt;
+    this.y += this.vy * clampedDt;
 
     // Facing rotation tracks mouse aim smoothly
     this.targetRotation = aimAngle;
     const diff = normalizeAngle(this.targetRotation - this.rotation);
-    this.rotation += diff * Math.min(1.0, 24.0 * dt);
+    this.rotation += diff * Math.min(1.0, 24.0 * clampedDt);
 
     // Invulnerability and hit flash timers
     if (this.iFramesTimer > 0) {
-      this.iFramesTimer = Math.max(0, this.iFramesTimer - dt);
+      this.iFramesTimer = Math.max(0, this.iFramesTimer - clampedDt);
     }
     if (this.hitFlashTimer > 0) {
-      this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
+      this.hitFlashTimer = Math.max(0, this.hitFlashTimer - clampedDt);
     }
 
     // Dash cooldown
     if (this.dashCooldownTimer > 0) {
-      this.dashCooldownTimer = Math.max(0, this.dashCooldownTimer - dt);
+      this.dashCooldownTimer = Math.max(0, this.dashCooldownTimer - clampedDt);
     }
 
     // Age out dash trails
     for (let i = this.dashTrails.length - 1; i >= 0; i--) {
-      this.dashTrails[i].alpha -= dt * 4.5;
+      this.dashTrails[i].alpha -= clampedDt * 4.5;
       if (this.dashTrails[i].alpha <= 0) {
         this.dashTrails.splice(i, 1);
       }

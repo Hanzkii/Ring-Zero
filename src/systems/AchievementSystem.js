@@ -409,29 +409,30 @@ export class AchievementSystem {
       const drawY = Math.round(currentY);
 
       ctx.save();
+      ctx.translate(drawX, drawY);
       ctx.globalAlpha = Math.max(0, Math.min(1, toast.slide));
 
       // Dark cybernetic card backdrop
       ctx.fillStyle = 'rgba(11, 15, 23, 0.96)';
-      ctx.fillRect(drawX, drawY, toastW, toastH);
+      ctx.fillRect(0, 0, toastW, toastH);
 
       // Neon cyan border with left accent bar
       ctx.strokeStyle = COLOR.CYAN;
       ctx.lineWidth = 1;
-      ctx.strokeRect(drawX, drawY, toastW, toastH);
+      ctx.strokeRect(0, 0, toastW, toastH);
 
       ctx.fillStyle = COLOR.CYAN;
-      ctx.fillRect(drawX, drawY, 4, toastH);
+      ctx.fillRect(0, 0, 4, toastH);
 
       // Badge tag
       ctx.font = 'bold 9px monospace';
       ctx.fillStyle = COLOR.AMBER;
-      ctx.fillText(`// CLEARANCE UNLOCKED: [${ach.badge || 'UNLOCKED'}]`, drawX + 12, drawY + 14);
+      ctx.fillText(`// CLEARANCE UNLOCKED: [${ach.badge || 'UNLOCKED'}]`, 12, 14);
 
       // Title
       ctx.font = 'bold 12px monospace';
       ctx.fillStyle = COLOR.WHITE;
-      ctx.fillText(ach.title || ach.name, drawX + 12, drawY + 28);
+      ctx.fillText(ach.title || ach.name, 12, 28);
 
       // Description with word wrapping to avoid clipping retro HUD border
       ctx.font = '9px monospace';
@@ -445,16 +446,16 @@ export class AchievementSystem {
         if (line2.length > 46) {
           line2 = line2.slice(0, 44) + '..';
         }
-        ctx.fillText(line1, drawX + 12, drawY + 40);
-        ctx.fillText(line2, drawX + 12, drawY + 50);
+        ctx.fillText(line1, 12, 40);
+        ctx.fillText(line2, 12, 50);
       } else {
-        ctx.fillText(desc, drawX + 12, drawY + 42);
+        ctx.fillText(desc, 12, 42);
       }
 
       // Lifetime progress bar
       const progress = Math.max(0, toast.timer / toast.maxTimer);
       ctx.fillStyle = COLOR.CYAN;
-      ctx.fillRect(drawX + toastW - 54, drawY + toastH - 3, 50 * progress, 2);
+      ctx.fillRect(toastW - 54, toastH - 3, 50 * progress, 2);
 
       ctx.restore();
 

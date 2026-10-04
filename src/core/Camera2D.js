@@ -213,4 +213,22 @@ export class Camera2D {
       maxY: this.pos.y + halfH,
     };
   }
+
+  /**
+   * Fast AABB check whether a world coordinate is inside the visible viewport
+   * @param {number} x
+   * @param {number} y
+   * @param {number} [margin=64]
+   * @returns {boolean}
+   */
+  isInView(x, y, margin = 64) {
+    const halfW = (this.viewportWidth * 0.5) + margin;
+    const halfH = (this.viewportHeight * 0.5) + margin;
+    return (
+      x >= this.pos.x - halfW &&
+      x <= this.pos.x + halfW &&
+      y >= this.pos.y - halfH &&
+      y <= this.pos.y + halfH
+    );
+  }
 }

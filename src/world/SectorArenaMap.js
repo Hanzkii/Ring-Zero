@@ -64,13 +64,13 @@ export class SectorArenaMap {
   }
 
   /**
-   * Ring 3: Userland (1920x1080, 4 corner memory cache pillars)
+   * Ring 3: Userland (2400x2400, 4 corner memory cache pillars)
    */
   _buildRing3() {
     const walls = this.wallsByRing[CLEARANCE_RING.RING_3];
     const segs = this.segmentsByRing[CLEARANCE_RING.RING_3];
-    const w = 1920;
-    const h = 1080;
+    const w = 2400;
+    const h = 2400;
     const hw = w * 0.5;
     const hh = h * 0.5;
 
@@ -80,11 +80,11 @@ export class SectorArenaMap {
     walls.push(new WallRect(-hw + 16, 0, 32, h, 'userland')); // Left
     walls.push(new WallRect(hw - 16, 0, 32, h, 'userland'));  // Right
 
-    // 2. 4 Corner Memory Cache Pillars at (+-550, +-320) size 120x120
-    walls.push(new WallRect(-550, -320, 120, 120, 'userland'));
-    walls.push(new WallRect(550, -320, 120, 120, 'userland'));
-    walls.push(new WallRect(-550, 320, 120, 120, 'userland'));
-    walls.push(new WallRect(550, 320, 120, 120, 'userland'));
+    // 2. 4 Corner Memory Cache Pillars at (+-650, +-650) size 140x140
+    walls.push(new WallRect(-650, -650, 140, 140, 'userland'));
+    walls.push(new WallRect(650, -650, 140, 140, 'userland'));
+    walls.push(new WallRect(-650, 650, 140, 140, 'userland'));
+    walls.push(new WallRect(650, 650, 140, 140, 'userland'));
 
     for (const wall of walls) {
       this._addSegmentsForRect(wall, segs);
@@ -92,13 +92,13 @@ export class SectorArenaMap {
   }
 
   /**
-   * Ring 2: Hardware Drivers (1920x1080, DMA/PCIe bus corridor arena with segmented chokepoints)
+   * Ring 2: Hardware Drivers (3000x3000, DMA/PCIe bus corridor arena with segmented chokepoints)
    */
   _buildRing2() {
     const walls = this.wallsByRing[CLEARANCE_RING.RING_2];
     const segs = this.segmentsByRing[CLEARANCE_RING.RING_2];
-    const w = 1920;
-    const h = 1080;
+    const w = 3000;
+    const h = 3000;
     const hw = w * 0.5;
     const hh = h * 0.5;
 
@@ -108,16 +108,16 @@ export class SectorArenaMap {
     walls.push(new WallRect(-hw + 16, 0, 32, h, 'drivers'));
     walls.push(new WallRect(hw - 16, 0, 32, h, 'drivers'));
 
-    // 2. Left vertical divider (x = -320) with center chokepoint opening
-    walls.push(new WallRect(-320, -300, 40, 360, 'drivers'));
-    walls.push(new WallRect(-320, 300, 40, 360, 'drivers'));
+    // 2. Left vertical divider (x = -480) with center chokepoint opening
+    walls.push(new WallRect(-480, -450, 48, 520, 'drivers'));
+    walls.push(new WallRect(-480, 450, 48, 520, 'drivers'));
 
-    // 3. Right vertical divider (x = 320) with top & bottom chokepoints
-    walls.push(new WallRect(320, 0, 40, 400, 'drivers'));
+    // 3. Right vertical divider (x = 480) with top & bottom chokepoints
+    walls.push(new WallRect(480, 0, 48, 600, 'drivers'));
 
     // 4. Horizontal bus bar conduits
-    walls.push(new WallRect(0, -260, 200, 32, 'drivers'));
-    walls.push(new WallRect(0, 260, 200, 32, 'drivers'));
+    walls.push(new WallRect(0, -380, 280, 40, 'drivers'));
+    walls.push(new WallRect(0, 380, 280, 40, 'drivers'));
 
     for (const wall of walls) {
       this._addSegmentsForRect(wall, segs);
@@ -125,13 +125,13 @@ export class SectorArenaMap {
   }
 
   /**
-   * Ring 1: Hypervisor (1920x1080, virtual sandbox partitioned compartments with broken firewall obstacles)
+   * Ring 1: Hypervisor (3600x3600, virtual sandbox partitioned compartments with broken firewall obstacles)
    */
   _buildRing1() {
     const walls = this.wallsByRing[CLEARANCE_RING.RING_1];
     const segs = this.segmentsByRing[CLEARANCE_RING.RING_1];
-    const w = 1920;
-    const h = 1080;
+    const w = 3600;
+    const h = 3600;
     const hw = w * 0.5;
     const hh = h * 0.5;
 
@@ -142,20 +142,20 @@ export class SectorArenaMap {
     walls.push(new WallRect(hw - 16, 0, 32, h, 'hypervisor'));
 
     // 2. Quadrant firewall barriers
-    walls.push(new WallRect(-280, -180, 32, 260, 'hypervisor'));
-    walls.push(new WallRect(280, -180, 32, 260, 'hypervisor'));
-    walls.push(new WallRect(-280, 180, 32, 260, 'hypervisor'));
-    walls.push(new WallRect(280, 180, 32, 260, 'hypervisor'));
+    walls.push(new WallRect(-450, -350, 40, 380, 'hypervisor'));
+    walls.push(new WallRect(450, -350, 40, 380, 'hypervisor'));
+    walls.push(new WallRect(-450, 350, 40, 380, 'hypervisor'));
+    walls.push(new WallRect(450, 350, 40, 380, 'hypervisor'));
 
     // 3. Lateral firewall baffles
-    walls.push(new WallRect(-520, 0, 260, 32, 'hypervisor'));
-    walls.push(new WallRect(520, 0, 260, 32, 'hypervisor'));
+    walls.push(new WallRect(-850, 0, 380, 40, 'hypervisor'));
+    walls.push(new WallRect(850, 0, 380, 40, 'hypervisor'));
 
     // 4. Broken sandbox pillars
-    walls.push(new WallRect(-120, -260, 48, 48, 'hypervisor'));
-    walls.push(new WallRect(120, -260, 48, 48, 'hypervisor'));
-    walls.push(new WallRect(-120, 260, 48, 48, 'hypervisor'));
-    walls.push(new WallRect(120, 260, 48, 48, 'hypervisor'));
+    walls.push(new WallRect(-240, -450, 64, 64, 'hypervisor'));
+    walls.push(new WallRect(240, -450, 64, 64, 'hypervisor'));
+    walls.push(new WallRect(-240, 450, 64, 64, 'hypervisor'));
+    walls.push(new WallRect(240, 450, 64, 64, 'hypervisor'));
 
     for (const wall of walls) {
       this._addSegmentsForRect(wall, segs);
@@ -163,27 +163,29 @@ export class SectorArenaMap {
   }
 
   /**
-   * Ring 0: Kernel Execution (1536x864 compact arena - 80% bounds, 4 sub-core pillars)
+   * Ring 0: Kernel Execution (4400x4400 expanded arena - CPU sub-core pillars)
    */
   _buildRing0() {
     const walls = this.wallsByRing[CLEARANCE_RING.RING_0];
     const segs = this.segmentsByRing[CLEARANCE_RING.RING_0];
-    const w = 1536;
-    const h = 864;
+    const w = 4400;
+    const h = 4400;
     const hw = w * 0.5;
     const hh = h * 0.5;
 
-    // 1. Shrunk compact boundary walls
+    // 1. Scaled boundary walls
     walls.push(new WallRect(0, -hh + 16, w, 32, 'kernel'));
     walls.push(new WallRect(0, hh - 16, w, 32, 'kernel'));
     walls.push(new WallRect(-hw + 16, 0, 32, h, 'kernel'));
     walls.push(new WallRect(hw - 16, 0, 32, h, 'kernel'));
 
-    // 2. Central CPU sub-core pillars
-    walls.push(new WallRect(-260, -150, 96, 96, 'kernel'));
-    walls.push(new WallRect(260, -150, 96, 96, 'kernel'));
-    walls.push(new WallRect(-260, 150, 96, 96, 'kernel'));
-    walls.push(new WallRect(260, 150, 96, 96, 'kernel'));
+    // 2. Central CPU sub-core pillars & sub-nodes
+    walls.push(new WallRect(-480, -320, 140, 140, 'kernel'));
+    walls.push(new WallRect(480, -320, 140, 140, 'kernel'));
+    walls.push(new WallRect(-480, 320, 140, 140, 'kernel'));
+    walls.push(new WallRect(480, 320, 140, 140, 'kernel'));
+    walls.push(new WallRect(-800, 0, 100, 100, 'kernel'));
+    walls.push(new WallRect(800, 0, 100, 100, 'kernel'));
 
     for (const wall of walls) {
       this._addSegmentsForRect(wall, segs);
@@ -242,11 +244,13 @@ export class SectorArenaMap {
 
     ctx.save();
 
-    // 1. Draw Ring 0 outer 60px pulsating hazard margin
+    // 1. Draw Ring 0 outer hazard margin
     if (isRing0) {
-      const hw = 1536 * 0.5 - 32;
-      const hh = 864 * 0.5 - 32;
-      const m = 60;
+      const arenaW = theme.width || 4400;
+      const arenaH = theme.height || 4400;
+      const hw = arenaW * 0.5 - 32;
+      const hh = arenaH * 0.5 - 32;
+      const m = theme.hazardMargin || 80;
       const pulse = 0.15 + 0.1 * Math.sin(performance.now() * 0.008);
 
       ctx.fillStyle = `rgba(255, 0, 60, ${pulse})`;

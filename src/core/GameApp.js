@@ -20,6 +20,7 @@ import { SettingsModal } from '../ui/SettingsModal.js';
 import { Player } from '../entities/Player.js';
 import { Projectile } from '../entities/Projectile.js';
 import { Enemy } from '../entities/Enemy.js';
+import { EnemySystem } from '../systems/EnemySystem.js';
 import { Drop } from '../entities/Drop.js';
 import { VectorRenderer } from '../ui/VectorRenderer.js';
 import { Vec2 } from './VectorMath.js';
@@ -38,6 +39,7 @@ import { DebugRenderer } from '../ui/DebugRenderer.js';
 import { DebugConsole } from '../ui/DebugConsole.js';
 import { ArsenalModal } from '../ui/ArsenalModal.js';
 import { AchievementSystem } from '../systems/AchievementSystem.js';
+import { HUD } from '../ui/HUD.js';
 
 export const APP_STATE = {
   BOOT: 'BOOT',
@@ -120,6 +122,8 @@ export class GameApp {
       soundBank: this.soundBank,
     });
 
+    this.hud = new HUD(this);
+
     this.terminalUI = new TerminalUI({
       storage: this.storage,
       soundBank: this.soundBank,
@@ -130,12 +134,18 @@ export class GameApp {
       onOpenSettings: () => this.openSettings(),
     });
 
+    // Clearance Ring 3 Theme & Dynamic Arena Scaling (2400x2400)
+    this.clearanceRing = 3;
+    this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_3];
+    const initW = this.currentSectorTheme.width || 2400;
+    const initH = this.currentSectorTheme.height || 2400;
+
     // World bounds
     this.worldBounds = {
-      minX: -WORLD.DEFAULT_WIDTH * 0.5,
-      minY: -WORLD.DEFAULT_HEIGHT * 0.5,
-      maxX: WORLD.DEFAULT_WIDTH * 0.5,
-      maxY: WORLD.DEFAULT_HEIGHT * 0.5,
+      minX: -initW * 0.5,
+      minY: -initH * 0.5,
+      maxX: initW * 0.5,
+      maxY: initH * 0.5,
     };
     this.camera.setBounds(
       this.worldBounds.minX,
@@ -143,6 +153,12 @@ export class GameApp {
       this.worldBounds.maxX,
       this.worldBounds.maxY
     );
+
+    this.enemySystem = new EnemySystem({
+      width: initW,
+      height: initH,
+      spawnMargin: 80,
+    });
 
     // Entities & Pools
     this.player = new Player(0, 0);
@@ -270,14 +286,13 @@ export class GameApp {
       achievementSystem: this.achievementSystem,
       onSpawnHazard: (x, y, r, d, dps) => this.spawnHazard(x, y, r, d, dps),
     });
+    this.collisionSystem.setArenaBounds(initW, initH);
+    this.waveManager.setArenaBounds(initW, initH);
 
-    // Procedural World Architecture & Raycasting
+    // Dynamic World Architecture & Raycasting
     this.raycaster = new Raycaster2D(950);
-    this.currentBiome = 'facility';
+    this.currentBiome = 'sector';
     this.currentSeed = 1337;
-    this.props = [];
-    this.map = null;
-    this.loadMap(this.currentBiome, this.currentSeed);
 
     // Developer Diagnostic Visualizer & Authenticated Debug Console
     this.debugRenderer = new DebugRenderer();
@@ -395,11 +410,34 @@ export class GameApp {
     this.map = this.sectorArenaMap;
     this.props = this.sectorArenaMap.props;
 
-    // Clamp player inside new arena bounds
-    const arenaW = this.currentSectorTheme.width || 1920;
-    const arenaH = this.currentSectorTheme.height || 1080;
-    const hw = arenaW * 0.5 - 32;
-    const hh = arenaH * 0.5 - 32;
+    // Dynamically update world bounds, camera bounds, and system boundaries
+    const arenaW = this.currentSectorTheme.width || 2400;
+    const arenaH = this.currentSectorTheme.height || 2400;
+    this.worldBounds.minX = -arenaW * 0.5;
+    this.worldBounds.maxX = arenaW * 0.5;
+    this.worldBounds.minY = -arenaH * 0.5;
+    this.worldBounds.maxY = arenaH * 0.5;
+    this.camera.setBounds(
+      this.worldBounds.minX,
+      this.worldBounds.minY,
+      this.worldBounds.maxX,
+      this.worldBounds.maxY
+    );
+
+    this.collisionSystem?.setArenaBounds?.(arenaW, arenaH);
+    this.waveManager?.setArenaBounds?.(arenaW, arenaH);
+    this.enemySystem?.setArenaBounds?.(arenaW, arenaH, 80);
+
+    // Ring 0 hard cap on active particles to sustain 60 TPS
+    if (targetRing === 0) {
+      this.particleSystem?.setMaxActive?.(300);
+    } else {
+      this.particleSystem?.setMaxActive?.(600);
+    }
+
+    // Clamp player inside new arena bounds with margin
+    const hw = arenaW * 0.5 - 80;
+    const hh = arenaH * 0.5 - 80;
     this.player.x = Math.max(-hw, Math.min(hw, this.player.x));
     this.player.y = Math.max(-hh, Math.min(hh, this.player.y));
     this.spatialGrid.update(this.player);
@@ -685,6 +723,23 @@ export class GameApp {
     this.sectorArenaMap.setRing(3, this.spatialGrid);
     this.map = this.sectorArenaMap;
     this.props = this.sectorArenaMap.props;
+    const r3Theme = SECTOR_THEMES[CLEARANCE_RING.RING_3];
+    const r3W = r3Theme.width || 2400;
+    const r3H = r3Theme.height || 2400;
+    this.worldBounds.minX = -r3W * 0.5;
+    this.worldBounds.maxX = r3W * 0.5;
+    this.worldBounds.minY = -r3H * 0.5;
+    this.worldBounds.maxY = r3H * 0.5;
+    this.camera.setBounds(
+      this.worldBounds.minX,
+      this.worldBounds.minY,
+      this.worldBounds.maxX,
+      this.worldBounds.maxY
+    );
+    this.collisionSystem?.setArenaBounds?.(r3W, r3H);
+    this.waveManager?.setArenaBounds?.(r3W, r3H);
+    this.enemySystem?.setArenaBounds?.(r3W, r3H, 80);
+    this.particleSystem?.setMaxActive?.(600);
     this.spatialGrid.update(this.player);
 
     // 8. Close pause/draft/arsenal modals if open
@@ -1010,10 +1065,10 @@ export class GameApp {
     this.player.y = Math.max(-halfH, Math.min(halfH, this.player.y));
     this.spatialGrid.update(this.player);
 
-    // Ring 0 outer 60px pulsating hazard margin check (15 DPS + red edge flash)
+    // Ring 0 pulsating hazard margin check (15 DPS + red edge flash)
     if (this.clearanceRing === 0) {
       this.achievementSystem?.updateRing0Survival?.(clampedDt);
-      const m = 60;
+      const m = this.currentSectorTheme.hazardMargin || 80;
       if (
         this.player.x < -halfW + m ||
         this.player.x > halfW - m ||
@@ -1055,13 +1110,16 @@ export class GameApp {
       }
     }
 
-    // Enemy AI & Kinematics
-    for (let i = 0; i < this.enemies.length; i++) {
-      const enemy = this.enemies[i];
-      enemy.updateAI(clampedDt, this.player, this.spatialGrid, this._onSentinelShoot);
-      this.cheatManager.updateEnemy(enemy, clampedDt, { player: this.player });
-      this.spatialGrid.update(enemy);
-    }
+    // Enemy AI & Kinematics (with off-screen tick culling and strict boundary clamping via EnemySystem)
+    this.enemySystem.update(
+      this.enemies,
+      clampedDt,
+      this.player,
+      this.spatialGrid,
+      this._onSentinelShoot,
+      this.camera,
+      this.cheatManager
+    );
 
     // Drops Vacuum Magnet & Physics
     if (this.pickupSystem) {
@@ -1238,7 +1296,7 @@ export class GameApp {
     });
 
     // 11. Render Vector Particles
-    this.particleSystem.render(ctx, alpha);
+    this.particleSystem.render(ctx, alpha, this.camera);
 
     // 11. 2D Dynamic Line-of-Sight Fog of War (Forward Vision Cone following crosshair)
     if (this.map) {
@@ -1394,226 +1452,15 @@ export class GameApp {
     const w = this.camera.viewportWidth;
     const h = this.camera.viewportHeight;
 
+    // 1. Modular Cyberpunk Vector HUD Render
+    if (this.hud) {
+      this.hud.render(ctx);
+    }
+
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    // 1. Top-Left: System Telemetry Card
-    const tlW = 280;
-    const tlH = 58;
-    this._renderVectorPanel(ctx, 16, 16, tlW, tlH, this.currentSectorTheme.accentDim);
-
-    ctx.font = 'bold 12px monospace';
-    ctx.fillStyle = this.currentSectorTheme.accent;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${this.currentSectorTheme.name} // RUNTIME`, 26, 23);
-
-    ctx.font = '10px monospace';
-    ctx.fillStyle = COLOR.WHITE_DIM;
-    ctx.fillText(`FPS: ${this.loop.fps} | TPS: ${this.loop.tps} | FRAME: ${this.loop.frameTimeMs.toFixed(1)}ms`, 26, 40);
-    ctx.fillText(`SECTOR: ${this.currentBiome.toUpperCase()} [SEED:${this.currentSeed}] | DAEMONS: ${this.enemies.length}`, 26, 54);
-
-    // Active Exploit Badges list below telemetry panel
-    this.cheatManager.renderHUD(ctx, 18, 88);
-
-    // 2. Top-Center: Wave Director Banner Card
-    const waveColor = this.waveManager.state === WAVE_STATE.PREPARING ? COLOR.AMBER : COLOR.CYAN;
-    const tcW = 320;
-    const tcH = 54;
-    const tcX = Math.round(w * 0.5 - tcW * 0.5);
-    this._renderVectorPanel(ctx, tcX, 16, tcW, tcH, waveColor);
-
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 13px monospace';
-    ctx.fillStyle = waveColor;
-    const waveText =
-      this.waveManager.state === WAVE_STATE.PREPARING
-        ? `// INCOMING SECURITY WAVE ${this.waveManager.waveNumber} //`
-        : `// PURGING SECURITY DAEMONS // WAVE ${this.waveManager.waveNumber} //`;
-    ctx.fillText(waveText, w * 0.5, 24);
-
-    // Wave progress vector gauge
-    const waveBarW = 270;
-    VectorRenderer.drawVectorBar(
-      ctx,
-      w * 0.5 - waveBarW * 0.5,
-      43,
-      waveBarW,
-      7,
-      this.waveManager.progressPercent,
-      waveColor,
-      ''
-    );
-
-    // 3. Top-Right: Spatial Coordinates & Level Card
-    const trW = 260;
-    const trH = 58;
-    const trX = w - trW - 16;
-    this._renderVectorPanel(ctx, trX, 16, trW, trH, 'rgba(0, 240, 255, 0.25)');
-
-    ctx.textAlign = 'right';
-    ctx.font = 'bold 12px monospace';
-    ctx.fillStyle = COLOR.CYAN;
-    ctx.fillText(`LEVEL ${this.player.level} // XP: ${this.player.xp} / ${this.player.xpToNextLevel}`, w - 26, 23);
-
-    // XP mini progress line
-    const xpPercent = Math.min(1.0, this.player.xp / Math.max(1, this.player.xpToNextLevel));
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
-    ctx.fillRect(trX + 10, 39, trW - 20, 2);
-    ctx.fillStyle = COLOR.CYAN;
-    ctx.fillRect(trX + 10, 39, (trW - 20) * xpPercent, 2);
-
-    ctx.font = '10px monospace';
-    ctx.fillStyle = COLOR.WHITE_DIM;
-    ctx.fillText(`COORDS: [${Math.round(this.player.x)}, ${Math.round(this.player.y)}]`, w - 26, 45);
-    ctx.fillText(`SPATIAL CELLS: ${this.spatialGrid.totalOccupiedCells} [G] DEBUG`, w - 26, 57);
-
-    // 4. Bottom-Left: Integrity & Dash Agility Card
-    const blW = 250;
-    const blH = 84;
-    const blY = h - blH - 16;
-    this._renderVectorPanel(ctx, 16, blY, blW, blH, 'rgba(0, 240, 255, 0.3)');
-
-    // Chassis Health Meter
-    const barWidth = 226;
-    const barHeight = 13;
-    const hpRatio = Math.max(0, this.player.health / this.player.maxHealth);
-    VectorRenderer.drawVectorBar(
-      ctx,
-      28,
-      blY + 16,
-      barWidth,
-      barHeight,
-      hpRatio,
-      this.player.health < 30 ? COLOR.RED : COLOR.GREEN,
-      `INTEGRITY // ${Math.max(0, Math.round(this.player.health))} / ${this.player.maxHealth}`
-    );
-
-    // Dash Boost Meter
-    VectorRenderer.drawVectorBar(
-      ctx,
-      28,
-      blY + 48,
-      barWidth,
-      barHeight,
-      this.player.dashCooldownPercent,
-      this.player.dashReady ? COLOR.CYAN : COLOR.AMBER,
-      this.player.dashReady ? 'DASH BOOST // READY [SPACE / RMB]' : 'DASH BOOST // RECHARGING'
-    );
-
-    // 5. Bottom-Right: Active Weapon & Cartridge Pip Counter Card
-    const weapon = this.weaponSystem.activeWeapon;
-    if (weapon) {
-      const brW = 280;
-      const brH = 96;
-      const brX = w - brW - 16;
-      const brY = h - brH - 16;
-      this._renderVectorPanel(ctx, brX, brY, brW, brH, weapon.color || COLOR.CYAN);
-
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'top';
-      ctx.font = 'bold 15px monospace';
-      ctx.fillStyle = weapon.color || COLOR.CYAN;
-      ctx.fillText(`${weapon.name}`, w - 26, brY + 10);
-
-      // Numeric ammo label
-      ctx.font = '11px monospace';
-      ctx.fillStyle = COLOR.WHITE;
-      const isInfiniteAmmo = this.cheatManager.isActive('infiniteammo');
-      let ammoStr = '';
-      if (isInfiniteAmmo) {
-        ammoStr = 'AMMO: INF / INF [DMA_LOCK]';
-      } else if (weapon.isReloading) {
-        ammoStr = `RELOADING... (${(weapon.reloadTime - weapon.reloadTimer).toFixed(1)}s)`;
-      } else {
-        ammoStr = `AMMO: ${weapon.currentAmmo} / ${weapon.clipSize}`;
-      }
-      ctx.fillText(ammoStr, w - 26, brY + 30);
-
-      // Cartridge Bullet Pips
-      if (isInfiniteAmmo) {
-        const maxDisplayPips = 24;
-        const pipW = Math.max(3, Math.floor((brW - 40) / maxDisplayPips) - 2);
-        const pipH = 8;
-        const startX = brX + 20;
-        const pipY = brY + 46;
-        for (let i = 0; i < maxDisplayPips; i++) {
-          ctx.fillStyle = COLOR.RED;
-          ctx.fillRect(startX + i * (pipW + 2), pipY, pipW, pipH);
-        }
-      } else if (!weapon.isReloading) {
-        const maxDisplayPips = Math.min(24, weapon.clipSize);
-        const pipW = Math.max(3, Math.floor((brW - 40) / maxDisplayPips) - 2);
-        const pipH = 8;
-        const startX = brX + 20;
-        const pipY = brY + 46;
-
-        for (let i = 0; i < maxDisplayPips; i++) {
-          const isLoaded = i < weapon.currentAmmo;
-          ctx.fillStyle = isLoaded ? (weapon.color || COLOR.CYAN) : 'rgba(255,255,255,0.15)';
-          ctx.fillRect(startX + i * (pipW + 2), pipY, pipW, pipH);
-        }
-      } else {
-        // Reload progress vector bar
-        VectorRenderer.drawVectorBar(
-          ctx,
-          brX + 20,
-          brY + 48,
-          brW - 40,
-          6,
-          weapon.reloadProgress,
-          COLOR.AMBER,
-          ''
-        );
-      }
-
-      // Dual Slot indicators with active slot marker
-      ctx.font = '10px monospace';
-      const slot1Name = this.weaponSystem.slots[0] ? this.weaponSystem.slots[0].name : 'EMPTY';
-      const slot2Name = this.weaponSystem.slots[1] ? this.weaponSystem.slots[1].name : 'EMPTY';
-      const s1Tag = this.weaponSystem.activeSlot === 0 ? `► [1] ${slot1Name}` : `  [1] ${slot1Name}`;
-      const s2Tag = this.weaponSystem.activeSlot === 1 ? `► [2] ${slot2Name}` : `  [2] ${slot2Name}`;
-      ctx.fillStyle = COLOR.CYAN;
-      ctx.fillText(`${s1Tag}  |  ${s2Tag}  ([Q] SWAP)`, w - 26, brY + 72);
-    }
-
-    // 6. Tactical Radar Telemetry Overlay
-    const radar = this.cheatManager.getCheat('radartelemetry');
-    if (radar && radar.enabled) {
-      radar.renderRadar(ctx, w, h, this.player, this.enemies, this.drops, this.props);
-    }
-
-    // 7. Full-screen CRT Glitch Flash & Tactical Elevation Banner
-    if (this.ringTransitionTimer > 0) {
-      const flashAlpha = this.ringTransitionTimer / 0.5;
-      ctx.save();
-      ctx.fillStyle = this.currentSectorTheme.id === CLEARANCE_RING.RING_0
-        ? `rgba(255, 0, 60, ${flashAlpha * 0.35})`
-        : `rgba(255, 176, 0, ${flashAlpha * 0.30})`;
-      ctx.fillRect(0, 0, w, h);
-
-      // Horizontal CRT glitch scanlines
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      const scanCount = 8;
-      for (let s = 0; s < scanCount; s++) {
-        const sy = (Math.sin(s * 1.5 + performance.now() * 0.02) * 0.5 + 0.5) * h;
-        ctx.fillRect(0, sy, w, 2 + Math.random() * 4);
-      }
-
-      // Tactical Elevation Banner
-      ctx.font = 'bold 22px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.shadowColor = this.currentSectorTheme.accent;
-      ctx.shadowBlur = 14;
-      ctx.fillText(`[CLEARANCE ELEVATION: ${this.currentSectorTheme.name} GRANTED]`, w * 0.5, h * 0.35);
-      ctx.font = '13px monospace';
-      ctx.fillStyle = this.currentSectorTheme.accent;
-      ctx.fillText(this.currentSectorTheme.description, w * 0.5, h * 0.35 + 28);
-      ctx.restore();
-    }
-
-    // 8. Ring 0 Hazard Perimeter Edge Flash Vignette
+    // 2. Ring 0 Hazard Perimeter Edge Flash Vignette
     if (this.hazardFlash > 0) {
       ctx.save();
       ctx.strokeStyle = `rgba(255, 0, 60, ${this.hazardFlash * 0.65})`;
@@ -1622,7 +1469,7 @@ export class GameApp {
       ctx.restore();
     }
 
-    // 9. Cyber-Clearance Achievement Toasts (Topmost HUD layer, immune to scanline bleed)
+    // 3. Cyber-Clearance Achievement Toasts (Topmost HUD layer, immune to scanline bleed)
     if (this.achievementSystem) {
       this.achievementSystem.renderToasts(ctx, w);
     }

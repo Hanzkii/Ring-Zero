@@ -32,9 +32,22 @@ export class CollisionSystem {
     this.achievementSystem = achievementSystem;
     this.onSpawnHazard = onSpawnHazard;
 
+    this.arenaWidth = WORLD.DEFAULT_WIDTH;
+    this.arenaHeight = WORLD.DEFAULT_HEIGHT;
+
     // Reusable candidate query arrays
     this._candidateList = [];
     this._knockbackDir = new Vec2();
+  }
+
+  /**
+   * Updates arena dimensions for projectile boundary despawning
+   * @param {number} width
+   * @param {number} height
+   */
+  setArenaBounds(width, height) {
+    this.arenaWidth = width;
+    this.arenaHeight = height;
   }
 
   /**
@@ -657,8 +670,8 @@ export class CollisionSystem {
    * Bullet despawn at arena boundaries
    */
   _resolveProjectilesVsWorldBounds() {
-    const hw = WORLD.DEFAULT_WIDTH * 0.5;
-    const hh = WORLD.DEFAULT_HEIGHT * 0.5;
+    const hw = (this.arenaWidth || WORLD.DEFAULT_WIDTH) * 0.5;
+    const hh = (this.arenaHeight || WORLD.DEFAULT_HEIGHT) * 0.5;
 
     this.projectilePool.forEachActive((proj) => {
       if (

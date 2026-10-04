@@ -93,6 +93,15 @@ export class ParticleSystem {
       initialCapacity: capacity,
       maxCapacity: capacity * 2,
     });
+    this.maxActive = 600;
+  }
+
+  /**
+   * Sets maximum active particles allowed (e.g. 300 for Ring 0)
+   * @param {number} maxCount
+   */
+  setMaxActive(maxCount) {
+    this.maxActive = Math.max(50, maxCount);
   }
 
   /**
@@ -104,11 +113,14 @@ export class ParticleSystem {
    * @param {number} [baseSpeed=300]
    */
   emitBurst(x, y, count = 12, color = COLOR.CYAN, baseSpeed = 300) {
-    for (let i = 0; i < count; i++) {
+    if (this.pool.activeCount >= this.maxActive) return;
+    const spawnCount = Math.min(count, this.maxActive - this.pool.activeCount);
+
+    for (let i = 0; i < spawnCount; i++) {
       const p = this.pool.obtain();
       if (!p) break;
 
-      const angle = (i / count) * Math.PI * 2 + randomRange(-0.2, 0.2);
+      const angle = (i / spawnCount) * Math.PI * 2 + randomRange(-0.2, 0.2);
       const speed = baseSpeed * randomRange(0.4, 1.4);
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
@@ -128,8 +140,11 @@ export class ParticleSystem {
    * @param {string} [color=COLOR.WHITE]
    */
   emitImpact(x, y, hitAngle, count = 6, color = COLOR.WHITE) {
+    if (this.pool.activeCount >= this.maxActive) return;
+    const spawnCount = Math.min(count, this.maxActive - this.pool.activeCount);
+
     const bounceAngle = hitAngle + Math.PI; // Deflect back
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < spawnCount; i++) {
       const p = this.pool.obtain();
       if (!p) break;
 
@@ -157,12 +172,18 @@ export class ParticleSystem {
   }
 
   /**
-   * Renders active particles
+   * Renders active particles with optional off-screen frustum culling
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} alpha
+   * @param {import('../core/Camera2D.js').Camera2D} [camera=null]
    */
-  render(ctx, alpha = 1.0) {
+  render(ctx, alpha = 1.0, camera = null) {
     this.pool.forEachActive((p) => {
+      if (camera && typeof camera.isInView === 'function') {
+        const rx = lerp(p.prevX, p.x, alpha);
+        const ry = lerp(p.prevY, p.y, alpha);
+        if (!camera.isInView(rx, ry, 64)) return;
+      }
       p.render(ctx, alpha);
     });
   }

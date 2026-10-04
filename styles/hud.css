@@ -3,6 +3,28 @@
    Minimalist military-spec telemetry & privilege escalation styling.
    ========================================================================== */
 
+/* Custom Neon Runners for Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(7, 10, 15, 0.9);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-cyan-dim);
+  border: 1px solid var(--color-cyan);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cyan);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.8);
+}
+
 #terminal-overlay {
   position: absolute;
   top: 0;
@@ -29,7 +51,18 @@
   border: 1px solid var(--color-cyan-dim);
   padding: 32px;
   position: relative;
-  box-shadow: 0 0 40px rgba(0, 240, 255, 0.08);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.12), inset 0 0 20px rgba(0, 240, 255, 0.04);
+  clip-path: polygon(
+    0 14px,
+    14px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
+  letter-spacing: 0.8px;
 }
 
 /* Corner bracket accents */
@@ -73,6 +106,7 @@
   padding: 6px 12px;
   cursor: pointer;
   transition: all 0.2s ease;
+  clip-path: polygon(0 6px, 6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px));
 }
 
 .term-tab-btn:hover {
@@ -106,6 +140,7 @@
   line-height: 1.7;
   color: rgba(255, 255, 255, 0.85);
   margin-bottom: 28px;
+  letter-spacing: 0.5px;
 }
 
 .terminal-body p {
@@ -119,6 +154,7 @@
   font-size: 12px;
   color: var(--color-green);
   margin: 16px 0;
+  letter-spacing: 1px;
 }
 
 .terminal-log span {
@@ -132,6 +168,7 @@
   background: rgba(0, 240, 255, 0.03);
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.6px;
 }
 
 .terminal-controls strong {
@@ -159,6 +196,16 @@
   transition: all 0.2s ease;
   position: relative;
   outline: none;
+  clip-path: polygon(
+    0 8px,
+    8px 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0 calc(100% - 8px)
+  );
 }
 
 .btn-vector:hover {
@@ -208,7 +255,18 @@
   border: 1px solid var(--color-cyan-dim);
   padding: 32px;
   position: relative;
-  box-shadow: 0 0 50px rgba(0, 240, 255, 0.12);
+  box-shadow: 0 0 50px rgba(0, 240, 255, 0.18), inset 0 0 30px rgba(0, 240, 255, 0.05);
+  clip-path: polygon(
+    0 18px,
+    18px 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% calc(100% - 18px),
+    calc(100% - 18px) 100%,
+    18px 100%,
+    0 calc(100% - 18px)
+  );
+  letter-spacing: 0.8px;
 }
 
 .draft-header {
@@ -240,14 +298,24 @@
 }
 
 .draft-card {
-  background: rgba(15, 20, 30, 0.8);
+  background: rgba(15, 20, 30, 0.85);
   border: 1px solid rgba(0, 240, 255, 0.25);
   padding: 24px 20px;
   position: relative;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  clip-path: polygon(
+    0 10px,
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
 }
 
 .draft-card:hover {

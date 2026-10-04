@@ -288,8 +288,9 @@ export class Enemy extends Entity {
    * @param {import('./Player.js').Player} player
    * @param {import('../systems/SpatialHashGrid.js').SpatialHashGrid} spatialGrid
    * @param {function(Object): void} onShootProjectile - Callback for Sentinel projectiles
+   * @param {Object} [arenaBounds=null] - Optional boundary clamping limits
    */
-  updateAI(dt, player, spatialGrid, onShootProjectile) {
+  updateAI(dt, player, spatialGrid, onShootProjectile, arenaBounds = null) {
     this.preStep();
     this.pulsePhase += dt * 3.5;
 
@@ -311,10 +312,15 @@ export class Enemy extends Entity {
         this.prevY = this.y;
         this.x += Math.cos(blinkAngle) * 150;
         this.y += Math.sin(blinkAngle) * 150;
-        const hw = 1200 - 64;
-        const hh = 1200 - 64;
-        this.x = Math.max(-hw, Math.min(hw, this.x));
-        this.y = Math.max(-hh, Math.min(hh, this.y));
+        if (arenaBounds) {
+          this.x = Math.max(arenaBounds.minX, Math.min(arenaBounds.maxX, this.x));
+          this.y = Math.max(arenaBounds.minY, Math.min(arenaBounds.maxY, this.y));
+        } else {
+          const hw = 1200 - 80;
+          const hh = 1200 - 80;
+          this.x = Math.max(-hw, Math.min(hw, this.x));
+          this.y = Math.max(-hh, Math.min(hh, this.y));
+        }
         this.glitchTimer = 0.25;
       }
     }
@@ -365,11 +371,13 @@ export class Enemy extends Entity {
       }
     }
 
-    // Swarm Flocking Separation (avoids overcrowding)
+    // Swarm Flocking Separation (avoids overcrowding, capped at 6 neighbors to maintain 60 TPS in Ring 0)
     this.separationVec.set(0, 0);
-    if (spatialGrid) {
+    if (spatialGrid && distToPlayer <= 1200) {
       const neighbors = spatialGrid.queryRadius(this.x, this.y, this.radius * 2.2, COLLISION_LAYER.ENEMY);
-      for (const neighbor of neighbors) {
+      const maxCount = Math.min(neighbors.length, 6);
+      for (let i = 0; i < maxCount; i++) {
+        const neighbor = neighbors[i];
         if (neighbor !== this && neighbor.active) {
           const ndx = this.x - neighbor.x;
           const ndy = this.y - neighbor.y;
@@ -390,6 +398,24 @@ export class Enemy extends Entity {
     // Advance position
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+
+    // Strict boundary clamping with SPAWN_MARGIN (80px)
+    if (arenaBounds) {
+      if (this.x < arenaBounds.minX) {
+        this.x = arenaBounds.minX;
+        if (this.vx < 0) this.vx = 0;
+      } else if (this.x > arenaBounds.maxX) {
+        this.x = arenaBounds.maxX;
+        if (this.vx > 0) this.vx = 0;
+      }
+      if (this.y < arenaBounds.minY) {
+        this.y = arenaBounds.minY;
+        if (this.vy < 0) this.vy = 0;
+      } else if (this.y > arenaBounds.maxY) {
+        this.y = arenaBounds.maxY;
+        if (this.vy > 0) this.vy = 0;
+      }
+    }
 
     // Face travel/player direction
     if (distToPlayer > 1) {

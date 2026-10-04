@@ -234,21 +234,49 @@ export class WaveManager {
   }
 
   /**
+   * Sets active arena dimensions for spawn clamping
+   * @param {number} width
+   * @param {number} height
+   */
+  setArenaBounds(width, height) {
+    this.arenaWidth = width;
+    this.arenaHeight = height;
+  }
+
+  /**
    * Calculates spawn position on perimeter ring outside player camera
+   * Strictly clamped within arena boundaries with SPAWN_MARGIN = 80px
    * @param {import('../entities/Player.js').Player} player
    * @returns {{x: number, y: number}}
    */
   _calculateSpawnPosition(player) {
     const angle = Math.random() * Math.PI * 2;
-    const dist = randomRange(500, 850); // Outside immediate frustum
+    const dist = randomRange(550, 850); // Outside immediate frustum
     let sx = player.x + Math.cos(angle) * dist;
     let sy = player.y + Math.sin(angle) * dist;
 
-    // Clamp inside arena walls (Ring 0 is compact 1536x864, others 1920x1080)
-    const arenaW = this.waveNumber >= 46 ? 1536 : 1920;
-    const arenaH = this.waveNumber >= 46 ? 864 : 1080;
-    const hw = arenaW * 0.5 - 64;
-    const hh = arenaH * 0.5 - 64;
+    // Determine arena dimensions from current wave or explicit bounds
+    let arenaW = this.arenaWidth;
+    let arenaH = this.arenaHeight;
+    if (!arenaW || !arenaH) {
+      if (this.waveNumber >= 46) {
+        arenaW = 4400;
+        arenaH = 4400;
+      } else if (this.waveNumber >= 31) {
+        arenaW = 3600;
+        arenaH = 3600;
+      } else if (this.waveNumber >= 16) {
+        arenaW = 3000;
+        arenaH = 3000;
+      } else {
+        arenaW = 2400;
+        arenaH = 2400;
+      }
+    }
+
+    const SPAWN_MARGIN = 80;
+    const hw = arenaW * 0.5 - SPAWN_MARGIN;
+    const hh = arenaH * 0.5 - SPAWN_MARGIN;
     sx = Math.max(-hw, Math.min(hw, sx));
     sy = Math.max(-hh, Math.min(hh, sy));
 

@@ -67,8 +67,9 @@ export class AchievementUI {
       font-family: monospace;
       box-sizing: border-box;
       pointer-events: none;
-      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-      transform: translateX(100%);
+      will-change: transform, opacity;
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out;
+      transform: translate3d(100%, 0, 0);
       opacity: 0;
       overflow: hidden;
       word-break: break-word;
@@ -93,11 +94,11 @@ export class AchievementUI {
     // Trigger enter animation
     if (typeof requestAnimationFrame !== 'undefined') {
       requestAnimationFrame(() => {
-        toastEl.style.transform = 'translateX(0)';
+        toastEl.style.transform = 'translate3d(0, 0, 0)';
         toastEl.style.opacity = '1';
       });
     } else {
-      toastEl.style.transform = 'translateX(0)';
+      toastEl.style.transform = 'translate3d(0, 0, 0)';
       toastEl.style.opacity = '1';
     }
 
@@ -120,7 +121,7 @@ export class AchievementUI {
     if (idx !== -1) this.toasts.splice(idx, 1);
 
     const el = toastObj.el;
-    el.style.transform = 'translateX(100%)';
+    el.style.transform = 'translate3d(100%, 0, 0)';
     el.style.opacity = '0';
 
     setTimeout(() => {
