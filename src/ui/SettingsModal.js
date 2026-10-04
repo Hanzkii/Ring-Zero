@@ -174,23 +174,18 @@ export class SettingsModal {
           </div>
 
           <!-- Performance Telemetry Overlay -->
-          <div style="
+          <label style="
             background: rgba(0,0,0,0.3); padding: 12px 14px; border: 1px solid rgba(0,240,255,0.15);
-            display: flex; align-items: center; justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between; cursor: pointer;
           ">
             <div>
               <div style="font-size: 12px; color: ${COLOR.WHITE}; font-weight: bold;">PERFORMANCE TELEMETRY (FPS / TPS / FRAMETIME)</div>
               <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">Real-time diagnostics chip with FPS, TPS, and frametime in ms (Hotkey: [F3] / [Shift+F])</div>
             </div>
-            <button id="btn-toggle-perf" type="button" style="
-              background: ${perfOverlay ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)'};
-              border: 1px solid ${perfOverlay ? COLOR.CYAN : 'rgba(255, 255, 255, 0.25)'};
-              color: ${perfOverlay ? COLOR.CYAN : 'rgba(255, 255, 255, 0.5)'};
-              font-family: monospace; font-size: 11px; font-weight: bold;
-              padding: 6px 14px; cursor: pointer; border-radius: 2px;
-              transition: all 0.15s ease;
-            ">[ ${perfOverlay ? 'ON' : 'OFF'} ]</button>
-          </div>
+            <input type="checkbox" id="chk-perf-overlay" ${perfOverlay ? 'checked' : ''} style="
+              transform: scale(1.3); cursor: pointer; accent-color: ${COLOR.CYAN};
+            ">
+          </label>
 
           <!-- Spatial Grid Debug -->
           <label style="
@@ -275,19 +270,18 @@ export class SettingsModal {
       this.storage.save();
     });
 
-    const btnPerf = this.modalEl.querySelector('#btn-toggle-perf');
-    btnPerf?.addEventListener('click', () => {
-      const current = !!this.storage.settings.showPerformanceOverlay;
-      const next = !current;
-      this.storage.settings.showPerformanceOverlay = next;
-      this.storage.updateSettings({ showPerformanceOverlay: next });
-      if (this.onPerfTelemetryToggle) this.onPerfTelemetryToggle(next);
+    const chkPerf = this.modalEl.querySelector('#chk-perf-overlay');
+    chkPerf?.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      this.storage.settings.showPerformanceOverlay = checked;
+      this.storage.updateSettings({ showPerformanceOverlay: checked });
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('rz_perf_overlay', String(checked));
+        } catch (_) {}
+      }
+      if (this.onPerfTelemetryToggle) this.onPerfTelemetryToggle(checked);
       this.soundBank?.playUIClick();
-
-      btnPerf.textContent = `[ ${next ? 'ON' : 'OFF'} ]`;
-      btnPerf.style.background = next ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)';
-      btnPerf.style.borderColor = next ? COLOR.CYAN : 'rgba(255, 255, 255, 0.25)';
-      btnPerf.style.color = next ? COLOR.CYAN : 'rgba(255, 255, 255, 0.5)';
       this.storage.save();
     });
 
