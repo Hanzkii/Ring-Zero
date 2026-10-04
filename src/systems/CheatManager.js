@@ -192,6 +192,7 @@ export class CheatManager {
           currentAngle = res;
         }
       }
+    }
     if (aimVector && typeof currentAngle === 'number') {
       aimVector.x = Math.cos(currentAngle);
       aimVector.y = Math.sin(currentAngle);
