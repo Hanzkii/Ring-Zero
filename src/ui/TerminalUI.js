@@ -11,6 +11,7 @@
 import { RING_TIER } from '../cheats/CheatDefinition.js';
 import { COLOR } from '../core/Constants.js';
 import { ACHIEVEMENT_REGISTRY } from '../systems/AchievementSystem.js';
+import { MENU_ICONS } from './MainMenu.js';
 
 export class TerminalUI {
   /**
@@ -47,25 +48,60 @@ export class TerminalUI {
   _initBootTerminal() {
     if (!this.bootOverlay) return;
 
+    const clearanceName = this.storage.getClearanceName();
+    const riskMult = this.storage.getRiskMultiplier().toFixed(2);
+    const bounties = this.storage.cryptoBounties.toLocaleString();
+
     this.bootOverlay.innerHTML = `
       <div class="terminal-box" id="main-terminal-box">
         <div class="terminal-header">
-          <div style="display: flex; justify-content: space-between; align-items: baseline;">
-            <h1 class="terminal-title">RING ZERO</h1>
-            <div id="terminal-bounty-display" style="font-size: 13px; color: ${COLOR.AMBER}; letter-spacing: 1px;">
-              BOUNTIES: <span id="hdr-bounties-val">0</span> BTC
+          <div class="terminal-header-top">
+            <div>
+              <h1 class="terminal-title">RING ZERO</h1>
+              <div class="terminal-subtitle">PRIVILEGE ESCALATION // KERNEL MEMORY INTERCEPTOR</div>
+            </div>
+            <div class="terminal-badges">
+              <div class="term-badge term-badge-clearance" title="Current Privilege Tier">
+                ${MENU_ICONS.shield}
+                <span id="hdr-clearance-val">${clearanceName}</span>
+              </div>
+              <div class="term-badge term-badge-multiplier" title="Active Security Threat Multiplier">
+                ${MENU_ICONS.threatDelta}
+                <span id="hdr-risk-val">${riskMult}x</span>
+              </div>
+              <div class="term-badge term-badge-bounty" id="terminal-bounty-display" title="Crypto Bounty Balance">
+                ${MENU_ICONS.coin}
+                <span id="hdr-bounties-val">${bounties}</span> BTC
+              </div>
             </div>
           </div>
-          <div class="terminal-subtitle">PRIVILEGE ESCALATION // KERNEL MEMORY INTERCEPTOR</div>
           
           <!-- Terminal Tabs -->
-          <div class="terminal-tabs" style="display: flex; gap: 6px; margin-top: 16px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 8px; flex-wrap: wrap;">
-            <button class="term-tab-btn active" data-tab="briefing">[ 1: BRIEFING ]</button>
-            <button class="term-tab-btn" data-tab="shop">[ 2: CLEARANCE SHOP ]</button>
-            <button class="term-tab-btn" data-tab="firmware">[ 3: FIRMWARE LAB ]</button>
-            <button class="term-tab-btn" data-tab="daemons">[ 4: SECURITY DAEMONS ]</button>
-            <button class="term-tab-btn" data-tab="leaderboard">[ 5: LEADERBOARD ]</button>
-            <button class="term-tab-btn" data-tab="achievements">[ 6: ACHIEVEMENTS ]</button>
+          <div class="terminal-tabs">
+            <button class="term-tab-btn active" data-tab="briefing">
+              ${MENU_ICONS.prompt}
+              <span>[ 1: BRIEFING ]</span>
+            </button>
+            <button class="term-tab-btn" data-tab="shop">
+              ${MENU_ICONS.chip}
+              <span>[ 2: CLEARANCE SHOP ]</span>
+            </button>
+            <button class="term-tab-btn" data-tab="firmware">
+              ${MENU_ICONS.cpu}
+              <span>[ 3: FIRMWARE LAB ]</span>
+            </button>
+            <button class="term-tab-btn" data-tab="daemons">
+              ${MENU_ICONS.skull}
+              <span>[ 4: SECURITY DAEMONS ]</span>
+            </button>
+            <button class="term-tab-btn" data-tab="leaderboard">
+              ${MENU_ICONS.leaderboard}
+              <span>[ 5: LEADERBOARD ]</span>
+            </button>
+            <button class="term-tab-btn" data-tab="achievements">
+              ${MENU_ICONS.trophy}
+              <span>[ 6: ACHIEVEMENTS ]</span>
+            </button>
           </div>
         </div>
 
@@ -73,13 +109,17 @@ export class TerminalUI {
           <!-- Content populated dynamically -->
         </div>
 
-        <div class="terminal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-          <button id="btn-term-settings" class="btn-vector" style="border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); font-size: 11px; padding: 12px 20px;">
-            SETTINGS
+        <div class="terminal-footer">
+          <button id="btn-term-settings" class="btn-vector-secondary">
+            ${MENU_ICONS.gearSettings}
+            <span>SETTINGS</span>
           </button>
           <div style="display: flex; align-items: center; gap: 16px;">
             <div class="terminal-prompt">PRESS [ENTER] OR CLICK TO EXECUTE</div>
-            <button id="btn-init-kernel" class="btn-vector">INITIALIZE KERNEL ACCESS</button>
+            <button id="btn-init-kernel" class="btn-vector-primary">
+              ${MENU_ICONS.chevronPlay}
+              <span>INITIALIZE KERNEL ACCESS</span>
+            </button>
           </div>
         </div>
       </div>
@@ -132,12 +172,8 @@ export class TerminalUI {
     tabButtons.forEach((btn) => {
       if (btn.getAttribute('data-tab') === tabName) {
         btn.classList.add('active');
-        btn.style.borderColor = COLOR.CYAN;
-        btn.style.color = COLOR.CYAN;
       } else {
         btn.classList.remove('active');
-        btn.style.borderColor = 'transparent';
-        btn.style.color = 'rgba(255, 255, 255, 0.6)';
       }
     });
 
@@ -152,6 +188,14 @@ export class TerminalUI {
     const bountyEl = document.getElementById('hdr-bounties-val');
     if (bountyEl) {
       bountyEl.textContent = this.storage.cryptoBounties.toLocaleString();
+    }
+    const clearanceEl = document.getElementById('hdr-clearance-val');
+    if (clearanceEl) {
+      clearanceEl.textContent = this.storage.getClearanceName();
+    }
+    const riskEl = document.getElementById('hdr-risk-val');
+    if (riskEl) {
+      riskEl.textContent = `${this.storage.getRiskMultiplier().toFixed(2)}x`;
     }
     if (!container) return;
 
@@ -187,7 +231,10 @@ export class TerminalUI {
       <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 8px;">
         <div>
           <div style="font-size: 11px; color: ${COLOR.CYAN}; letter-spacing: 1.5px;">// CYBERNETIC CLEARANCE // RUNTIME ACQUISITIONS //</div>
-          <div style="font-size: 15px; font-weight: bold; color: #FFF; margin-top: 2px;">SYSTEM ACHIEVEMENTS: ${unlockedCount} / ${achList.length} COMPLETED (${pct}%)</div>
+          <div style="font-size: 15px; font-weight: bold; color: #FFF; margin-top: 2px; display: flex; align-items: center; gap: 8px;">
+            ${MENU_ICONS.trophy}
+            <span>SYSTEM ACHIEVEMENTS: ${unlockedCount} / ${achList.length} COMPLETED (${pct}%)</span>
+          </div>
         </div>
         <div style="width: 140px; height: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(0,240,255,0.3);">
           <div style="height: 100%; width: ${pct}%; background: ${COLOR.CYAN};"></div>
@@ -267,8 +314,8 @@ export class TerminalUI {
         <div style="font-size: 11px; letter-spacing: 1px; color: ${COLOR.CYAN}; font-weight: bold;">
           // PERMANENT FIRMWARE MICRO-UPGRADES // HARDWARE RE-FLASHING //
         </div>
-        <div style="font-size: 12px; color: ${COLOR.WHITE};">
-          CRYPTO BALANCE: <span style="color: ${COLOR.AMBER}; font-weight: bold; text-shadow: 0 0 6px ${COLOR.AMBER}80;">${bounties} BTC</span>
+        <div style="font-size: 12px; color: ${COLOR.WHITE}; display: flex; align-items: center; gap: 6px;">
+          CRYPTO BALANCE: <span style="color: ${COLOR.AMBER}; font-weight: bold; text-shadow: 0 0 6px ${COLOR.AMBER}80; display: inline-flex; align-items: center; gap: 4px;">${MENU_ICONS.coin} ${bounties} BTC</span>
         </div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px; max-height: 290px; overflow-y: auto;">
@@ -366,19 +413,150 @@ export class TerminalUI {
   _renderBriefingTab(container) {
     const ringName = this.storage.getClearanceName();
     const mult = this.storage.getRiskMultiplier().toFixed(2);
+    const poolTier = `TIER >= RING ${this.storage.clearanceRing}`;
 
     container.innerHTML = `
-      <p>SYSTEM WARNING: Kernel-space privilege deauthorization detected. Hostile security daemons are sanitizing memory blocks.</p>
-      <div class="terminal-log">
-        <div>[CLEARANCE] <span>${ringName}</span> MOUNTED.</div>
-        <div>[EXPLOITS] DRAFT POOL: <span>TIER &gt;= RING ${this.storage.clearanceRing}</span></div>
-        <div>[SECURITY] SCORE MULTIPLIER: <span>${mult}x ACTIVE</span></div>
-        <div>[AUDIO] ZERO-ASSET WEB AUDIO SYNTHESIZER: <span>ARMED</span></div>
+      <p style="font-size: 12px; color: rgba(255, 255, 255, 0.85); margin-bottom: 12px; line-height: 1.5;">
+        SYSTEM WARNING: Kernel-space privilege deauthorization detected. Hostile security daemons are sanitizing memory blocks. Weaponize hardware ballistics and runtime cheat exploits to breach Ring 0 clearance.
+      </p>
+
+      <!-- 2x2 High-Contrast Diagnostic Telemetry Grid -->
+      <div class="diag-grid">
+        <div class="diag-card">
+          <div class="diag-card-header">
+            <span class="diag-chip">[CLEARANCE]</span>
+            <span style="font-size: 9px; color: ${COLOR.CYAN}; font-family: monospace;">STATUS: MOUNTED</span>
+          </div>
+          <div class="diag-card-val" style="color: ${COLOR.CYAN};">
+            ${MENU_ICONS.shield}
+            <span>${ringName}</span>
+          </div>
+          <div class="diag-card-desc">Hardware protection ring boundary & kernel execution privilege.</div>
+        </div>
+
+        <div class="diag-card">
+          <div class="diag-card-header">
+            <span class="diag-chip">[EXPLOITS]</span>
+            <span style="font-size: 9px; color: ${COLOR.GREEN}; font-family: monospace;">PIPELINE: ARMED</span>
+          </div>
+          <div class="diag-card-val" style="color: ${COLOR.WHITE};">
+            ${MENU_ICONS.chip}
+            <span>${poolTier} DRAFT POOL</span>
+          </div>
+          <div class="diag-card-desc">Dynamic runtime injection pipeline & milestone escalation rewards.</div>
+        </div>
+
+        <div class="diag-card">
+          <div class="diag-card-header">
+            <span class="diag-chip">[SECURITY]</span>
+            <span style="font-size: 9px; color: ${COLOR.AMBER}; font-family: monospace;">RISK DELTA</span>
+          </div>
+          <div class="diag-card-val" style="color: ${COLOR.AMBER};">
+            ${MENU_ICONS.threatDelta}
+            <span>${mult}x SCORE MULTIPLIER</span>
+          </div>
+          <div class="diag-card-desc">Active security daemon response factor & bounty coefficient.</div>
+        </div>
+
+        <div class="diag-card">
+          <div class="diag-card-header">
+            <span class="diag-chip">[AUDIO]</span>
+            <span style="font-size: 9px; color: ${COLOR.GREEN}; font-family: monospace;">SYNTH: READY</span>
+          </div>
+          <div class="diag-card-val" style="color: ${COLOR.GREEN};">
+            ${MENU_ICONS.audioWave}
+            <span>ZERO-ASSET WEB AUDIO</span>
+          </div>
+          <div class="diag-card-desc">Pure mathematical FM synth, dynamic bassline & glitch ticks.</div>
+        </div>
       </div>
-      <p>Weaponize hardware ballistics and runtime cheat exploits to breach Ring 0 clearance.</p>
-      <div class="terminal-controls">
-        <div><strong>CONTROLS:</strong> [W,A,S,D] Move &bull; [MOUSE] Aim &bull; [LMB] Fire &bull; [R] Reload &bull; [Q] Swap Weapon</div>
-        <div><strong>AGILITY:</strong> [SPACE / RMB] Hyper-Velocity Dash &bull; [G] Spatial Grid Debug</div>
+
+      <!-- Controls & Keybinds Grid Matrix -->
+      <div class="keybind-matrix">
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">W</span>
+            <span class="keycap">A</span>
+            <span class="keycap">S</span>
+            <span class="keycap">D</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.move}
+            <span>Vector Movement & Strafe</span>
+          </div>
+        </div>
+
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">MOUSE</span>
+            <span class="keycap">LMB</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.aim}
+            <span>Aim & Primary Ballistic Fire</span>
+          </div>
+        </div>
+
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">SPACE</span>
+            <span class="keycap">RMB</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.dash}
+            <span>Hyper-Velocity Thruster Dash</span>
+          </div>
+        </div>
+
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">Q</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.swap}
+            <span>Cycle Equipped Weapon</span>
+          </div>
+        </div>
+
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">R</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.reload}
+            <span>Tactical Magazine Reload</span>
+          </div>
+        </div>
+
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">F</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.rootkit}
+            <span>ROOTKIT.SYS Kernel Glitch</span>
+          </div>
+        </div>
+
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">G</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.grid}
+            <span>Spatial Hash Debug Mesh</span>
+          </div>
+        </div>
+
+        <div class="keybind-row">
+          <div class="keycap-group">
+            <span class="keycap">ESC</span>
+          </div>
+          <div class="keybind-action">
+            ${MENU_ICONS.pause}
+            <span>System Diagnostic & Pause</span>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -415,8 +593,8 @@ export class TerminalUI {
     ];
 
     let html = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN};">
-        EXPLOIT PRIVILEGE CLEARANCE // CURRENT ACCESS: <strong>${this.storage.getClearanceName()}</strong>
+      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; align-items: center; gap: 6px;">
+        EXPLOIT PRIVILEGE CLEARANCE // CURRENT ACCESS: ${MENU_ICONS.shield} <strong>${this.storage.getClearanceName()}</strong>
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px;">
     `;
@@ -497,8 +675,8 @@ export class TerminalUI {
     const mult = this.storage.getRiskMultiplier().toFixed(2);
 
     let html = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN};">
-        ANTI-CHEAT SECURITY DAEMONS // ACTIVE SCORE MULTIPLIER: <strong style="color: ${COLOR.AMBER};">${mult}x</strong>
+      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; align-items: center; gap: 6px;">
+        ANTI-CHEAT SECURITY DAEMONS // ACTIVE SCORE MULTIPLIER: ${MENU_ICONS.threatDelta} <strong style="color: ${COLOR.AMBER};">${mult}x</strong>
       </div>
       <div style="display: flex; flex-direction: column; gap: 12px;">
     `;
@@ -558,7 +736,7 @@ export class TerminalUI {
     let html = `
       <div style="margin-bottom: 10px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-weight: bold; letter-spacing: 1px;">TOP 100 KERNEL LEADERBOARD</span>
+          <span style="font-weight: bold; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">${MENU_ICONS.leaderboard} TOP 100 KERNEL LEADERBOARD</span>
           ${statusBadge}
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
