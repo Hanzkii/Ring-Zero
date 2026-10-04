@@ -56,7 +56,7 @@ class VectorParticle {
     }
   }
 
-  render(ctx, alpha = 1.0) {
+  renderFast(ctx, alpha = 1.0) {
     if (!this.active) return;
 
     const rx = lerp(this.prevX, this.x, alpha);
@@ -68,14 +68,18 @@ class VectorParticle {
     const tailX = rx - (this.vx * 0.03 * tailFactor);
     const tailY = ry - (this.vy * 0.03 * tailFactor);
 
-    ctx.save();
     ctx.strokeStyle = this.color;
     ctx.globalAlpha = Math.max(0, lifeRatio);
-    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(tailX, tailY);
     ctx.lineTo(rx, ry);
     ctx.stroke();
+  }
+
+  render(ctx, alpha = 1.0) {
+    ctx.save();
+    ctx.lineWidth = 1;
+    this.renderFast(ctx, alpha);
     ctx.restore();
   }
 
@@ -178,14 +182,17 @@ export class ParticleSystem {
    * @param {import('../core/Camera2D.js').Camera2D} [camera=null]
    */
   render(ctx, alpha = 1.0, camera = null) {
+    ctx.save();
+    ctx.lineWidth = 1;
     this.pool.forEachActive((p) => {
       if (camera && typeof camera.isInView === 'function') {
         const rx = lerp(p.prevX, p.x, alpha);
         const ry = lerp(p.prevY, p.y, alpha);
         if (!camera.isInView(rx, ry, 64)) return;
       }
-      p.render(ctx, alpha);
+      p.renderFast(ctx, alpha);
     });
+    ctx.restore();
   }
 
   /**

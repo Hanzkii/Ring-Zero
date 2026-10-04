@@ -70,19 +70,22 @@ export class AimbotCheat extends CheatInterceptor {
 
     if (!player || !enemies || enemies.length === 0) return null;
 
-    let minDistance = Infinity;
+    const maxRangeSq = maxRange * maxRange;
+    let minDistanceSq = Infinity;
 
     for (let i = 0; i < enemies.length; i++) {
       const enemy = enemies[i];
       if (!enemy || !enemy.active || enemy.markedForRemoval || enemy.health <= 0) continue;
 
       // 1. Direct enemy body Euclidean distance from player
-      const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const distSq = dx * dx + dy * dy;
 
-      if (dist <= maxRange) {
+      if (distSq <= maxRangeSq) {
         const losOk = !checkLOS || checkLOS(player.x, player.y, enemy.x, enemy.y);
-        if (losOk && dist < minDistance) {
-          minDistance = dist;
+        if (losOk && distSq < minDistanceSq) {
+          minDistanceSq = distSq;
           this._bestTarget = enemy;
           this._bestTargetX = enemy.x;
           this._bestTargetY = enemy.y;
@@ -97,11 +100,13 @@ export class AimbotCheat extends CheatInterceptor {
           const step = Math.max(1, Math.floor(history.length / 5));
           for (let h = 0; h < history.length - 1; h += step) {
             const snap = history[h];
-            const gDist = Math.hypot(snap.x - player.x, snap.y - player.y);
-            if (gDist <= maxRange) {
+            const gdx = snap.x - player.x;
+            const gdy = snap.y - player.y;
+            const gDistSq = gdx * gdx + gdy * gdy;
+            if (gDistSq <= maxRangeSq) {
               const ghostLosOk = !checkLOS || checkLOS(player.x, player.y, snap.x, snap.y);
-              if (ghostLosOk && gDist < minDistance) {
-                minDistance = gDist;
+              if (ghostLosOk && gDistSq < minDistanceSq) {
+                minDistanceSq = gDistSq;
                 this._bestTarget = enemy;
                 this._bestTargetX = snap.x;
                 this._bestTargetY = snap.y;

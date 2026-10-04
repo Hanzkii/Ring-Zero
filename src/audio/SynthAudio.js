@@ -150,6 +150,13 @@ export class SynthAudio {
     osc.connect(gain);
     gain.connect(this.sfxGain || this.masterGain);
 
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
+
     osc.start(t);
     osc.stop(t + duration);
   }
@@ -182,6 +189,14 @@ export class SynthAudio {
     source.connect(filter);
     filter.connect(gain);
     gain.connect(this.sfxGain || this.masterGain);
+
+    source.onended = () => {
+      try {
+        source.disconnect();
+        filter.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
 
     source.start(t);
     source.stop(t + duration);
@@ -219,6 +234,15 @@ export class SynthAudio {
 
     carrier.connect(outGain);
     outGain.connect(this.sfxGain || this.masterGain);
+
+    carrier.onended = () => {
+      try {
+        carrier.disconnect();
+        modulator.disconnect();
+        modGain.disconnect();
+        outGain.disconnect();
+      } catch (_) {}
+    };
 
     carrier.start(t);
     modulator.start(t);

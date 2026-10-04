@@ -625,9 +625,11 @@ export class CollisionSystem {
               const clearance = this.cheatManager?.clearanceRing ?? 3;
               for (const enemy of enemyList) {
                 if (!enemy.active || enemy.markedForRemoval) continue;
-                const d = Math.hypot(enemy.x - prop.x, enemy.y - prop.y);
-                if (d < blastRadius + enemy.radius) {
-                  const dir = this._knockbackDir.set(enemy.x - prop.x, enemy.y - prop.y).normalize();
+                const edx = enemy.x - prop.x;
+                const edy = enemy.y - prop.y;
+                const maxEnemyRange = blastRadius + enemy.radius;
+                if (edx * edx + edy * edy < maxEnemyRange * maxEnemyRange) {
+                  const dir = this._knockbackDir.set(edx, edy).normalize();
                   const died = enemy.takeDamage(120, dir, 300);
                   if (died) {
                     this.particleSystem.emitBurst(enemy.x, enemy.y, 14, enemy.color, 240);
@@ -642,8 +644,10 @@ export class CollisionSystem {
               }
 
               if (player && !player.markedForRemoval) {
-                const pd = Math.hypot(player.x - prop.x, player.y - prop.y);
-                if (pd < blastRadius + player.radius) {
+                const pdx = player.x - prop.x;
+                const pdy = player.y - prop.y;
+                const maxPlayerRange = blastRadius + player.radius;
+                if (pdx * pdx + pdy * pdy < maxPlayerRange * maxPlayerRange) {
                   player.takeDamage(25);
                   this.camera.addTrauma(0.35);
                   this.particleSystem.emitBurst(player.x, player.y, 10, COLOR.RED, 200);

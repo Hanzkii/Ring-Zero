@@ -72,35 +72,39 @@ export class SilentAimCheat extends CheatInterceptor {
     );
 
     let bestTarget = null;
-    let bestScore = Infinity;
+    let bestScoreSq = Infinity;
     let bestTargetX = 0;
     let bestTargetY = 0;
     let isBacktrack = false;
+
+    const minRangeSq = 10 * 10;
+    const maxRangeSq = maxRange * maxRange;
 
     for (const enemy of candidates) {
       if (!enemy.active || enemy.markedForRemoval) continue;
 
       // 1. Direct enemy body targeting
-      const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const distSq = dx * dx + dy * dy;
 
-      if (dist >= 10 && dist <= maxRange) {
+      if (distSq >= minRangeSq && distSq <= maxRangeSq && distSq < bestScoreSq) {
         const hasDirectLOS =
           hasWallhack ||
           !raycaster ||
           raycaster.hasLineOfSight(player.x, player.y, enemy.x, enemy.y, wallSegments);
 
         if (hasDirectLOS) {
+          const dist = Math.sqrt(distSq);
           const tLead = dist / bulletSpeed;
           const lx = enemy.x + (enemy.vx || 0) * tLead;
           const ly = enemy.y + (enemy.vy || 0) * tLead;
 
-          if (dist < bestScore) {
-            bestScore = dist;
-            bestTarget = enemy;
-            bestTargetX = lx;
-            bestTargetY = ly;
-            isBacktrack = false;
-          }
+          bestScoreSq = distSq;
+          bestTarget = enemy;
+          bestTargetX = lx;
+          bestTargetY = ly;
+          isBacktrack = false;
         }
       }
 
@@ -111,8 +115,10 @@ export class SilentAimCheat extends CheatInterceptor {
           const step = Math.max(1, Math.floor(history.length / 5));
           for (let i = 0; i < history.length - 1; i += step) {
             const snap = history[i];
-            const gDist = Math.hypot(snap.x - player.x, snap.y - player.y);
-            if (gDist < 10 || gDist > maxRange) continue;
+            const gdx = snap.x - player.x;
+            const gdy = snap.y - player.y;
+            const gDistSq = gdx * gdx + gdy * gdy;
+            if (gDistSq < minRangeSq || gDistSq > maxRangeSq || gDistSq >= bestScoreSq) continue;
 
             const hasGhostLOS =
               hasWallhack ||
@@ -120,13 +126,11 @@ export class SilentAimCheat extends CheatInterceptor {
               raycaster.hasLineOfSight(player.x, player.y, snap.x, snap.y, wallSegments);
 
             if (hasGhostLOS) {
-              if (gDist < bestScore) {
-                bestScore = gDist;
-                bestTarget = enemy;
-                bestTargetX = snap.x;
-                bestTargetY = snap.y;
-                isBacktrack = true;
-              }
+              bestScoreSq = gDistSq;
+              bestTarget = enemy;
+              bestTargetX = snap.x;
+              bestTargetY = snap.y;
+              isBacktrack = true;
             }
           }
         }
