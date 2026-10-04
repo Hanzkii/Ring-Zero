@@ -56,7 +56,7 @@ export class TerminalUI {
       <div class="terminal-box" id="main-terminal-box">
         <div class="terminal-header">
           <div class="terminal-header-top">
-            <div>
+            <div class="terminal-title-group">
               <h1 class="terminal-title">RING ZERO</h1>
               <div class="terminal-subtitle">PRIVILEGE ESCALATION // KERNEL MEMORY INTERCEPTOR</div>
             </div>
@@ -76,36 +76,36 @@ export class TerminalUI {
             </div>
           </div>
           
-          <!-- Terminal Tabs -->
+          <!-- Terminal Tabs Segmented Rail -->
           <div class="terminal-tabs">
             <button class="term-tab-btn active" data-tab="briefing">
               ${MENU_ICONS.prompt}
-              <span>[ 1: BRIEFING ]</span>
+              <span>BRIEFING</span>
             </button>
             <button class="term-tab-btn" data-tab="shop">
               ${MENU_ICONS.chip}
-              <span>[ 2: CLEARANCE SHOP ]</span>
+              <span>SHOP</span>
             </button>
             <button class="term-tab-btn" data-tab="firmware">
               ${MENU_ICONS.cpu}
-              <span>[ 3: FIRMWARE LAB ]</span>
+              <span>FIRMWARE</span>
             </button>
             <button class="term-tab-btn" data-tab="daemons">
               ${MENU_ICONS.skull}
-              <span>[ 4: SECURITY DAEMONS ]</span>
+              <span>DAEMONS</span>
             </button>
             <button class="term-tab-btn" data-tab="leaderboard">
               ${MENU_ICONS.leaderboard}
-              <span>[ 5: LEADERBOARD ]</span>
+              <span>RANKS</span>
             </button>
             <button class="term-tab-btn" data-tab="achievements">
               ${MENU_ICONS.trophy}
-              <span>[ 6: ACHIEVEMENTS ]</span>
+              <span>ACHIEVEMENTS</span>
             </button>
           </div>
         </div>
 
-        <div class="terminal-body" id="terminal-tab-content" style="min-height: 260px;">
+        <div class="terminal-body" id="terminal-tab-content">
           <!-- Content populated dynamically -->
         </div>
 
@@ -114,13 +114,13 @@ export class TerminalUI {
             ${MENU_ICONS.gearSettings}
             <span>SETTINGS</span>
           </button>
-          <div style="display: flex; align-items: center; gap: 16px;">
-            <div class="terminal-prompt">PRESS [ENTER] OR CLICK TO EXECUTE</div>
-            <button id="btn-init-kernel" class="btn-vector-primary">
-              ${MENU_ICONS.chevronPlay}
-              <span>INITIALIZE KERNEL ACCESS</span>
-            </button>
+          <div class="terminal-prompt" style="font-size: 11px; color: rgba(255, 255, 255, 0.45); letter-spacing: 1px;">
+            PRESS [ENTER] OR CLICK TO EXECUTE
           </div>
+          <button id="btn-init-kernel" class="btn-vector-primary">
+            ${MENU_ICONS.chevronPlay}
+            <span>INITIALIZE KERNEL ACCESS</span>
+          </button>
         </div>
       </div>
     `;
@@ -225,13 +225,13 @@ export class TerminalUI {
     const pct = Math.round((unlockedCount / achList.length) * 100);
 
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'display: flex; flex-direction: column; gap: 14px;';
+    wrap.style.cssText = 'display: flex; flex-direction: column; gap: 10px; height: 100%; box-sizing: border-box;';
 
     wrap.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 8px;">
+      <div style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 6px;">
         <div>
-          <div style="font-size: 11px; color: ${COLOR.CYAN}; letter-spacing: 1.5px;">// CYBERNETIC CLEARANCE // RUNTIME ACQUISITIONS //</div>
-          <div style="font-size: 15px; font-weight: bold; color: #FFF; margin-top: 2px; display: flex; align-items: center; gap: 8px;">
+          <div style="font-size: 10px; color: ${COLOR.CYAN}; letter-spacing: 1.5px;">// CYBERNETIC CLEARANCE // RUNTIME ACQUISITIONS //</div>
+          <div style="font-size: 14px; font-weight: bold; color: #FFF; margin-top: 2px; display: flex; align-items: center; gap: 8px;">
             ${MENU_ICONS.trophy}
             <span>SYSTEM ACHIEVEMENTS: ${unlockedCount} / ${achList.length} COMPLETED (${pct}%)</span>
           </div>
@@ -241,30 +241,23 @@ export class TerminalUI {
         </div>
       </div>
 
-      <div style="
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 10px; max-height: 52vh; overflow-y: auto; padding-right: 4px;
-      ">
+      <div class="achievements-grid">
         ${achList.map((ach) => {
           const isDone = unlockedMap.has(ach.id);
           const data = unlockedMap.get(ach.id);
           const dateStr = data?.unlockedAt ? new Date(data.unlockedAt).toLocaleDateString() : '';
-          const borderCol = isDone ? COLOR.CYAN : 'rgba(255,255,255,0.1)';
           const badgeCol = isDone ? COLOR.AMBER : 'rgba(255,255,255,0.3)';
-          const titleCol = isDone ? '#FFF' : 'rgba(255,255,255,0.4)';
+          const titleCol = isDone ? '#FFF' : 'rgba(255,255,255,0.45)';
           const statusText = isDone ? `<span style="color: ${COLOR.CYAN};">[UNLOCKED ${dateStr}]</span>` : `<span style="color: rgba(255,255,255,0.3);">[LOCKED]</span>`;
 
           return `
-            <div style="
-              background: rgba(18, 24, 34, 0.7); border: 1px solid ${borderCol};
-              padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
-            ">
+            <div class="achievement-card ${isDone ? 'unlocked' : ''}">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 10px; font-weight: bold; color: ${badgeCol}; letter-spacing: 1px;">[${ach.badge}]</span>
                 <span style="font-size: 9px; font-family: monospace;">${statusText}</span>
               </div>
-              <div style="font-size: 13px; font-weight: bold; color: ${titleCol};">${ach.title}</div>
-              <div style="font-size: 10px; color: rgba(255,255,255,0.6); line-height: 1.3;">${ach.description}</div>
+              <div style="font-size: 12px; font-weight: bold; color: ${titleCol}; margin: 2px 0;">${ach.title}</div>
+              <div class="achievement-desc">${ach.description}</div>
             </div>
           `;
         }).join('')}
@@ -318,7 +311,7 @@ export class TerminalUI {
           CRYPTO BALANCE: <span style="color: ${COLOR.AMBER}; font-weight: bold; text-shadow: 0 0 6px ${COLOR.AMBER}80; display: inline-flex; align-items: center; gap: 4px;">${MENU_ICONS.coin} ${bounties} BTC</span>
         </div>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 290px; overflow-y: auto;">
+      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 410px; overflow-y: auto; padding-right: 4px;">
     `;
 
     nodes.forEach((n) => {
@@ -656,54 +649,76 @@ export class TerminalUI {
         id: 'watchdogAI',
         name: 'DAEMON: WATCHDOG_AI.sys',
         desc: 'Security daemons gain +25% movement speed and tighter pursuit pathing.',
-        bonus: '+25% Score Multiplier',
+        bonus: '+25% Multiplier',
       },
       {
         id: 'integrityShield',
         name: 'DAEMON: INTEGRITY_SHIELD.ko',
         desc: 'Enemies reinforce chassis with +50% health resistance.',
-        bonus: '+35% Score Multiplier',
+        bonus: '+35% Multiplier',
       },
       {
         id: 'kernelPurge',
         name: 'DAEMON: KERNEL_PURGE.exe',
         desc: 'Direct damage check doubles (+100% incoming damage to player chassis).',
-        bonus: '+50% Score Multiplier',
+        bonus: '+50% Multiplier',
       },
     ];
 
     const mult = this.storage.getRiskMultiplier().toFixed(2);
 
     let html = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: ${COLOR.CYAN}; display: flex; align-items: center; gap: 6px;">
-        ANTI-CHEAT SECURITY DAEMONS // ACTIVE SCORE MULTIPLIER: ${MENU_ICONS.threatDelta} <strong style="color: ${COLOR.AMBER};">${mult}x</strong>
+      <div style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 6px; margin-bottom: 6px;">
+        <div style="font-size: 11px; letter-spacing: 1px; color: ${COLOR.CYAN}; font-weight: bold;">
+          // ANTI-CHEAT SECURITY DAEMONS // RISK ESCALATION //
+        </div>
+        <div style="font-size: 12px; color: ${COLOR.WHITE}; display: flex; align-items: center; gap: 6px;">
+          SCORE MULTIPLIER: <span style="color: ${COLOR.AMBER}; font-weight: bold; text-shadow: 0 0 6px ${COLOR.AMBER}80; display: inline-flex; align-items: center; gap: 4px;">${MENU_ICONS.threatDelta} ${mult}x</span>
+        </div>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
     `;
 
     daemons.forEach((d) => {
       const active = !!this.storage.riskModifiers[d.id];
       html += `
-        <label style="
-          border: 1px solid ${active ? COLOR.AMBER : 'rgba(255,255,255,0.15)'};
-          background: ${active ? 'rgba(255, 176, 0, 0.08)' : 'rgba(0,0,0,0.3)'};
-          padding: 12px 14px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          cursor: pointer;
-        ">
-          <div>
-            <div style="font-weight: bold; font-size: 13px; color: ${active ? COLOR.AMBER : COLOR.WHITE};">${d.name}</div>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 4px;">${d.desc}</div>
-            <div style="font-size: 10px; color: ${COLOR.GREEN}; margin-top: 2px;">REWARD: ${d.bonus}</div>
+        <label class="daemon-row ${active ? 'active' : ''}" style="cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 220px;">
+            <span style="color: ${active ? COLOR.AMBER : 'rgba(255,255,255,0.4)'};">${MENU_ICONS.skull}</span>
+            <div>
+              <div style="font-weight: bold; font-size: 12px; color: ${active ? COLOR.AMBER : COLOR.WHITE};">${d.name}</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.4); font-family: monospace;">SECURITY MODULE</div>
+            </div>
           </div>
-          <input type="checkbox" data-daemon="${d.id}" ${active ? 'checked' : ''} style="transform: scale(1.3); cursor: pointer; accent-color: ${COLOR.AMBER};">
+          <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 8px;">
+            <div style="font-size: 11px; color: rgba(255,255,255,0.7);">${d.desc}</div>
+            <span style="font-size: 10px; font-weight: bold; color: ${COLOR.GREEN}; background: rgba(5, 255, 161, 0.1); border: 1px solid rgba(5, 255, 161, 0.3); padding: 3px 8px; border-radius: 2px; white-space: nowrap;">
+              ${d.bonus}
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; padding-left: 8px;">
+            <input type="checkbox" data-daemon="${d.id}" ${active ? 'checked' : ''} style="transform: scale(1.3); cursor: pointer; accent-color: ${COLOR.AMBER};">
+          </div>
         </label>
       `;
     });
 
-    html += `</div>`;
+    html += `
+      </div>
+      <!-- Telemetry Risk Matrix Card -->
+      <div style="margin-top: 14px; background: rgba(6, 12, 20, 0.7); border: 1px dashed rgba(255, 176, 0, 0.3); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div style="font-size: 11px; color: ${COLOR.AMBER}; font-weight: bold; letter-spacing: 1px;">// CUMULATIVE RISK TELEMETRY //</div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 3px;">
+            Activating security daemons increases hostile speed and threat levels while accelerating cryptographic bounty yields and leaderboard placement.
+          </div>
+        </div>
+        <div style="text-align: right; min-width: 140px;">
+          <div style="font-size: 9px; color: rgba(255,255,255,0.45); font-family: monospace;">CURRENT ACCELERATION</div>
+          <div style="font-size: 16px; font-weight: bold; color: ${COLOR.AMBER};">${mult}x YIELD</div>
+        </div>
+      </div>
+    `;
     container.innerHTML = html;
 
     container.querySelectorAll('input[type="checkbox"]').forEach((box) => {
@@ -746,7 +761,7 @@ export class TerminalUI {
           </button>
         </div>
       </div>
-      <div style="max-height: 240px; overflow-y: auto; border: 1px solid rgba(0, 240, 255, 0.15); background: rgba(0,0,0,0.35);">
+      <div style="max-height: 400px; overflow-y: auto; border: 1px solid rgba(0, 240, 255, 0.15); background: rgba(0,0,0,0.35);">
         <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; font-family: monospace;">
           <thead>
             <tr style="border-bottom: 1px solid rgba(0,240,255,0.3); color: rgba(255,255,255,0.6); position: sticky; top: 0; background: #070A0F; z-index: 2;">
