@@ -388,6 +388,7 @@ export class GameApp {
     // Elevate cheat manager clearance and persistent storage
     this.cheatManager.clearanceRing = targetRing;
     this.storage.setClearanceRing(targetRing);
+    this.achievementSystem?.onRingElevated?.(targetRing, this.waveManager?.waveNumber || 1);
 
     // Dynamic arena shift with zero runtime GC allocations
     this.sectorArenaMap.setRing(targetRing, this.spatialGrid);
@@ -892,12 +893,97 @@ export class GameApp {
       }
     );
 
-    // Player dash impulse check (Space or Right Mouse Button)
-    if (this.input.isKeyJustPressed('Space') || this.input.isMouseButtonJustPressed(2)) {
+    // Player Signature Ability Check (Space or Shift or Right Mouse Button)
+    if (this.input.isKeyJustPressed('Space') || this.input.isKeyJustPressed('ShiftLeft') || this.input.isKeyJustPressed('ShiftRight') || this.input.isMouseButtonJustPressed(2)) {
       if (this.player.dash(moveDir)) {
         this.camera.addTrauma(0.24);
-        this.particleSystem.emitBurst(this.player.x, this.player.y, 8, COLOR.CYAN, 200);
-        this.soundBank.playDash();
+
+        if (this.clearanceRing === 3) {
+          // Ring 3: FORK() - Directional dash leaving cyber particle trail
+          this.particleSystem.emitBurst(this.player.x, this.player.y, 16, COLOR.CYAN, 240);
+          this.particleSystem.emitBurst(this.player.x, this.player.y, 8, COLOR.GREEN, 180);
+          this.soundBank.playDash();
+        } else if (this.clearanceRing === 2) {
+          // Ring 2: IRQ_TRIGGER - Reflective parry / shockwave clearing nearby bullets
+          this.particleSystem.emitBurst(this.player.x, this.player.y, 24, COLOR.AMBER, 320);
+          this.soundBank.playWallhackPulse?.() || this.soundBank.playDash();
+
+          // Reflect / clear nearby hostile projectiles within 200px
+          const parryRadiusSq = 200 * 200;
+          this.projectilePool.forEachActive((proj) => {
+            if (proj.isHostile || proj.owner === 'enemy') {
+              const pdx = proj.x - this.player.x;
+              const pdy = proj.y - this.player.y;
+              if (pdx * pdx + pdy * pdy <= parryRadiusSq) {
+                // Deflect bullet back at hostiles
+                proj.isHostile = false;
+                proj.owner = 'player';
+                proj.layer = COLLISION_LAYER.PROJECTILE_PLAYER;
+                proj.color = COLOR.AMBER;
+                proj.vx = -proj.vx * 1.25;
+                proj.vy = -proj.vy * 1.25;
+                proj.damage = Math.max(proj.damage, 45);
+                this.particleSystem.emitBurst(proj.x, proj.y, 4, COLOR.AMBER, 120);
+              }
+            }
+          });
+
+          // Shockwave pushes and damages close enemies
+          const shockRadiusSq = 180 * 180;
+          for (const enemy of this.enemies) {
+            if (enemy.active && !enemy.markedForRemoval) {
+              const edx = enemy.x - this.player.x;
+              const edy = enemy.y - this.player.y;
+              const distSq = edx * edx + edy * edy;
+              if (distSq <= shockRadiusSq) {
+                const dist = Math.sqrt(distSq) || 1;
+                const died = enemy.takeDamage(60, { x: edx / dist, y: edy / dist }, 300);
+                if (died) {
+                  this.achievementSystem?.onEnemyKilled(enemy, false, true);
+                  this.particleSystem.emitBurst(enemy.x, enemy.y, 14, COLOR.AMBER, 250);
+                }
+              }
+            }
+          }
+        } else if (this.clearanceRing === 1) {
+          // Ring 1: PAGE_FAULT - Blink teleport leaving an aggro-drawing holographic decoy
+          const decoyX = this.player.x;
+          const decoyY = this.player.y;
+          this.particleSystem.emitBurst(decoyX, decoyY, 20, '#D900FF', 260);
+
+          // Blink player ahead along moveDir
+          const blinkDist = 180;
+          const bDir = moveDir.magSq() > 0.01 ? moveDir : this.player.dashDirection;
+          this.player.x += bDir.x * blinkDist;
+          this.player.y += bDir.y * blinkDist;
+          this.particleSystem.emitBurst(this.player.x, this.player.y, 16, '#B000FF', 280);
+          this.achievementSystem?.onPageFaultEvade();
+          this.soundBank.playDash();
+
+          // Spawn harmless decoy burst drawing minor hostile aggro
+          this.props.push({
+            x: decoyX,
+            y: decoyY,
+            radius: 20,
+            health: 80,
+            maxHealth: 80,
+            color: '#D900FF',
+            isDecoy: true,
+            markedForRemoval: false,
+            update: function(dDt) {
+              this.health -= dDt * 25;
+              if (this.health <= 0) this.markedForRemoval = true;
+            },
+            render: function(rCtx) {
+              VectorRenderer.strokeCircle(rCtx, this.x, this.y, this.radius, '#D900FF', 1.5);
+              VectorRenderer.drawTargetBracket(rCtx, this.x, this.y, this.radius * 2, '#D900FF', 2);
+            },
+          });
+        } else {
+          // Ring 0: Quantum Phase Dash
+          this.particleSystem.emitBurst(this.player.x, this.player.y, 25, '#FF003C', 350);
+          this.soundBank.playDash();
+        }
       }
     }
 
@@ -926,6 +1012,7 @@ export class GameApp {
 
     // Ring 0 outer 60px pulsating hazard margin check (15 DPS + red edge flash)
     if (this.clearanceRing === 0) {
+      this.achievementSystem?.updateRing0Survival?.(clampedDt);
       const m = 60;
       if (
         this.player.x < -halfW + m ||

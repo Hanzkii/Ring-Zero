@@ -1,214 +1,154 @@
 # Ring Zero
 
-> **Privilege Escalation // 2D Procedural Kernel Shooter**  
-> Built strictly with **Vanilla Modern JavaScript (ES6+ modules)**, **HTML5 Canvas 2D API**, and **Web Audio API**.  
-> **Zero external dependencies. Zero npm packages. Zero bundlers. Zero audio assets.**
+```text
+  ██████╗ ██╗███╗   ██╗ ██████╗     ███████╗███████╗██████╗  ██████╗ 
+  ██╔══██╗██║████╗  ██║██╔════╝     ╚══███╔╝██╔════╝██╔══██╗██╔═══██╗
+  ██████╔╝██║██╔██╗ ██║██║  ███╗      ███╔╝ █████╗  ██████╔╝██║   ██║
+  ██╔══██╗██║██║╚██╗██║██║   ██║     ███╔╝  ██╔══╝  ██╔══██╗██║   ██║
+  ██║  ██║██║██║ ╚████║╚██████╔╝    ███████╗███████╗██║  ██║╚██████╔╝
+  ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝     ╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ 
+```
+
+> **4-Tier Protection Ring Privilege Escalation // Vector Cyber Shooter**  
+> Built strictly with **Vanilla Modern JavaScript (ES6+ Modules)**, **HTML5 Canvas 2D API**, and native **Web Audio API**.  
+> **Zero external dependencies. Zero npm packages. Zero bundlers. Zero binary audio assets.**
 
 [![Deploy Ring Zero to GitHub Pages](https://github.com/Hanzkii/Ring-Zero/actions/workflows/deploy.yml/badge.svg)](https://github.com/Hanzkii/Ring-Zero/actions/workflows/deploy.yml)
 
 ---
 
-## ⚡ Lore & Premise: Kernel Privilege Escalation
+## ⚡ Project Overview & Architecture Pillars
 
-In CPU protection ring architecture, execution privilege is strictly hierarchical:
-* **Ring 3**: Userland applications (heavily sandboxed, limited system access).
-* **Ring 2**: Device drivers & hardware communication routines.
-* **Ring 1**: Hypervisor & virtualization management layer.
-* **Ring 0**: Kernel space (unrestricted physical memory and hardware execution).
+In CPU protection ring architecture, system privilege is hierarchical:
+- **Ring 3**: Userland applications (sandboxed, restricted permissions).
+- **Ring 2**: Hardware device drivers & communication buses.
+- **Ring 1**: Hypervisor & virtual machine monitors (VMM).
+- **Ring 0**: Kernel space (unrestricted physical CPU execution & raw memory).
 
-In **Ring Zero**, your cyber-chassis is trapped in a hostile memory virtualization container. Sanitization daemons and anti-tamper security routines are systematically purging active memory blocks. To escape, you must weaponize classic game hacking exploits—injecting memory hooks, desyncing network packets, rewriting physics clocks, and piercing spatial geometry—to fight your way down into **Ring 0**.
+In **Ring Zero**, your cyber-chassis is trapped in a virtualized user space container. Hostile sanitization daemons systematically eliminate all running userland threads. To survive and breach kernel space, you must fight through milestone waves (15, 30, 45, 60+), drafting exploit injections, acquiring ring-specific prototype weaponry, triggering signature privilege abilities, and ascending through the protection hierarchy down to **Ring 0**.
+
+### Core Technical Pillars:
+1. **Zero External Dependencies**: 100% vanilla ES6+ modules with native browser APIs.
+2. **Deterministic 60Hz Physics**: Fixed simulation step accumulator (`dt = 1/60s`) with sub-frame alpha interpolation for buttery-smooth high-refresh rendering.
+3. **Procedural Web Audio Engine**: 4 procedural soundtrack profiles synthesized at runtime with real-time FM synthesis, dual-detuned Reese bass oscillators, and resonant filter sweeps.
+4. **Zero-GC Object Pools**: Preallocated 1,200 projectile objects and 1,024 particle structs recycled with zero runtime garbage collection hitches.
+5. **Spatial Hash Partitioning**: 128px uniform spatial hash grid accelerating collision queries from $O(N^2)$ to $O(N)$.
+6. **Cryptographic Anti-Tamper Verification**: SubtleCrypto SHA-256 telemetry signing for leaderboard score integrity.
 
 ---
 
-## 🎮 Controls
+## 🛡️ 4-Tier Protection Ring Content Matrix
 
-| Action | Key / Input | Notes |
+| Ring Clearance | Waves | Visual Theme & Palette | Procedural OST Profile | Signature Ability |
+| :--- | :---: | :--- | :--- | :--- |
+| **Ring 3: Userland** | 1–15 | Terminal Cyan (`#00F0FF`) & Matrix Green (`#00FF66`) | Mellow Synthwave (~114 BPM, D minor pentatonic, warm filtered saws) | `FORK()` — Directional thruster dash leaving high-density particle trails |
+| **Ring 2: Device Drivers** | 16–30 | PCB Trace Amber (`#FFB000`) & Warning Orange (`#FF5500`) | Industrial EBM (~132 BPM, sharp 2:1 FM metallic bass, driving 16th arps) | `IRQ_TRIGGER` — Reflective parry shockwave deflecting bullets and damaging hostiles |
+| **Ring 1: Hypervisor** | 31–45 | Virtual Magenta (`#D900FF`) & Ultraviolet (`#8800FF`) | Aggressive Darksynth (~150 BPM, C# Phrygian, distorted saw chugs & pitch slides) | `PAGE_FAULT` — Phase blink leaving an aggro-drawing holographic decoy |
+| **Ring 0: Kernel Space** | 46+ | Crimson Hazard (`#FF003C`) & Monolithic Black (`#070A0F`) | Cybercore / Dark D&B (~170 BPM, chaotic dual-detuned Reese bass & breakbeats) | `ROOTKIT.SYS` — Global screen purge ('F') destroying bullets & freezing memory |
+
+---
+
+## 🔫 Complete 16-Weapon Arsenal
+
+All 16 weapons feature distinct ballistic profiles, damage formulas, pellet dynamics, and vector projectile aesthetics:
+
+### Ring 3: Userland (Waves 1–15)
+- **`SIGTERM`**: Semi-automatic precision pulse pistol. Clean kinetic accuracy and reliable single-target stopping power.
+- **`STDERR_STREAM`**: Short-range wide cone error spray. Triple-pellet scatter ideal for early crowd suppression.
+- **`SOCKET_BLASTER`**: High fire-rate spray carbine. Rapid transmission cycling for continuous suppression.
+- **`CHMOD_777`**: Wide 8-pellet flak scatter shotgun. Maximum point-blank permissions and heavy knockback.
+
+### Ring 2: Device Drivers (Waves 16–30)
+- **`DMA_RAIL`**: High-velocity direct memory access railgun piercing through up to 3 hostiles.
+- **`INTERRUPT_VECTOR`**: Arc-lightning disruptor discharging volatile sub-pulses across clustered hostiles.
+- **`BUS_BURST`**: 4-round hardware bus burst carbine delivering dense kinetic bursts with sharp recoil climb.
+- **`OVERCLOCK_ROTARY`**: Spooling rotary autocannon with progressive 16.0 fire-rate output.
+
+### Ring 1: Hypervisor (Waves 31–45)
+- **`SHADOW_PAGE`**: Synchronized twin-beam weapon firing mirrored projectiles on parallel axes.
+- **`CONTAINER_BREACH`**: Pressurized cluster projectile detonating into 4 volatile sub-munitions upon impact.
+- **`VMM_PHASOR`**: Relativistic beam weapon boring through shielding, armor, and concrete walls.
+- **`VM_SINGULARITY`**: Gravitational vortex core generating negative knockback that draws minor hostiles toward impact zero.
+
+### Ring 0: Kernel Space (Waves 46+)
+- **`NULL_POINTER`**: Absolute de-allocation laser instantly vaporizing memory structures with 260 damage and 8-target wall pierce.
+- **`BUFFER_OVERFLOW`**: Hyper-frequency cascade firing 18 rounds/sec that fragments into memory leak clusters.
+- **`KERNEL_PANIC`**: Catastrophic 12-pellet omnidirectional pulse wave blasting through walls with 350 damage.
+- **`ROOTKIT_EXEC`**: Parasitic exploit shot that corrupts hostiles, converting eliminated targets into secondary explosive nodes.
+
+---
+
+## 🏆 Ring-Specific Achievements System
+
+The engine tracks both run-scoped milestones and career persistent achievements. Achievement notifications auto-dismiss after 4.0 seconds without UI clutter or DOM leaks:
+
+| Achievement ID | Title | Unlock Condition | Badge Tag |
+| :--- | :--- | :--- | :--- |
+| `[ACH_R3_ESCAPE]` | **Sandbox Escape** | Clear Wave 15 and ascend to Ring 2 (Device Drivers). | `[R3_ESCAPE]` |
+| `[ACH_R3_CLEAN]` | **Clean Memory** | Survive 5 consecutive waves without sustaining chassis damage. | `[MEM_CLEAN]` |
+| `[ACH_R2_HARDWARE]` | **Driver Initialized** | Clear Wave 30 and ascend to Ring 1 (Hypervisor). | `[R2_DRIVER]` |
+| `[ACH_R2_PARRY]` | **IRQ Handler** | Eliminate 25 hostiles using the `IRQ_TRIGGER` reflective parry shockwave. | `[IRQ_PARRY]` |
+| `[ACH_R1_BREACH]` | **Hypervisor Collapse** | Clear Wave 45 and breach Ring 0 (Kernel Space). | `[R1_BREACH]` |
+| `[ACH_R1_GHOST]` | **Ghost Thread** | Evade damage 30 times using the `PAGE_FAULT` phase blink. | `[PAGE_FAULT]` |
+| `[ACH_R0_ROOT]` | **UID 0 Attained** | Breach and survive inside Ring 0 Kernel Execution (Wave 46+). | `[UID_0]` |
+| `[ACH_R0_PANIC]` | **Kernel Panic Survivor** | Survive for 90 cumulative seconds within the Ring 0 hazard zone. | `[KERNEL_SURV]` |
+
+---
+
+## 🎮 Controls Reference
+
+| Action | Primary Input | Secondary / Alternative |
 | :--- | :--- | :--- |
-| **Movement** | `[W]`, `[A]`, `[S]`, `[D]` | Kinematic cyber-chassis thrusters |
-| **Aim & Direct Fire** | `[Mouse Pointer]` + `[LMB]` | 360° cursor tracking with recoil trauma |
-| **Autonomous Triggerbot** | Autonomous | Fires automatically when crosshairs intersect targets |
-| **Hyper-Velocity Dash** | `[Space]` or `[RMB]` | High-speed omnidirectional evasion & ram damage |
-| **Weapon Reload** | `[R]` | Auto-reloads on empty clip; accelerated by Fast DMA |
-| **Swap Weapon Slot** | `[Q]` | Toggle between Primary and Secondary weapon loadouts |
-| **Rootkit Screen Purge** | `[F]` | Ring 0 active exploit: EMP screen purge, wipes hostile bullets, deals massive shockwave damage & grants invulnerability |
-| **Draft Re-roll** | `[R]` *(in Draft Modal)* | Spend Heuristic Spoofing tokens to reroll exploit cards |
-| **Pause Menu** | `[ESC]` or `[P]` | Suspends 60Hz physics; inspects active exploits & loadout |
-| **Spatial Grid Debug** | `[G]` | Real-time visual overlay of the uniform spatial hash cells |
+| **Movement / Strafe** | `[W]`, `[A]`, `[S]`, `[D]` | Arrow Keys |
+| **Aim Direction** | `[Mouse Pointer]` | Dynamic 360° Cursor Tracking |
+| **Primary Fire** | `[LMB]` (Left Mouse Button) | Auto-Fire via Triggerbot exploit |
+| **Signature Ability / Dash** | `[Space]` | `[Shift]` or `[RMB]` (Right Mouse Button) |
+| **Rootkit EMP Purge** | `[F]` | Ring 0 Active Screen Wiping Shockwave |
+| **Manual Reload** | `[R]` | Automatic on empty clip |
+| **Swap Weapon Slot** | `[Q]` | `[1]` / `[2]` Direct Slot Select |
+| **Draft Card Select** | `[1]`, `[2]`, `[3]`, `[4]`, `[5]` | Direct Card Click |
+| **Re-roll Draft Options** | `[R]` (in draft modal) | Spends Heuristic Spoofing token |
+| **Pause / Resume** | `[ESC]` or `[P]` | Suspends simulation clock & opens menu |
+| **Spatial Grid Debug Overlay**| `[G]` | Toggles real-time spatial hash grid cells |
 
 ---
 
-## 🧬 Exploit Matrix (16 Injected Exploits)
+## 🧪 Local Testing & Development Guide
 
-Exploits are gated behind your clearance ring. Spend crypto bounties earned during runs to unlock deeper Rings in the **Meta-Terminal**.
+Ring Zero uses standard ES Modules and requires an HTTP/HTTPS context (browser security restrictions disallow `file:///` ES module loading).
 
-| Ring Clearance | Exploit File | Name | Type | Mechanics & Rank Scaling |
-| :---: | :--- | :--- | :---: | :--- |
-| **Ring 3**<br>*(Userland)* | `Aimbot.dll` | **Aimbot** | Passive/Assist | Predictive trajectory lead targeting closest daemon. Rank 1: snap angle; Rank 2: predictive lead; Rank 3: autonomous triggerbot. |
-| **Ring 3**<br>*(Userland)* | `Wallhack.lua` | **ESP / Wallhack** | Visual/Bullet | Highlights daemons through walls and smoke. Rank 1: bounding boxes; Rank 2: telemetry radar; Rank 3: +2 bullet armor pierce. |
-| **Ring 3**<br>*(Userland)* | `OverclockDash.bin` | **Overclocked Dash** | Agility | Enhances thruster capacitor. Rank 1: -25% cooldown; Rank 2: +30% dash impulse; Rank 3: double dash charges. |
-| **Ring 3**<br>*(Userland)* | `Speedhack.exe` | **Speedhack** | Kinematics | Overclocks movement bus velocity. Rank 1: +25% speed; Rank 2: +45% speed; Rank 3: +70% speed. |
-| **Ring 3**<br>*(Userland)* | `Triggerbot.cs` | **Triggerbot** | Firing | 0ms reaction auto-fire when crosshair ray intersects hostile hitboxes. Rank 1: 14px ray; Rank 2: 24px ray; Rank 3: 34px cone. |
-| **Ring 2**<br>*(Hardware Drivers)* | `DoubleTap.pkg` | **Double Tap** | Ballistics | Packet multiplexing shoots an immediate phantom second volley with zero spread penalty. Rank 1: 40% chance; Rank 2: 70% chance; Rank 3: 100% guaranteed. |
-| **Ring 2**<br>*(Hardware Drivers)* | `Backtrack.sys` | **Backtrack** | Temporal | Records 90-tick historical ring buffer for all daemons. Bullets hit ghost positions and physically rewind enemies in spacetime. |
-| **Ring 2**<br>*(Hardware Drivers)* | `PacketChoke.net` | **Packet Choke** | Defensive | Simulates socket packet loss to drop incoming damage hit confirmations. Rank 1: 25% evasion; Rank 2: 40% evasion; Rank 3: 55% evasion. |
-| **Ring 2**<br>*(Hardware Drivers)* | `RadarTelemetry.ini` | **Tactical Radar** | Telemetry | Sweeping military-spec HUD mini-map displaying daemons, weapon drops, and explosive canisters in world space. |
-| **Ring 1**<br>*(Hypervisor)* | `Spinbot.asi` | **Spinbot Anti-Aim** | Evasion | Rapidly modulates visual chassis rotation offset, desyncing hostile pulse calculations and deflecting 35%-65% incoming damage. |
-| **Ring 1**<br>*(Hypervisor)* | `PenetrationBucker.bin`| **Penetration Bucker**| Ballistics | Overclocks bullet kinetic core to pierce multiple static walls and props. Rank 1: +2 pierce; Rank 2: +4 pierce; Rank 3: +8 pierce. |
-| **Ring 1**<br>*(Hypervisor)* | `RapidFire.ovl` | **Rapid Fire** | Ballistics | Accelerates firing hammer and clip cycles. Rank 1: +40% fire rate, -20% reload; Rank 2: +80% fire rate, -35% reload; Rank 3: +120% fire rate, -50% reload. |
-| **Ring 0**<br>*(Kernel Execution)* | `SilentAim.vmp` | **Silent Aim** | Reality-Bending | Disconnects visual camera aim from bullet trajectory. 100% predictive targeting, guaranteed critical hits, overrides and purges standard Aimbot. |
-| **Ring 0**<br>*(Kernel Execution)* | `Noclip.drv` | **Noclip** | Physics Bypass | Unbinds chassis from collision matrices. Completely phases through static concrete walls and server rack obstacles without collision clamping. |
-| **Ring 0**<br>*(Kernel Execution)* | `Rootkit.sys` | **Rootkit Purge** | Active Control | Tap `[F]` to discharge an EMP screen purge: incinerates all hostile projectiles across the arena, deals massive kernel shockwave damage (300-950), and grants 2.5s-4.0s invulnerability. |
-| **Ring 0**<br>*(Kernel Execution)* | `KernelPanic.rip` | **Kernel Panic** | Catastrophic | Triggers severe memory dump: every 10/7/5 shots or upon receiving damage, erupts an omnidirectional ring of 16-32 critical piercing lasers. |
-
----
-
-## 🔬 Permanent Firmware Micro-Upgrades
-
-In the **Terminal Firmware Lab**, spend surplus crypto bounties to permanently upgrade your chassis hardware:
-* **Buffer Expansion**: +20 Max HP per rank (up to +100 HP).
-* **Overclocked Bus**: +14 Movement Speed per rank (up to +70 px/s).
-* **Fast DMA I/O**: -10% Weapon Reload Time per rank (up to -50%).
-* **Heuristic Spoofing**: Grants Draft Re-roll tokens (`[R]` in draft modal) per run.
-* **Cache Magnet**: +40px Fragment & Crate Pickup Radius per rank (up to +200px).
-
----
-
-## 🔊 Zero-Asset Procedural Web Audio Engine
-
-Ring Zero contains **zero external audio files** (.mp3, .wav, .ogg). All audio synthesis is computed in real-time via the native browser `AudioContext`:
-* **Exponential Ballistic Drop**: Snappy pitch bends with exponential gain decay envelopes.
-* **Sub-Bass Shockwave Resonance**: Biquad low-pass filtered noise combined with low frequency sine sweeps.
-* **Aimbot Target Lock Chimes**: Dual high-frequency micro-beeps at 1800 Hz and 2400 Hz.
-* **Spinbot / Glitch Modulations**: Frequency-modulated square wave oscillators with rapid LFO vibrato.
-* **Master & SFX Gain Buses**: Independent vector slider volume controls wired dynamically in settings.
-
----
-
-## 🛡️ Anti-Tamper & Cryptographic Leaderboard
-
-All run completions are cryptographically signed using browser-native **SubtleCrypto** (SHA-256):
-$$\text{Checksum} = \text{SHA256}(\text{score} \parallel \text{waves} \parallel \text{kills} \parallel \text{bounties} \parallel \text{salt})$$
-Runs submitted with modified memory state, tampered scores, or stale hashes are automatically rejected.
-
----
-
-## 📐 System Architecture
-
-* **Zero Build Step**: Native browser ES6 modules (`type="module"`). Compatible with any static HTTP server or GitHub Pages.
-* **Fixed-Timestep Simulation Loop**: 60 Hz deterministic physics accumulator (`dt = 1/60`) with sub-frame alpha lerp interpolation for silky smooth high-refresh rendering.
-* **Spatial Hash Partitioning**: 128 px uniform 2D grid reducing narrowphase tests from $O(N^2)$ to $O(N)$.
-* **Zero-GC Preallocated Pools**: 1,200 projectile objects and 1,024 particle structs recycled with zero runtime heap allocation.
-* **Procedural Environments**: BSP Binary Space Partitioning (Facility sector) and Cellular Automata rock caves (Decrypted Caverns) with 2D raycast visibility cones.
-
-### Directory Structure
-```
-ring-zero/
-├── .github/workflows/
-│   └── deploy.yml              # Syntax validation, test suite & GitHub Pages CD
-├── index.html                  # Boot terminal shell and canvas mounting point
-├── styles/
-│   ├── main.css                # Base responsive canvas styling
-│   └── hud.css                 # Vector HUD, modals, sliders, and terminal CSS
-├── src/
-│   ├── main.js                 # Application bootstrap & user-gesture audio unlock
-│   ├── core/
-│   │   ├── Constants.js        # Simulation parameters, colors, collision bitmasks
-│   │   ├── VectorMath.js       # Zero-allocation Vec2 math and geometric utilities
-│   │   ├── GameLoop.js         # 60Hz fixed accumulator & sub-frame alpha loop
-│   │   ├── InputManager.js     # Keyboard, mouse, crosshair, and aim tracking
-│   │   ├── Camera2D.js         # Smooth tracking, mouse lead, trauma shake (T^2)
-│   │   ├── ObjectPool.js       # High-performance zero-GC object pool
-│   │   └── GameApp.js          # Core state orchestrator, pause, and lifecycle manager
-│   ├── audio/
-│   │   ├── SynthAudio.js       # Web Audio API pure synthesizer (zero audio files)
-│   │   └── SoundBank.js        # Procedural SFX dispatchers and sound presets
-│   ├── cheats/
-│   │   ├── CheatDefinition.js  # 16-exploit registry, tiers, and interceptor base class
-│   │   ├── AimbotCheat.js      # Predictive lead targeting
-│   │   ├── WallhackCheat.js    # ESP wireframes and wall pierce
-│   │   ├── SpinbotCheat.js     # Angle desync anti-aim
-│   │   ├── OverclockDashCheat.js # Thruster cooldown and impulse
-│   │   ├── SpeedhackCheat.js   # Bus velocity overclock
-│   │   ├── TriggerbotCheat.js  # 0ms crosshair ray auto-fire
-│   │   ├── DoubleTapCheat.js   # Multi-bullet packet duplicate
-│   │   ├── BacktrackCheat.js   # 90-tick temporal spacetime rewind
-│   │   ├── PacketChokeCheat.js # Incoming damage packet evasion
-│   │   ├── RadarTelemetryCheat.js # Tactical circular radar HUD
-│   │   ├── PenetrationBuckerCheat.js # Multi-wall bullet pierce
-│   │   ├── RapidFireCheat.js   # Fire rate & reload cycle acceleration
-│   │   ├── SilentAimCheat.js   # Kernel lock, triggerbot, trajectory curving
-│   │   ├── NoclipCheat.js      # Geometric wall phasing
-│   │   ├── RootkitCheat.js     # Active [F] Ring 0 EMP screen purge
-│   │   └── KernelPanicCheat.js # Omnidirectional critical laser rings
-│   ├── entities/
-│   │   ├── Entity.js           # Base spatial entity
-│   │   ├── Player.js           # Cyber-chassis kinematics, dash, and health
-│   │   ├── Enemy.js            # Security daemons, flocking AI, and drop loot
-│   │   ├── Projectile.js       # High-velocity ballistics, pierce, and lifetimes
-│   │   └── Drop.js             # XP fragments, crypto bounties, weapon crates
-│   ├── services/
-│   │   ├── StorageService.js   # LocalStorage schema, firmware nodes, clearance
-│   │   └── LeaderboardService.js # Async cryptographic SHA-256 verification
-│   ├── systems/
-│   │   ├── CheatManager.js     # Pipeline interceptor dispatcher & drafting
-│   │   ├── CollisionSystem.js  # Narrowphase contacts, noclip, and bullet pierce
-│   │   ├── SpatialHashGrid.js  # Uniform 2D broadphase spatial acceleration
-│   │   ├── WeaponSystem.js     # Dual weapon slots, ballistics, and reloading
-│   │   ├── WaveManager.js      # Procedural daemon scaling director
-│   │   └── ParticleSystem.js   # High-efficiency vector debris emitter
-│   ├── ui/
-│   │   ├── VectorRenderer.js   # Procedural vector HUD drawing primitives
-│   │   ├── TerminalUI.js       # Boot terminal, firmware lab, clearance shop
-│   │   ├── DraftModal.js       # Exploit cards draft interface with [R] re-rolls
-│   │   ├── PauseOverlay.js     # [ESC]/[P] hardware loadout & exploit inspector
-│   │   └── SettingsModal.js    # Vector sliders for volume, shake, and debug grid
-│   └── world/
-│       ├── BSPFacilityMap.js   # Binary space partitioning concrete rooms
-│       ├── CellularCavernMap.js # Cellular automata rock cavern generator
-│       ├── DestructibleProp.js # Server racks and explosive fuel canisters
-│       └── Raycaster2D.js      # Dynamic line-of-sight fog-of-war vision cone
-└── test/
-    ├── phase1_test.js          # Core math, physics loop, spatial hash tests
-    ├── phase2_test.js          # Ballistics, weapons, and particle tests
-    ├── phase3_test.js          # Exploit interceptor pipeline tests
-    ├── phase4_test.js          # Procedural BSP, cellular maps, and raycast tests
-    ├── phase5_test.js          # Web Audio, clearance hierarchy, and checksum tests
-    └── arsenal_expansion_test.js # Settings, firmware, rerolls, and all 16 exploits
-```
-
----
-
-## 🚀 Local Development & Execution
-
-Because **Ring Zero** uses pure standard ES6 modules without external packages or transpilers, no build tools or package managers are required.
-
-### Quick Start:
+### Option 1: Python HTTP Server (Recommended)
 ```bash
-# Clone repository
-git clone https://github.com/Hanzkii/Ring-Zero.git
-cd Ring-Zero
-
-# Run with any static HTTP server (e.g. Node, Python, or VS Code Live Server)
-python -m http.server 8080
-# Or: npx serve .
-
-# Open browser
-open http://localhost:8080
+python -m http.server 8000
+# Open http://localhost:8000 in your browser
 ```
 
-### Running Automated Test Suites:
-Run all 319 unit, regression, and gameplay invariant tests headless via Node.js:
+### Option 2: Node.js Serve
 ```bash
-node test/phase1_test.js
-node test/phase2_test.js
-node test/phase3_test.js
-node test/phase4_test.js
-node test/phase5_test.js
-node test/arsenal_expansion_test.js
+npx serve .
+# Open the displayed localhost URL
+```
+
+### Option 3: Syntax Validation Suite
+Verify all JavaScript modules before deployment:
+```bash
+node --check src/core/GameApp.js
+node --check src/systems/WeaponSystem.js
+node --check src/systems/AchievementSystem.js
+node --check src/ui/AchievementUI.js
+node --check src/ui/DraftModal.js
+node --check src/ui/TerminalUI.js
+node --check src/audio/SynthMusic.js
+node --check src/audio/SoundBank.js
 ```
 
 ---
 
-## 📜 License
+## 🚀 GitHub Pages Deployment
 
-MIT License. Crafted with precision for pure vector arcade fidelity.
+The project contains a pre-configured GitHub Actions workflow located at `.github/workflows/deploy.yml`. 
+
+Any push directly to the `main` branch automatically verifies and deploys the static game bundle to GitHub Pages:
+1. Commit and push changes: `git push origin main`.
+2. The GitHub Actions runner builds and deploys artifacts to the `github-pages` environment.
+3. Access the live production game at: `https://<username>.github.io/Ring-Zero/`.

@@ -40,10 +40,10 @@ export class AchievementUI {
   /**
    * Displays an achievement toast notification
    * @param {Object} achievement
-   * @param {number} [duration=3.5]
+   * @param {number} [duration=4.0]
    * @returns {Object|null}
    */
-  showToast(achievement, duration = 3.5) {
+  showToast(achievement, duration = 4.0) {
     if (!this.toastContainer && typeof document !== 'undefined' && this.rootContainer) {
       this._initDOMContainer();
     }

@@ -168,7 +168,8 @@ export class DraftModal {
     if (titleHeader) titleHeader.textContent = 'SELECT ESCALATION WEAPON';
 
     const hotkeyHint = this.modalEl.querySelector('.draft-footer div');
-    if (hotkeyHint) hotkeyHint.textContent = 'PRESS [1], [2], [3], OR [4] TO CONFIRM';
+    const keepIdx = weapons.length + 1;
+    if (hotkeyHint) hotkeyHint.textContent = `PRESS [1] TO [${keepIdx}] TO CONFIRM`;
 
     if (this.rerollBtn) {
       this.rerollBtn.style.display = 'none';
@@ -178,12 +179,12 @@ export class DraftModal {
     if (!cardsContainer) return;
     cardsContainer.innerHTML = '';
 
-    // Render 3 weapons from cumulative unlocked pool
+    // Render all weapons from the ring escalation pool (up to 4)
     weapons.forEach((wpn, idx) => {
       const card = document.createElement('div');
       card.className = 'draft-card';
       card.style.borderColor = accentColor;
-      card.style.minWidth = '220px';
+      card.style.minWidth = '200px';
 
       card.innerHTML = `
         <div class="card-hotkey">[ ${idx + 1} ]</div>
@@ -207,16 +208,16 @@ export class DraftModal {
       cardsContainer.appendChild(card);
     });
 
-    // 4th Choice: KEEP CURRENT WEAPON (+15% KERNEL OVERCLOCK)
+    // Final Choice: KEEP CURRENT WEAPON (+15% KERNEL OVERCLOCK)
     const keepCard = document.createElement('div');
     keepCard.className = 'draft-card';
     keepCard.style.borderColor = COLOR.GREEN;
-    keepCard.style.minWidth = '220px';
+    keepCard.style.minWidth = '200px';
 
     const curName = currentWeapon?.name || 'CURRENT WEAPON';
     const nextOverclock = (currentWeapon?.overclockLevel || 0) + 1;
     keepCard.innerHTML = `
-      <div class="card-hotkey">[ 4 ]</div>
+      <div class="card-hotkey">[ ${keepIdx} ]</div>
       <div class="card-badge" style="color: ${COLOR.GREEN}; border-color: ${COLOR.GREEN}">
         KERNEL OVERCLOCK &bull; RANK ${nextOverclock}
       </div>
@@ -234,7 +235,7 @@ export class DraftModal {
         OVERCLOCK ${curName.toUpperCase()}
       </button>
     `;
-    keepCard.addEventListener('click', () => this.selectEscalationIndex(3));
+    keepCard.addEventListener('click', () => this.selectEscalationIndex(weapons.length));
     cardsContainer.appendChild(keepCard);
 
     this.modalEl.classList.remove('draft-modal-hidden');
@@ -242,18 +243,18 @@ export class DraftModal {
   }
 
   /**
-   * Selects an escalation option (0, 1, 2 = weapons, 3 = keep current)
+   * Selects an escalation option (0..N-1 = weapons, N = keep current)
    * @param {number} index
    */
   selectEscalationIndex(index) {
     if (!this.isOpen || !this.isEscalationMode) return;
     this.close();
 
-    if (index >= 0 && index < 3) {
+    if (index >= 0 && index < this.currentOptions.length) {
       if (this.escalationCallback) {
         this.escalationCallback(this.currentOptions[index]);
       }
-    } else if (index === 3) {
+    } else {
       if (this.keepCurrentCallback) {
         this.keepCurrentCallback();
       }
@@ -302,14 +303,17 @@ export class DraftModal {
 
   _onKeyDown(e) {
     if (this.isEscalationMode) {
-      if (e.code === 'Digit1' || e.code === 'Numpad1') {
+      const code = e.code;
+      if (code === 'Digit1' || code === 'Numpad1') {
         this.selectEscalationIndex(0);
-      } else if (e.code === 'Digit2' || e.code === 'Numpad2') {
+      } else if (code === 'Digit2' || code === 'Numpad2') {
         this.selectEscalationIndex(1);
-      } else if (e.code === 'Digit3' || e.code === 'Numpad3') {
+      } else if (code === 'Digit3' || code === 'Numpad3') {
         this.selectEscalationIndex(2);
-      } else if (e.code === 'Digit4' || e.code === 'Numpad4') {
+      } else if (code === 'Digit4' || code === 'Numpad4') {
         this.selectEscalationIndex(3);
+      } else if (code === 'Digit5' || code === 'Numpad5') {
+        this.selectEscalationIndex(4);
       }
       return;
     }

@@ -7,6 +7,68 @@
 import { COLOR } from '../core/Constants.js';
 
 export const ACHIEVEMENT_REGISTRY = {
+  // Ring-Specific Milestones
+  ACH_R3_ESCAPE: {
+    id: 'ACH_R3_ESCAPE',
+    name: 'ACH_R3_ESCAPE',
+    title: 'Sandbox Escape',
+    description: 'Clear Wave 15 and reach Ring 2 (Device Drivers).',
+    badge: 'R3_ESCAPE',
+  },
+  ACH_R3_CLEAN: {
+    id: 'ACH_R3_CLEAN',
+    name: 'ACH_R3_CLEAN',
+    title: 'Clean Memory',
+    description: 'Survive 5 consecutive waves without taking damage.',
+    badge: 'MEM_CLEAN',
+  },
+  ACH_R2_HARDWARE: {
+    id: 'ACH_R2_HARDWARE',
+    name: 'ACH_R2_HARDWARE',
+    title: 'Driver Initialized',
+    description: 'Clear Wave 30 and reach Ring 1 (Hypervisor).',
+    badge: 'R2_DRIVER',
+  },
+  ACH_R2_PARRY: {
+    id: 'ACH_R2_PARRY',
+    name: 'ACH_R2_PARRY',
+    title: 'IRQ Handler',
+    description: 'Eliminate 25 hostiles using the IRQ_TRIGGER ability.',
+    badge: 'IRQ_PARRY',
+    target: 25,
+  },
+  ACH_R1_BREACH: {
+    id: 'ACH_R1_BREACH',
+    name: 'ACH_R1_BREACH',
+    title: 'Hypervisor Collapse',
+    description: 'Clear Wave 45 and breach Ring 0 (Kernel Space).',
+    badge: 'R1_BREACH',
+  },
+  ACH_R1_GHOST: {
+    id: 'ACH_R1_GHOST',
+    name: 'ACH_R1_GHOST',
+    title: 'Ghost Thread',
+    description: 'Evade damage 30 times using PAGE_FAULT blink.',
+    badge: 'PAGE_FAULT',
+    target: 30,
+  },
+  ACH_R0_ROOT: {
+    id: 'ACH_R0_ROOT',
+    name: 'ACH_R0_ROOT',
+    title: 'UID 0 Attained',
+    description: 'Survive and enter Ring 0 Kernel Execution (Wave 46+).',
+    badge: 'UID_0',
+  },
+  ACH_R0_PANIC: {
+    id: 'ACH_R0_PANIC',
+    name: 'ACH_R0_PANIC',
+    title: 'Kernel Panic Survivor',
+    description: 'Survive 90 seconds in Ring 0 hazard zone.',
+    badge: 'KERNEL_SURV',
+    target: 90,
+  },
+
+  // Legacy Milestones for backward compatibility
   ROOT_KIT: {
     id: 'ROOT_KIT',
     name: 'ROOT_KIT',
@@ -18,14 +80,14 @@ export const ACHIEVEMENT_REGISTRY = {
     id: 'RING_ZERO_BREACH',
     name: 'RING_ZERO_BREACH',
     title: 'Ring 0 Breach',
-    description: 'Equip any Kernel-tier (Ring 0) exploit (InfiniteAmmo, KernelPanic, Noclip, SilentAim).',
+    description: 'Equip any Kernel-tier (Ring 0) exploit.',
     badge: 'RING_0',
   },
   GHOST_IN_THE_SHELL: {
     id: 'GHOST_IN_THE_SHELL',
     name: 'GHOST_IN_THE_SHELL',
     title: 'Ghost In The Shell',
-    description: 'Deflect 50 incoming enemy projectiles using Anti-Aim / Spinbot evasion.',
+    description: 'Deflect 50 incoming enemy projectiles using Anti-Aim evasion.',
     badge: 'EVADE_50',
     target: 50,
   },
@@ -82,7 +144,7 @@ export class AchievementSystem {
     this.unlocked = new Map();
 
     // In-game active toast queue
-    this.activeToasts = []; // { achievement, timer, maxTimer: 3.5, slide: 0 }
+    this.activeToasts = []; // { achievement, timer, maxTimer: 4.0, slide: 0 }
 
     // Run-scoped trackers
     this.runStats = {
@@ -90,6 +152,10 @@ export class AchievementSystem {
       waveTookDamage: false,
       silentAimWaveFired: 0,
       silentAimWaveHits: 0,
+      consecutiveNoDamageWaves: 0,
+      irqTriggerKills: 0,
+      pageFaultEvades: 0,
+      ring0SurvivalTime: 0,
     };
 
     this.load();
@@ -144,11 +210,11 @@ export class AchievementSystem {
     this.unlocked.set(id, data);
     this.save();
 
-    // Enqueue toast
+    // Enqueue toast with clean 4.0s auto-dismissal
     this.activeToasts.push({
       achievement: ach,
-      timer: 3.5,
-      maxTimer: 3.5,
+      timer: 4.0,
+      maxTimer: 4.0,
       slide: 0,
     });
 
@@ -161,6 +227,46 @@ export class AchievementSystem {
 
   // --- In-Game Event Hooks ---
 
+  /**
+   * Tracks Clearance Ring elevation
+   * @param {number} ring - 3, 2, 1, 0
+   * @param {number} waveNumber
+   */
+  onRingElevated(ring, waveNumber) {
+    if (ring <= 2) {
+      this.unlock('ACH_R3_ESCAPE');
+    }
+    if (ring <= 1) {
+      this.unlock('ACH_R2_HARDWARE');
+    }
+    if (ring === 0) {
+      this.unlock('ACH_R1_BREACH');
+      this.unlock('ACH_R0_ROOT');
+      this.unlock('RING_ZERO_BREACH');
+    }
+  }
+
+  onIrqTriggerKill() {
+    this.runStats.irqTriggerKills++;
+    if (this.runStats.irqTriggerKills >= 25) {
+      this.unlock('ACH_R2_PARRY');
+    }
+  }
+
+  onPageFaultEvade() {
+    this.runStats.pageFaultEvades++;
+    if (this.runStats.pageFaultEvades >= 30) {
+      this.unlock('ACH_R1_GHOST');
+    }
+  }
+
+  updateRing0Survival(dt) {
+    this.runStats.ring0SurvivalTime += dt;
+    if (this.runStats.ring0SurvivalTime >= 90) {
+      this.unlock('ACH_R0_PANIC');
+    }
+  }
+
   onCheatUnlocked(cheatId, ringTier) {
     this.unlock('ROOT_KIT');
     if (
@@ -168,20 +274,26 @@ export class AchievementSystem {
       cheatId === 'infiniteammo' ||
       cheatId === 'kernelpanic' ||
       cheatId === 'noclip' ||
-      cheatId === 'silentaim'
+      cheatId === 'silentaim' ||
+      cheatId === 'rootkit'
     ) {
+      this.unlock('ACH_R0_ROOT');
       this.unlock('RING_ZERO_BREACH');
     }
   }
 
   onProjectileEvaded() {
     this.runStats.evasionCount++;
+    this.onPageFaultEvade();
     if (this.runStats.evasionCount >= 50) {
       this.unlock('GHOST_IN_THE_SHELL');
     }
   }
 
-  onEnemyKilled(enemy, isBacktrackHit = false) {
+  onEnemyKilled(enemy, isBacktrackHit = false, isIrqKill = false) {
+    if (isIrqKill) {
+      this.onIrqTriggerKill();
+    }
     if (isBacktrackHit) {
       this.unlock('CHRONO_DISPLACED');
     }
@@ -192,15 +304,37 @@ export class AchievementSystem {
 
   onPlayerDamaged() {
     this.runStats.waveTookDamage = true;
+    this.runStats.consecutiveNoDamageWaves = 0;
   }
 
   onWaveCompleted(waveNumber, waveAccuracy = 0, hasSilentAim = false, totalFirmwareCount = 0) {
+    if (!this.runStats.waveTookDamage) {
+      this.runStats.consecutiveNoDamageWaves++;
+      if (this.runStats.consecutiveNoDamageWaves >= 5) {
+        this.unlock('ACH_R3_CLEAN');
+      }
+    } else {
+      this.runStats.consecutiveNoDamageWaves = 0;
+    }
+
+    if (waveNumber >= 15) {
+      this.unlock('ACH_R3_ESCAPE');
+    }
+    if (waveNumber >= 30) {
+      this.unlock('ACH_R2_HARDWARE');
+    }
+    if (waveNumber >= 45) {
+      this.unlock('ACH_R1_BREACH');
+      this.unlock('ACH_R0_ROOT');
+    }
+
     if (hasSilentAim && waveAccuracy >= 99.9) {
       this.unlock('NULL_POINTER');
     }
     if (waveNumber >= 10 && totalFirmwareCount === 0) {
       this.unlock('COLD_REBOOT');
     }
+
     // Reset wave-scoped damage state
     this.runStats.waveTookDamage = false;
   }
@@ -219,6 +353,10 @@ export class AchievementSystem {
     this.runStats.waveTookDamage = false;
     this.runStats.silentAimWaveFired = 0;
     this.runStats.silentAimWaveHits = 0;
+    this.runStats.consecutiveNoDamageWaves = 0;
+    this.runStats.irqTriggerKills = 0;
+    this.runStats.pageFaultEvades = 0;
+    this.runStats.ring0SurvivalTime = 0;
   }
 
   /**
