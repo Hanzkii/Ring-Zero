@@ -72,13 +72,13 @@ export const PLAYER_CONFIG = {
 };
 
 export const CLEARANCE_RING = {
-  RING_3: 'RING_3', // Userland (Waves 1-10)
-  RING_2: 'RING_2', // Hardware Drivers (Waves 11-20)
-  RING_1: 'RING_1', // Hypervisor (Waves 21-30)
-  RING_0: 'RING_0', // Kernel Execution (Waves 31+)
+  RING_3: 'RING_3', // Userland (Waves 1-15)
+  RING_2: 'RING_2', // Hardware Drivers (Waves 16-30)
+  RING_1: 'RING_1', // Hypervisor (Waves 31-45)
+  RING_0: 'RING_0', // Kernel Execution (Waves 46+)
 };
 
-export const WAVES_PER_RING = 10;
+export const WAVES_PER_RING = 15;
 
 export const SECTOR_THEMES = {
   [CLEARANCE_RING.RING_3]: {

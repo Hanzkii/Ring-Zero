@@ -104,8 +104,8 @@ export class WaveManager {
    * @param {import('../entities/Player.js').Player} player
    */
   _spawnNextBatch(player) {
-    // 4-Tier Protection Ring Milestone Boss Gates (Waves 10, 20, 30, 40)
-    if (this.waveNumber === 10 && !this.bossSpawned) {
+    // 4-Tier Protection Ring Milestone Boss Gates (Waves 15, 30, 45, 60)
+    if (this.waveNumber === 15 && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
       const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.DAEMON_OVERSEER);
@@ -114,7 +114,7 @@ export class WaveManager {
       return;
     }
 
-    if (this.waveNumber === 20 && !this.bossSpawned) {
+    if (this.waveNumber === 30 && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
       const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.BUS_ARBITER);
@@ -123,7 +123,7 @@ export class WaveManager {
       return;
     }
 
-    if (this.waveNumber === 30 && !this.bossSpawned) {
+    if (this.waveNumber === 45 && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
       const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.HYPERVISOR_SENTINEL);
@@ -132,7 +132,7 @@ export class WaveManager {
       return;
     }
 
-    if (this.waveNumber === 40 && !this.bossSpawned) {
+    if (this.waveNumber === 60 && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
       const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.ROOTKIT_COLOSSUS);
@@ -141,12 +141,12 @@ export class WaveManager {
       return;
     }
 
-    // Post-Wave 40 endless recurring colossus every 10 waves
-    if (this.waveNumber > 40 && this.waveNumber % 10 === 0 && !this.bossSpawned) {
+    // Post-Wave 60 endless recurring colossus every 15 waves
+    if (this.waveNumber > 60 && this.waveNumber % 15 === 0 && !this.bossSpawned) {
       this.bossSpawned = true;
       const pos = this._calculateSpawnPosition(player);
       const boss = new Enemy(pos.x, pos.y, ENEMY_ARCHETYPES.ROOTKIT_COLOSSUS);
-      const endlessScale = 1 + (this.waveNumber - 40) * 0.08;
+      const endlessScale = 1 + (this.waveNumber - 60) * 0.08;
       boss.maxHealth = Math.round(boss.maxHealth * endlessScale);
       boss.health = boss.maxHealth;
       this.onSpawnEnemy(boss);
@@ -245,8 +245,8 @@ export class WaveManager {
     let sy = player.y + Math.sin(angle) * dist;
 
     // Clamp inside arena walls (Ring 0 is compact 1536x864, others 1920x1080)
-    const arenaW = this.waveNumber >= 31 ? 1536 : 1920;
-    const arenaH = this.waveNumber >= 31 ? 864 : 1080;
+    const arenaW = this.waveNumber >= 46 ? 1536 : 1920;
+    const arenaH = this.waveNumber >= 46 ? 864 : 1080;
     const hw = arenaW * 0.5 - 64;
     const hh = arenaH * 0.5 - 64;
     sx = Math.max(-hw, Math.min(hw, sx));

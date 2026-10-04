@@ -148,8 +148,8 @@ export class Camera2D {
     const renderY = this.prevPos.y + (this.pos.y - this.prevPos.y) * alpha + this.shakeOffset.y;
 
     // Center the viewport on target position
-    const centerX = this.viewportWidth * 0.5;
-    const centerY = this.viewportHeight * 0.5;
+    const centerX = Math.round(this.viewportWidth * 0.5);
+    const centerY = Math.round(this.viewportHeight * 0.5);
 
     ctx.translate(centerX, centerY);
 

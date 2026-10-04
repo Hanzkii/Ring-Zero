@@ -208,6 +208,8 @@ export class GameApp {
     this.hazards = [];
     this.hazardFlash = 0;
 
+    this.pendingElevationRing = null;
+
     this.sectorArenaMap = new SectorArenaMap();
     this.map = this.sectorArenaMap;
     this.props = this.sectorArenaMap.props;
@@ -239,19 +241,20 @@ export class GameApp {
       this.achievementSystem?.onWaveCompleted(waveNum, acc, hasSilent, fwCount);
       this.achievementSystem?.onBountiesUpdated(this.storage.cryptoBounties + (this.player.bounties || 0));
 
-      // Milestone waves:
+      // Milestone waves (15-wave intervals):
       // Waves 3, 6: Arsenal Loadout Selection
-      // Wave 10: Clearance Ring 2 (Hardware Drivers)
-      // Wave 20: Clearance Ring 1 (Hypervisor)
-      // Wave 30: Clearance Ring 0 (Kernel Execution)
+      // Wave 15: Clearance Ring 2 (Hardware Drivers)
+      // Wave 30: Clearance Ring 1 (Hypervisor)
+      // Wave 45: Clearance Ring 0 (Kernel Execution)
+      // Wave 60: Clearance Ring 0 (Endgame Loop)
       if (waveNum === 3 || waveNum === 6) {
         this.openArsenalModal(waveNum);
-      } else if (waveNum === 10) {
-        this.elevateClearance(2);
-      } else if (waveNum === 20) {
-        this.elevateClearance(1);
+      } else if (waveNum === 15) {
+        this.pendingElevationRing = 2;
       } else if (waveNum === 30) {
-        this.elevateClearance(0);
+        this.pendingElevationRing = 1;
+      } else if (waveNum === 45 || waveNum === 60) {
+        this.pendingElevationRing = 0;
       }
     };
 
@@ -401,25 +404,40 @@ export class GameApp {
 
     // Trigger Clearance Escalation Weapon Draft
     this.state = APP_STATE.ESCALATION_DRAFT;
+    this.synthMusic?.setIntensity?.(MUSIC_INTENSITY.AMBIENT);
     const weapons = getEscalationWeaponsForRing(targetRing);
     this.draftModal.openEscalationDraft({
       targetRing,
       weapons,
       currentWeapon: this.weaponSystem.activeWeapon,
       onSelectWeapon: (chosenWpn) => {
-        const newWeapon = new WeaponInstance(chosenWpn);
-        const slot = (typeof this.weaponSystem.activeSlot === 'number')
-          ? this.weaponSystem.activeSlot
-          : 0;
+        if (chosenWpn?.isKeepCurrent) {
+          const active = this.weaponSystem.activeWeapon;
+          if (active && typeof active.applyOverclock === 'function') {
+            active.applyOverclock(1.15);
+          }
+        } else if (chosenWpn) {
+          const newWeapon = new WeaponInstance(chosenWpn);
+          const slot = (typeof this.weaponSystem.activeSlot === 'number')
+            ? this.weaponSystem.activeSlot
+            : 0;
 
-        if (!Array.isArray(this.weaponSystem.slots)) {
-          this.weaponSystem.slots = [];
-        }
-        this.weaponSystem.slots[slot] = newWeapon;
+          if (!Array.isArray(this.weaponSystem.slots)) {
+            this.weaponSystem.slots = [];
+          }
+          const wired = (typeof this.weaponSystem._wireInstance === 'function')
+            ? this.weaponSystem._wireInstance(newWeapon)
+            : newWeapon;
+          this.weaponSystem.slots[slot] = wired;
 
-        if (this.player) {
-          this.player.weapon = newWeapon;
+          if (this.player) {
+            this.player.weapon = wired;
+          }
         }
+
+        // Bug 1: Hook music switch directly into elevation completion handler
+        this.synthMusic?.crossfadeTo?.(targetRing);
+        this.synthMusic?.setIntensity?.(MUSIC_INTENSITY.COMBAT);
 
         this.soundBank?.playLevelUp();
         this.particleSystem?.emitBurst(this.player.x, this.player.y, 25, COLOR?.CYAN || '#00f0ff', 300);
@@ -430,6 +448,11 @@ export class GameApp {
         if (active && typeof active.applyOverclock === 'function') {
           active.applyOverclock(1.15);
         }
+
+        // Bug 1: Hook music switch directly into elevation completion handler
+        this.synthMusic?.crossfadeTo?.(targetRing);
+        this.synthMusic?.setIntensity?.(MUSIC_INTENSITY.COMBAT);
+
         this.soundBank?.playLevelUp();
         this.particleSystem.emitBurst(this.player.x, this.player.y, 25, COLOR.CYAN, 300);
         this.state = APP_STATE.RUN;
@@ -620,6 +643,7 @@ export class GameApp {
     this.clearanceRing = 3;
     this.currentSectorTheme = SECTOR_THEMES[CLEARANCE_RING.RING_3];
     this.ringTransitionTimer = 0;
+    this.pendingElevationRing = null;
     this.hazards.length = 0;
     this.hazardFlash = 0;
     this.achievementSystem?.resetRun();
@@ -720,7 +744,8 @@ export class GameApp {
    * @param {number} dt - Fixed delta time (1/60 s)
    */
   update(dt) {
-    this.achievementSystem?.update(dt);
+    const clampedDt = Math.min(dt, 0.1);
+    this.achievementSystem?.update(clampedDt);
 
     // If game over, handle Enter to re-deploy or Escape for main menu
     if (this.state === APP_STATE.GAMEOVER) {
@@ -790,13 +815,13 @@ export class GameApp {
 
     // Ring transition screen glitch timer
     if (this.ringTransitionTimer > 0) {
-      this.ringTransitionTimer = Math.max(0, this.ringTransitionTimer - dt);
+      this.ringTransitionTimer = Math.max(0, this.ringTransitionTimer - clampedDt);
     }
 
     // Active Area Hazards
     for (let i = this.hazards.length - 1; i >= 0; i--) {
       const h = this.hazards[i];
-      h.duration -= dt;
+      h.duration -= clampedDt;
       if (h.duration <= 0) {
         this.hazards.splice(i, 1);
         continue;
@@ -807,7 +832,7 @@ export class GameApp {
       const hdistSq = hdx * hdx + hdy * hdy;
       const hitRadius = h.radius + this.player.radius;
       if (hdistSq <= hitRadius * hitRadius) {
-        this.player.takeDamage(h.dps * dt, this.cheatManager, {
+        this.player.takeDamage(h.dps * clampedDt, this.cheatManager, {
           isHazard: true,
           camera: this.camera,
           soundBank: this.soundBank,
@@ -855,7 +880,7 @@ export class GameApp {
         player: this.player,
         spatialGrid: this.spatialGrid,
         enemies: this.enemies,
-        dt,
+        dt: clampedDt,
         weapon: this.weaponSystem.activeWeapon,
         raycaster: this.raycaster,
         wallSegments: this.map ? this.map.getSegments() : [],
@@ -876,14 +901,14 @@ export class GameApp {
     }
 
     // Check if any cheat (Aimbot Triggerbot) requests autonomous fire
-    const autoFire = this.cheatManager.wantsAutoFire(dt, this.weaponSystem.activeWeapon);
+    const autoFire = this.cheatManager.wantsAutoFire(clampedDt, this.weaponSystem.activeWeapon);
 
     // Weapon Ballistics Update (passes autoFire state and aimbot-modified aim angle)
-    this.weaponSystem.update(dt, this.input, this.player, this.camera, autoFire, modifiedAimAngle, this.cheatManager);
+    this.weaponSystem.update(clampedDt, this.input, this.player, this.camera, autoFire, modifiedAimAngle, this.cheatManager);
 
     // Player Kinematics
-    this.player.updateKinematics(dt, moveDir, modifiedAimAngle);
-    this.cheatManager.updatePlayer(this.player, dt, {
+    this.player.updateKinematics(clampedDt, moveDir, modifiedAimAngle);
+    this.cheatManager.updatePlayer(this.player, clampedDt, {
       player: this.player,
       weapon: this.weaponSystem.activeWeapon,
       reloadReduction: this.storage.getFirmwareBonus('fastDMA'),
@@ -907,17 +932,17 @@ export class GameApp {
         this.player.y < -halfH + m ||
         this.player.y > halfH - m
       ) {
-        this.player.takeDamage(15 * dt, this.cheatManager, {
+        this.player.takeDamage(15 * clampedDt, this.cheatManager, {
           isHazard: true,
           camera: this.camera,
           soundBank: this.soundBank,
         });
-        this.hazardFlash = Math.min(1.0, (this.hazardFlash || 0) + dt * 4);
+        this.hazardFlash = Math.min(1.0, (this.hazardFlash || 0) + clampedDt * 4);
         if (Math.random() < 0.25) {
           this.particleSystem.emitBurst(this.player.x, this.player.y, 2, '#FF003C', 140);
         }
       } else if (this.hazardFlash > 0) {
-        this.hazardFlash = Math.max(0, this.hazardFlash - dt * 2.5);
+        this.hazardFlash = Math.max(0, this.hazardFlash - clampedDt * 2.5);
       }
     } else {
       this.hazardFlash = 0;
@@ -930,12 +955,12 @@ export class GameApp {
     }
 
     // Wave Director Update
-    this.waveManager.update(dt, this.player, this.enemies.length);
+    this.waveManager.update(clampedDt, this.player, this.enemies.length);
 
     // Destructible Props Update
     for (let i = this.props.length - 1; i >= 0; i--) {
       const prop = this.props[i];
-      prop.update(dt);
+      prop.update(clampedDt);
       if (prop.markedForRemoval) {
         this.spatialGrid.remove(prop);
         this.props.splice(i, 1);
@@ -945,41 +970,41 @@ export class GameApp {
     // Enemy AI & Kinematics
     for (let i = 0; i < this.enemies.length; i++) {
       const enemy = this.enemies[i];
-      enemy.updateAI(dt, this.player, this.spatialGrid, this._onSentinelShoot);
-      this.cheatManager.updateEnemy(enemy, dt, { player: this.player });
+      enemy.updateAI(clampedDt, this.player, this.spatialGrid, this._onSentinelShoot);
+      this.cheatManager.updateEnemy(enemy, clampedDt, { player: this.player });
       this.spatialGrid.update(enemy);
     }
 
     // Drops Vacuum Magnet & Physics
     if (this.pickupSystem) {
-      this.pickupSystem.update(this.drops, this.player, dt);
+      this.pickupSystem.update(this.drops, this.player, clampedDt);
     }
     for (let i = 0; i < this.drops.length; i++) {
       const drop = this.drops[i];
-      drop.update(dt, this.player);
+      drop.update(clampedDt, this.player);
       this.spatialGrid.update(drop);
     }
 
     // Projectile Ballistics Simulation
     this.projectilePool.forEachActiveReverse((proj) => {
-      proj.update(dt, this.cheatManager);
+      proj.update(clampedDt, this.cheatManager);
       if (proj.markedForRemoval) {
         this.projectilePool.release(proj);
       }
     });
 
     // Particle Simulation
-    this.particleSystem.update(dt);
+    this.particleSystem.update(clampedDt);
 
     // Camera follow tracking with lead
     const cx = this.camera.viewportWidth * 0.5;
     const cy = this.camera.viewportHeight * 0.5;
     const aimDistance = Math.hypot(this.input.screenPointer.x - cx, this.input.screenPointer.y - cy);
-    this.camera.update(dt, this.player, this.input.aimVector, aimDistance);
+    this.camera.update(clampedDt, this.player, this.input.aimVector, aimDistance);
 
     // Resolve Narrowphase Collisions
     this.collisionSystem.resolve(
-      dt,
+      clampedDt,
       this.player,
       this.enemies,
       this.drops,
@@ -1034,6 +1059,13 @@ export class GameApp {
       };
 
       this.terminalUI.showRunDiagnostic(summary);
+    }
+
+    // Deferred Clearance Elevation Interception (post-update, pre-render)
+    if (this.pendingElevationRing !== null) {
+      const ring = this.pendingElevationRing;
+      this.pendingElevationRing = null;
+      this.elevateClearance(ring);
     }
 
     // Clear single-frame input states
@@ -1463,12 +1495,7 @@ export class GameApp {
       radar.renderRadar(ctx, w, h, this.player, this.enemies, this.drops, this.props);
     }
 
-    // 7. Cyber-Clearance Achievement Toasts
-    if (this.achievementSystem) {
-      this.achievementSystem.renderToasts(ctx, w);
-    }
-
-    // 8. Full-screen CRT Glitch Flash & Tactical Elevation Banner
+    // 7. Full-screen CRT Glitch Flash & Tactical Elevation Banner
     if (this.ringTransitionTimer > 0) {
       const flashAlpha = this.ringTransitionTimer / 0.5;
       ctx.save();
@@ -1498,13 +1525,18 @@ export class GameApp {
       ctx.restore();
     }
 
-    // 9. Ring 0 Hazard Perimeter Edge Flash Vignette
+    // 8. Ring 0 Hazard Perimeter Edge Flash Vignette
     if (this.hazardFlash > 0) {
       ctx.save();
       ctx.strokeStyle = `rgba(255, 0, 60, ${this.hazardFlash * 0.65})`;
       ctx.lineWidth = 14;
       ctx.strokeRect(0, 0, w, h);
       ctx.restore();
+    }
+
+    // 9. Cyber-Clearance Achievement Toasts (Topmost HUD layer, immune to scanline bleed)
+    if (this.achievementSystem) {
+      this.achievementSystem.renderToasts(ctx, w);
     }
 
     ctx.restore();

@@ -295,14 +295,14 @@ export class Player extends Entity {
       return;
     }
 
-    const rx = lerp(this.prevX, this.x, alpha);
-    const ry = lerp(this.prevY, this.y, alpha);
+    const rx = Math.round(lerp(this.prevX, this.x, alpha));
+    const ry = Math.round(lerp(this.prevY, this.y, alpha));
     const rot = this.getInterpolatedRotation(alpha) + (this.visualRotationOffset || 0);
 
     // 1. Draw motion ghost trails
     for (const trail of this.dashTrails) {
       ctx.save();
-      ctx.translate(trail.x, trail.y);
+      ctx.translate(Math.round(trail.x), Math.round(trail.y));
       ctx.rotate(trail.rotation);
       ctx.globalAlpha = trail.alpha;
       this._drawChassis(ctx, COLOR.CYAN_MUTED, false);
@@ -317,7 +317,7 @@ export class Player extends Entity {
     ctx.translate(rx, ry);
     ctx.rotate(rot + (this.recoilClimbAngle || 0));
     if (this.recoilKickOffset > 0.001) {
-      ctx.translate(-this.recoilKickOffset, 0);
+      ctx.translate(-Math.round(this.recoilKickOffset), 0);
     }
 
     let hullColor = COLOR.CYAN;

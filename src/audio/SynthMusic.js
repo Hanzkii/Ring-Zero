@@ -349,17 +349,40 @@ export class SynthMusic {
   }
 
   /**
+   * Smoothly crossfades to a target procedural darksynth track by ring number or track ID
+   * @param {number|string} ringOrTrack - 3, 2, 1, 0, or track name
+   * @param {number} [duration=1.0]
+   */
+  crossfadeTo(ringOrTrack, duration = 1.0) {
+    if (typeof ringOrTrack === 'number' || ringOrTrack === 'RING_0' || ringOrTrack === 'RING_1' || ringOrTrack === 'RING_2' || ringOrTrack === 'RING_3') {
+      const r = typeof ringOrTrack === 'string'
+        ? (ringOrTrack === 'RING_0' ? 0 : ringOrTrack === 'RING_1' ? 1 : ringOrTrack === 'RING_2' ? 2 : 3)
+        : Number(ringOrTrack);
+      const trackMap = {
+        0: MUSIC_TRACKS.KERNEL_PANIC,
+        1: MUSIC_TRACKS.SANDBOX_PURGE,
+        2: MUSIC_TRACKS.BUS_COLLISION,
+        3: MUSIC_TRACKS.OVERCLOCK_PULSE,
+      };
+      const trackId = trackMap[r] || MUSIC_TRACKS.OVERCLOCK_PULSE;
+      this.crossfadeToTrack(trackId, duration);
+    } else if (typeof ringOrTrack === 'string') {
+      this.crossfadeToTrack(ringOrTrack, duration);
+    }
+  }
+
+  /**
    * Dynamically rotates tracks according to clearance ring and wave progression
    * @param {number|string} ring - 3, 2, 1, 0 or 'RING_3', 'RING_2', 'RING_1', 'RING_0'
-   * @param {number} waveNumber
+   * @param {number} [waveNumber]
    */
   setTrackForRing(ring, waveNumber) {
     const r = typeof ring === 'string'
       ? (ring === 'RING_0' ? 0 : ring === 'RING_1' ? 1 : ring === 'RING_2' ? 2 : 3)
       : Number(ring);
 
-    // Milestone boss encounters (Waves 10, 20, 30, 40)
-    if (waveNumber === 10 || waveNumber === 20 || waveNumber === 30 || waveNumber === 40 || (waveNumber > 40 && waveNumber % 10 === 0)) {
+    // Milestone boss encounters (Waves 15, 30, 45, 60)
+    if (waveNumber && (waveNumber === 15 || waveNumber === 30 || waveNumber === 45 || waveNumber === 60 || (waveNumber > 60 && waveNumber % 15 === 0))) {
       this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
       return;
     }
@@ -380,13 +403,13 @@ export class SynthMusic {
    * @param {number} waveNumber
    */
   setTrackForWave(waveNumber) {
-    if (waveNumber === 10 || waveNumber === 20 || waveNumber === 30 || waveNumber === 40 || (waveNumber > 40 && waveNumber % 10 === 0)) {
+    if (waveNumber === 15 || waveNumber === 30 || waveNumber === 45 || waveNumber === 60 || (waveNumber > 60 && waveNumber % 15 === 0)) {
+      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
+    } else if (waveNumber >= 46) {
       this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
     } else if (waveNumber >= 31) {
-      this.crossfadeToTrack(MUSIC_TRACKS.KERNEL_PANIC, 1.0);
-    } else if (waveNumber >= 21) {
       this.crossfadeToTrack(MUSIC_TRACKS.SANDBOX_PURGE, 1.0);
-    } else if (waveNumber >= 11) {
+    } else if (waveNumber >= 16) {
       this.crossfadeToTrack(MUSIC_TRACKS.BUS_COLLISION, 1.0);
     } else {
       this.crossfadeToTrack(MUSIC_TRACKS.OVERCLOCK_PULSE, 1.0);

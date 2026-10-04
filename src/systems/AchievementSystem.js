@@ -256,47 +256,69 @@ export class AchievementSystem {
 
     ctx.save();
     let currentY = 16;
+    const maxVisible = 3;
+    const visibleToasts = this.activeToasts.slice(0, maxVisible);
 
-    for (const toast of this.activeToasts) {
+    for (const toast of visibleToasts) {
+      if (toast.slide <= 0.01) continue;
+
       const ach = toast.achievement;
-      const toastW = 280;
-      const toastH = 46;
+      const toastW = 320;
+      const toastH = 58;
       const offscreenX = screenWidth + 20;
       const targetX = screenWidth - toastW - 16;
-      const drawX = offscreenX + (targetX - offscreenX) * toast.slide;
+      const drawX = Math.round(offscreenX + (targetX - offscreenX) * toast.slide);
+      const drawY = Math.round(currentY);
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, toast.slide));
 
       // Dark cybernetic card backdrop
-      ctx.fillStyle = 'rgba(11, 15, 23, 0.94)';
-      ctx.fillRect(drawX, currentY, toastW, toastH);
+      ctx.fillStyle = 'rgba(11, 15, 23, 0.96)';
+      ctx.fillRect(drawX, drawY, toastW, toastH);
 
       // Neon cyan border with left accent bar
       ctx.strokeStyle = COLOR.CYAN;
       ctx.lineWidth = 1;
-      ctx.strokeRect(drawX, currentY, toastW, toastH);
+      ctx.strokeRect(drawX, drawY, toastW, toastH);
 
       ctx.fillStyle = COLOR.CYAN;
-      ctx.fillRect(drawX, currentY, 4, toastH);
+      ctx.fillRect(drawX, drawY, 4, toastH);
 
       // Badge tag
       ctx.font = 'bold 9px monospace';
       ctx.fillStyle = COLOR.AMBER;
-      ctx.fillText(`// CLEARANCE UNLOCKED: [${ach.badge}]`, drawX + 12, currentY + 14);
+      ctx.fillText(`// CLEARANCE UNLOCKED: [${ach.badge || 'UNLOCKED'}]`, drawX + 12, drawY + 14);
 
       // Title
       ctx.font = 'bold 12px monospace';
       ctx.fillStyle = COLOR.WHITE;
-      ctx.fillText(ach.title, drawX + 12, currentY + 28);
+      ctx.fillText(ach.title || ach.name, drawX + 12, drawY + 28);
 
-      // Description snippet
+      // Description with word wrapping to avoid clipping retro HUD border
       ctx.font = '9px monospace';
       ctx.fillStyle = COLOR.WHITE_DIM;
-      const snippet = ach.description.length > 38 ? ach.description.slice(0, 36) + '..' : ach.description;
-      ctx.fillText(snippet, drawX + 12, currentY + 40);
+      const desc = ach.description || '';
+      if (desc.length > 48) {
+        let splitIdx = desc.lastIndexOf(' ', 48);
+        if (splitIdx === -1 || splitIdx < 20) splitIdx = 48;
+        const line1 = desc.slice(0, splitIdx).trim();
+        let line2 = desc.slice(splitIdx).trim();
+        if (line2.length > 46) {
+          line2 = line2.slice(0, 44) + '..';
+        }
+        ctx.fillText(line1, drawX + 12, drawY + 40);
+        ctx.fillText(line2, drawX + 12, drawY + 50);
+      } else {
+        ctx.fillText(desc, drawX + 12, drawY + 42);
+      }
 
       // Lifetime progress bar
       const progress = Math.max(0, toast.timer / toast.maxTimer);
       ctx.fillStyle = COLOR.CYAN;
-      ctx.fillRect(drawX + toastW - 48, currentY + toastH - 3, 44 * progress, 2);
+      ctx.fillRect(drawX + toastW - 54, drawY + toastH - 3, 50 * progress, 2);
+
+      ctx.restore();
 
       currentY += toastH + 8;
     }
