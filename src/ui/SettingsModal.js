@@ -19,9 +19,10 @@ export class SettingsModal {
    * @param {import('../core/InputManager.js').InputManager} [options.input]
    * @param {import('../audio/SynthMusic.js').SynthMusic} [options.synthMusic]
    * @param {function(boolean): void} [options.onGridDebugToggle]
+   * @param {function(boolean): void} [options.onPerfTelemetryToggle]
    * @param {function(): void} [options.onClose]
    */
-  constructor({ storage, synth, soundBank, camera, input = null, synthMusic = null, onGridDebugToggle = null, onClose = null }) {
+  constructor({ storage, synth, soundBank, camera, input = null, synthMusic = null, onGridDebugToggle = null, onPerfTelemetryToggle = null, onClose = null }) {
     this.storage = storage;
     this.synth = synth;
     this.soundBank = soundBank;
@@ -29,6 +30,7 @@ export class SettingsModal {
     this.input = input;
     this.synthMusic = synthMusic;
     this.onGridDebugToggle = onGridDebugToggle;
+    this.onPerfTelemetryToggle = onPerfTelemetryToggle;
     this.onClose = onClose;
 
     this.isOpen = false;
@@ -73,6 +75,9 @@ export class SettingsModal {
     if (this.onGridDebugToggle && s.showDebugGrid !== undefined) {
       this.onGridDebugToggle(s.showDebugGrid);
     }
+    if (this.onPerfTelemetryToggle && s.showPerformanceOverlay !== undefined) {
+      this.onPerfTelemetryToggle(s.showPerformanceOverlay);
+    }
   }
 
   open() {
@@ -97,6 +102,7 @@ export class SettingsModal {
     const sensVal = Number(s.mouseSensitivity ?? 1.0);
     const shakeVal = Math.round((s.screenShake ?? 1.0) * 100);
     const debugGrid = !!s.showDebugGrid;
+    const perfOverlay = !!s.showPerformanceOverlay;
 
     this.modalEl.innerHTML = `
       <div class="terminal-box" style="max-width: 580px; width: 90%;">
@@ -165,6 +171,25 @@ export class SettingsModal {
             <input type="range" id="rng-screen-shake" min="0" max="100" value="${shakeVal}" style="
               width: 100%; accent-color: ${COLOR.AMBER}; cursor: pointer;
             ">
+          </div>
+
+          <!-- Performance Telemetry Overlay -->
+          <div style="
+            background: rgba(0,0,0,0.3); padding: 12px 14px; border: 1px solid rgba(0,240,255,0.15);
+            display: flex; align-items: center; justify-content: space-between;
+          ">
+            <div>
+              <div style="font-size: 12px; color: ${COLOR.WHITE}; font-weight: bold;">PERFORMANCE TELEMETRY (FPS / TPS / FRAMETIME)</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">Real-time diagnostics chip with FPS, TPS, and frametime in ms (Hotkey: [F3] / [Shift+F])</div>
+            </div>
+            <button id="btn-toggle-perf" type="button" style="
+              background: ${perfOverlay ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)'};
+              border: 1px solid ${perfOverlay ? COLOR.CYAN : 'rgba(255, 255, 255, 0.25)'};
+              color: ${perfOverlay ? COLOR.CYAN : 'rgba(255, 255, 255, 0.5)'};
+              font-family: monospace; font-size: 11px; font-weight: bold;
+              padding: 6px 14px; cursor: pointer; border-radius: 2px;
+              transition: all 0.15s ease;
+            ">[ ${perfOverlay ? 'ON' : 'OFF'} ]</button>
           </div>
 
           <!-- Spatial Grid Debug -->
@@ -247,6 +272,22 @@ export class SettingsModal {
       const ratio = val / 100;
       this.storage.settings.screenShake = ratio;
       if (this.camera) this.camera.traumaMultiplier = ratio;
+      this.storage.save();
+    });
+
+    const btnPerf = this.modalEl.querySelector('#btn-toggle-perf');
+    btnPerf?.addEventListener('click', () => {
+      const current = !!this.storage.settings.showPerformanceOverlay;
+      const next = !current;
+      this.storage.settings.showPerformanceOverlay = next;
+      this.storage.updateSettings({ showPerformanceOverlay: next });
+      if (this.onPerfTelemetryToggle) this.onPerfTelemetryToggle(next);
+      this.soundBank?.playUIClick();
+
+      btnPerf.textContent = `[ ${next ? 'ON' : 'OFF'} ]`;
+      btnPerf.style.background = next ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+      btnPerf.style.borderColor = next ? COLOR.CYAN : 'rgba(255, 255, 255, 0.25)';
+      btnPerf.style.color = next ? COLOR.CYAN : 'rgba(255, 255, 255, 0.5)';
       this.storage.save();
     });
 

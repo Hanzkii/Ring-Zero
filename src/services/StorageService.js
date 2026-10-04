@@ -113,6 +113,7 @@ export const DEFAULT_SAVE_STATE = {
     mouseSensitivity: 1.0,
     screenShake: 1.0,
     showDebugGrid: false,
+    showPerformanceOverlay: false,
     isMuted: false,
   },
 };
@@ -144,6 +145,10 @@ export class StorageService {
       const raw = this.storage.getItem(STORAGE_KEY);
       if (!raw) {
         const initial = JSON.parse(JSON.stringify(DEFAULT_SAVE_STATE));
+        const perfVal = this.storage.getItem('rz_perf_overlay');
+        if (perfVal !== null) {
+          initial.settings.showPerformanceOverlay = perfVal === 'true';
+        }
         this.saveState(initial);
         return initial;
       }
@@ -167,6 +172,12 @@ export class StorageService {
         },
         highScores: Array.isArray(parsed.highScores) ? parsed.highScores : [],
       };
+
+      const perfVal = this.storage.getItem('rz_perf_overlay');
+      if (perfVal !== null) {
+        state.settings.showPerformanceOverlay = perfVal === 'true';
+      }
+
       return state;
     } catch (e) {
       console.warn('StorageService: Failed to parse save state, resetting to default', e);
@@ -187,6 +198,9 @@ export class StorageService {
     if (!this.storage) return;
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(stateObj));
+      if (stateObj.settings?.showPerformanceOverlay !== undefined) {
+        this.storage.setItem('rz_perf_overlay', String(stateObj.settings.showPerformanceOverlay));
+      }
     } catch (e) {
       console.warn('StorageService: Unable to write to localStorage', e);
     }
@@ -248,6 +262,11 @@ export class StorageService {
       ...this.settings,
       ...partial,
     };
+    if (partial.showPerformanceOverlay !== undefined && this.storage) {
+      try {
+        this.storage.setItem('rz_perf_overlay', String(partial.showPerformanceOverlay));
+      } catch (_) {}
+    }
     this.save();
   }
 

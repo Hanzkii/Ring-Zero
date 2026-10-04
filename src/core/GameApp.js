@@ -113,10 +113,14 @@ export class GameApp {
       onGridDebugToggle: (val) => {
         this.showSpatialGridDebug = val;
       },
+      onPerfTelemetryToggle: (val) => {
+        this.showPerformanceOverlay = val;
+      },
     });
 
-    // Sync debug grid setting
+    // Sync debug grid and performance telemetry settings
     this.showSpatialGridDebug = !!this.storage.settings?.showDebugGrid;
+    this.showPerformanceOverlay = !!this.storage.settings?.showPerformanceOverlay;
 
     this.achievementSystem = new AchievementSystem({
       soundBank: this.soundBank,
@@ -900,8 +904,19 @@ export class GameApp {
       }
     }
 
-    // Rootkit Kernel EMP Purge KeyF trigger
-    if (this.input.isKeyJustPressed('KeyF')) {
+    // Toggle Performance Telemetry with F3 or Shift + F
+    const isShiftHeld = this.input.isKeyDown('ShiftLeft') || this.input.isKeyDown('ShiftRight');
+    const isF3Pressed = this.input.isKeyJustPressed('F3');
+    const isShiftFPressed = isShiftHeld && this.input.isKeyJustPressed('KeyF');
+
+    if (isF3Pressed || isShiftFPressed) {
+      this.showPerformanceOverlay = !this.showPerformanceOverlay;
+      this.storage.updateSettings({ showPerformanceOverlay: this.showPerformanceOverlay });
+      this.soundBank?.playUIClick?.();
+    }
+
+    // Rootkit Kernel EMP Purge KeyF trigger (only when Shift is NOT held)
+    if (this.input.isKeyJustPressed('KeyF') && !isShiftHeld) {
       const rootkit = this.cheatManager.getCheat('rootkit');
       if (rootkit && rootkit.trigger({
         player: this.player,

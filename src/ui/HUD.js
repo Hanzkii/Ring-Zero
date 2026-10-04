@@ -7,6 +7,7 @@
 import { COLOR, CLEARANCE_RING, SECTOR_THEMES } from '../core/Constants.js';
 import { VectorRenderer } from './VectorRenderer.js';
 import { UIIcons } from './UIIcons.js';
+import { TelemetryOverlay } from './TelemetryOverlay.js';
 
 // Re-export icon routines for external callers
 export const drawIntegrityIcon = UIIcons.drawIntegrityIcon.bind(UIIcons);
@@ -26,6 +27,7 @@ export class HUD {
    */
   constructor(app) {
     this.app = app;
+    this.telemetryOverlay = new TelemetryOverlay();
   }
 
   /**
@@ -131,6 +133,11 @@ export class HUD {
     // 7. Tactical Elevation Banner & CRT Glitch Flash
     this.renderElevationTransitionBanner(ctx, w, h);
 
+    // 8. Dedicated Performance Diagnostics Telemetry Overlay (when enabled)
+    if (app.showPerformanceOverlay) {
+      this.telemetryOverlay.render(ctx, w, h, app.loop);
+    }
+
     ctx.restore();
   }
 
@@ -186,16 +193,6 @@ export class HUD {
       ctx.fillRect(gaugeX, xpY - 3, gaugeW * xpRatio, gaugeH);
     }
 
-    // Performance telemetry (FPS / TPS) in subtle corner
-    ctx.font = '9px monospace';
-    ctx.fillStyle = COLOR.WHITE_DIM;
-    ctx.textAlign = 'right';
-    ctx.fillText(
-      `${app.loop.fps} FPS | ${app.loop.tps} TPS`,
-      16 + panelW - 12,
-      34
-    );
-
     // Raw debug telemetry (COORDS & SPATIAL CELLS) ONLY when [G] is toggled
     if (app.showSpatialGridDebug) {
       ctx.save();
@@ -208,6 +205,23 @@ export class HUD {
         96
       );
       ctx.restore();
+    }
+  }
+
+  /**
+   * Aliases for level/clearance banner rendering
+   */
+  renderLevelBanner(ctx, w, h) {
+    return this.renderTopSystemBar(ctx, w, h);
+  }
+
+  drawRingHeader(ctx, w, h) {
+    return this.renderTopSystemBar(ctx, w, h);
+  }
+
+  renderPerformanceTelemetry(ctx, w, h) {
+    if (this.app.showPerformanceOverlay) {
+      this.telemetryOverlay.render(ctx, w, h, this.app.loop);
     }
   }
 

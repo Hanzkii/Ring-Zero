@@ -80,7 +80,7 @@ export class InputManager {
 
   _onKeyDown(e) {
     // Prevent default scrolling and browser shortcuts for standard gaming keys
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Escape'].includes(e.code)) {
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Escape', 'F3'].includes(e.code)) {
       e.preventDefault();
     }
     if (!this.keys.get(e.code)) {
