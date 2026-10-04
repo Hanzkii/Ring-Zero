@@ -379,8 +379,9 @@ export class GameApp {
     this.player.health = this.player.maxHealth;
     this.camera.addTrauma(0.5);
 
-    // Crossfade into aggressive sector darksynth OST
+    // Crossfade into aggressive sector darksynth OST with audible escalation transition
     if (this.synthMusic) {
+      this.synthMusic.triggerEscalationTransition?.();
       this.synthMusic.crossfadeToTrack(this.currentSectorTheme.track, 1.0);
     }
 
@@ -435,7 +436,7 @@ export class GameApp {
           }
         }
 
-        // Bug 1: Hook music switch directly into elevation completion handler
+        // Hook music switch directly into elevation completion handler
         this.synthMusic?.crossfadeTo?.(targetRing);
         this.synthMusic?.setIntensity?.(MUSIC_INTENSITY.COMBAT);
 
@@ -449,7 +450,7 @@ export class GameApp {
           active.applyOverclock(1.15);
         }
 
-        // Bug 1: Hook music switch directly into elevation completion handler
+        // Hook music switch directly into elevation completion handler
         this.synthMusic?.crossfadeTo?.(targetRing);
         this.synthMusic?.setIntensity?.(MUSIC_INTENSITY.COMBAT);
 
@@ -855,7 +856,7 @@ export class GameApp {
         particleSystem: this.particleSystem,
         soundBank: this.soundBank,
       })) {
-        this.soundBank.playGlitchTick();
+        this.soundBank?.playGlitchTick?.();
       }
     }
 

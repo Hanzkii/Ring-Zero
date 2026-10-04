@@ -106,71 +106,73 @@ export const TRACK_CONFIGS = {
   [MUSIC_TRACKS.OVERCLOCK_PULSE]: {
     id: MUSIC_TRACKS.OVERCLOCK_PULSE,
     name: 'OVERCLOCK_PULSE',
-    bpm: 138,
-    mode: 'D_MINOR',
-    resonance: 6.5,
-    // Driving 16th industrial techno bassline (D minor)
+    bpm: 114, // Ring 3: Mellow Synthwave (~114 BPM, D minor pentatonic, warm filtered saws)
+    mode: 'D_MINOR_PENTATONIC',
+    profile: 'SYNTHWAVE',
+    resonance: 2.5, // Warm, gentle resonance
+    // Warm pumping 8th/16th saw bassline
     bass: [
-      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2, NOTE.D2, NOTE.G2, NOTE.D2,
-      NOTE.D2, NOTE.D2, NOTE.A2, NOTE.G2, NOTE.F2, NOTE.D2, NOTE.C3, NOTE.D2,
-      NOTE.D2, NOTE.D2, NOTE.D2, NOTE.F2, NOTE.D2, NOTE.D2, NOTE.G2, NOTE.A2,
-      NOTE.C3, NOTE.A2, NOTE.G2, NOTE.F2, NOTE.G2, NOTE.F2, NOTE.C3, NOTE.D2,
+      NOTE.D2, 0, NOTE.D2, 0, NOTE.F2, 0, NOTE.D2, 0,
+      NOTE.G2, 0, NOTE.D2, 0, NOTE.A2, 0, NOTE.F2, 0,
+      NOTE.D2, 0, NOTE.D2, 0, NOTE.F2, 0, NOTE.G2, 0,
+      NOTE.A2, 0, NOTE.C3, 0, NOTE.A2, 0, NOTE.F2, NOTE.G2,
     ],
-    // Cyber arpeggio
+    // Mellow nostalgic synthwave melody (D minor pentatonic)
     lead: [
-      NOTE.D4, NOTE.A4, NOTE.F4, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F4, NOTE.G4,
-      NOTE.A4, NOTE.F4, NOTE.D4, NOTE.A3, NOTE.C4, NOTE.D4, NOTE.F4, NOTE.A4,
-      NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5,
-      NOTE.F5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.F4, NOTE.D4, NOTE.C4,
+      NOTE.D4, 0, NOTE.F4, NOTE.G4, NOTE.A4, 0, NOTE.C5, 0,
+      NOTE.A4, 0, NOTE.G4, 0, NOTE.F4, NOTE.D4, 0, NOTE.C4,
+      NOTE.D4, 0, NOTE.F4, 0, NOTE.G4, NOTE.A4, NOTE.C5, 0,
+      NOTE.D5, 0, NOTE.C5, NOTE.A4, NOTE.G4, 0, NOTE.F4, 0,
     ],
-    // 4-on-the-floor kick with push on 14 & 30
+    // Laid-back 4-on-the-floor synthwave kick
     kick: [
-      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0,
-      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0,
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+      1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
     ],
-    // Crisp snare/clap on 4, 12, 20, 28
+    // Snappy vintage clap/snare on 4 & 12 (every 8 steps)
     snare: [
       0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
       0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
     ],
-    // 16th hats: 1=closed, 2=open accent on offbeats
+    // Soft steady 8th/16th hats
     hats: [
-      1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1,
-      1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2,
+      1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0,
+      1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 1,
     ],
   },
 
   [MUSIC_TRACKS.BUS_COLLISION]: {
     id: MUSIC_TRACKS.BUS_COLLISION,
     name: 'BUS_COLLISION',
-    bpm: 148,
+    bpm: 132, // Ring 2: Industrial EBM (~132 BPM, sharp FM-style bass, driving 16th arps)
     mode: 'A_MINOR',
-    resonance: 7.0,
-    // Driving 16th hardware bus bassline (A minor)
+    profile: 'EBM',
+    resonance: 6.5, // Sharp punchy resonance
+    // Relentless 16th-note driving EBM bass sequence
     bass: [
       NOTE.A1, NOTE.A1, NOTE.C2, NOTE.A1, NOTE.D2, NOTE.A1, NOTE.E2, NOTE.D2,
       NOTE.A1, NOTE.A1, NOTE.G2, NOTE.E2, NOTE.D2, NOTE.C2, NOTE.D2, NOTE.E2,
       NOTE.A1, NOTE.A1, NOTE.C2, NOTE.A1, NOTE.D2, NOTE.A1, NOTE.G2, NOTE.A2,
       NOTE.C3, NOTE.A2, NOTE.G2, NOTE.E2, NOTE.D2, NOTE.C2, NOTE.B1, NOTE.A1,
     ],
-    // Sharp amber bus lead
+    // Sharp driving 16th-note industrial arpeggio
     lead: [
       NOTE.A4, NOTE.C5, NOTE.E5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.E4,
       NOTE.A4, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5,
       NOTE.E5, NOTE.G5, NOTE.E5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.E4,
       NOTE.D4, NOTE.E4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5, NOTE.C5, NOTE.A4,
     ],
-    // Driving punchy kick groove
+    // Driving industrial punch kick
     kick: [
       1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,
       1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
     ],
-    // Snappy snare/clap
+    // Crisp snappy industrial snare
     snare: [
       0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
       0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
     ],
-    // Driving 16th hats
+    // Driving 16th-note hats
     hats: [
       1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
       1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 2, 2,
@@ -180,34 +182,35 @@ export const TRACK_CONFIGS = {
   [MUSIC_TRACKS.SANDBOX_PURGE]: {
     id: MUSIC_TRACKS.SANDBOX_PURGE,
     name: 'SANDBOX_PURGE',
-    bpm: 158,
+    bpm: 150, // Ring 1: Aggressive Darksynth (~150 BPM, C# Phrygian, distorted square leads, pitch slides)
     mode: 'CSHARP_PHRYGIAN',
-    resonance: 7.8,
-    // Aggressive C# Phrygian EBM chugging bass
+    profile: 'DARKSYNTH',
+    resonance: 7.8, // Heavy aggressive resonance
+    // Heavy distorted bass chug in C# Phrygian
     bass: [
       NOTE.CS2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.CS2, NOTE.E2, NOTE.D2, NOTE.CS2,
       NOTE.CS2, NOTE.CS2, NOTE.FS2, NOTE.E2, NOTE.D2, NOTE.CS2, NOTE.B1, NOTE.CS2,
       NOTE.CS2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.CS2, NOTE.GS2, NOTE.FS2, NOTE.E2,
       NOTE.D2, NOTE.E2, NOTE.D2, NOTE.CS2, NOTE.D2, NOTE.CS2, NOTE.B1, NOTE.CS2,
     ],
-    // Menacing toxic green synth lead
+    // Aggressive piercing darksynth lead with slides
     lead: [
       NOTE.CS4, NOTE.E4, NOTE.D4, NOTE.CS4, NOTE.GS4, NOTE.A4, NOTE.GS4, NOTE.E4,
       NOTE.D4, NOTE.CS4, NOTE.D4, NOTE.E4, NOTE.FS4, NOTE.E4, NOTE.D4, NOTE.CS4,
       NOTE.E4, NOTE.FS4, NOTE.GS4, NOTE.A4, NOTE.GS4, NOTE.FS4, NOTE.E4, NOTE.D4,
       NOTE.CS4, NOTE.D4, NOTE.E4, NOTE.FS4, NOTE.E4, NOTE.D4, NOTE.CS4, NOTE.B3,
     ],
-    // Relentless 4-on-the-floor kick + double-kick groove
+    // Relentless double-kick groove
     kick: [
       1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
       1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
     ],
-    // Snare/clap on 4, 12, 20, 28 with roll on 30
+    // Hard claps/snares with roll
     snare: [
       0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
       0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
     ],
-    // Fast 16th hats with biting accents
+    // Rapid open/closed 16th hats
     hats: [
       1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
       1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 2, 2,
@@ -217,34 +220,35 @@ export const TRACK_CONFIGS = {
   [MUSIC_TRACKS.KERNEL_PANIC]: {
     id: MUSIC_TRACKS.KERNEL_PANIC,
     name: 'KERNEL_PANIC',
-    bpm: 168,
-    mode: 'F_MINOR_BREAKBEAT',
-    resonance: 8.5,
-    // Relentless high-speed rolling saw bassline in F minor for kernel execution
+    bpm: 170, // Ring 0: Dark Drum & Bass / Cybercore (~170 BPM, chaotic Reese bass, high-speed breakbeats)
+    mode: 'F_LOCRIAN_DNB',
+    profile: 'CYBERCORE',
+    resonance: 8.5, // Piercing high resonance
+    // Heavy churning Reese bass in F
     bass: [
       NOTE.F1, NOTE.F1, NOTE.GS1, NOTE.F1, NOTE.AS1, NOTE.F1, NOTE.C2, NOTE.AS1,
       NOTE.F1, NOTE.F1, NOTE.CS2, NOTE.C2, NOTE.AS1, NOTE.GS1, NOTE.AS1, NOTE.C2,
       NOTE.F1, NOTE.F1, NOTE.GS1, NOTE.F1, NOTE.AS1, NOTE.F1, NOTE.DS2, NOTE.F2,
       NOTE.GS2, NOTE.F2, NOTE.DS2, NOTE.CS2, NOTE.C2, NOTE.AS1, NOTE.GS1, NOTE.F1,
     ],
-    // Relentless piercing cyber lead
+    // High-speed cybercore lead riff
     lead: [
       NOTE.F4, NOTE.GS4, NOTE.C5, NOTE.AS4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.C4,
       NOTE.F4, NOTE.AS4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.F4, NOTE.GS4, NOTE.AS4,
       NOTE.C5, NOTE.DS5, NOTE.C5, NOTE.AS4, NOTE.GS4, NOTE.F4, NOTE.DS4, NOTE.C4,
       NOTE.AS3, NOTE.C4, NOTE.DS4, NOTE.F4, NOTE.GS4, NOTE.AS4, NOTE.GS4, NOTE.F4,
     ],
-    // Syncopated breakbeat kick
+    // DNB breakbeat syncopated kick pattern
     kick: [
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
       1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
     ],
-    // Hard breakbeat snare with ghost hits
+    // Fast breakbeat snare with ghost notes
     snare: [
       0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1,
       0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1,
     ],
-    // Intense open 16th hats
+    // Intense rapid-fire hats
     hats: [
       2, 1, 2, 1, 2, 1, 2, 2, 2, 1, 2, 1, 2, 1, 2, 2,
       2, 1, 2, 1, 2, 1, 2, 2, 2, 1, 2, 1, 2, 2, 2, 2,
@@ -595,26 +599,172 @@ export class SynthMusic {
   }
 
   /**
-   * Channel 1: Detuned sawtooth bass note with resonant lowpass filter sweep
+   * Triggers an audible transition (tape-stop pitch drop, resonant filter sweep, drum cut) on Ring escalation
+   */
+  triggerEscalationTransition() {
+    if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+    try {
+      const now = this.ctx.currentTime;
+      const dur = 0.45;
+
+      // Filter sweep / tape-stop effect
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(640, now);
+      // Tape-stop pitch dive down to 35Hz
+      osc.frequency.exponentialRampToValueAtTime(35, now + dur);
+
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(8.0, now);
+      filter.frequency.setValueAtTime(2400, now);
+      filter.frequency.exponentialRampToValueAtTime(100, now + dur);
+
+      const sweepVol = Math.min(0.4, this.volume * 0.7);
+      gain.gain.setValueAtTime(Math.max(0.001, sweepVol), now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          filter.disconnect();
+          gain.disconnect();
+        } catch (_) {}
+      };
+      osc.start(now);
+      osc.stop(now + dur);
+    } catch (_) {}
+  }
+
+  /**
+   * Channel 1: Bass note with distinct voice profiles per ring:
+   * - Ring 3 (SYNTHWAVE): Warm filtered saw (resonance 2.5)
+   * - Ring 2 (EBM): Sharp punchy FM bass
+   * - Ring 1 (DARKSYNTH): Aggressive distorted bass chug
+   * - Ring 0 (CYBERCORE): Chaotic dual detuned Reese bass (±14 cents detune beating)
    * @private
    */
   _playBassNote(freq, time, gainLevel, resonance = 6.5) {
+    if (!freq) return;
+    const dur = this.stepDuration * 0.92;
+    const isCombat = this.intensity === MUSIC_INTENSITY.COMBAT;
+    const profile = this.currentTrackConfig?.profile || 'DARKSYNTH';
+
+    if (profile === 'CYBERCORE') {
+      // Ring 0: Relentless dual detuned Reese bass (two detuned sawtooth oscillators)
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      osc1.type = 'sawtooth';
+      osc2.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(freq, time);
+      osc2.frequency.setValueAtTime(freq, time);
+
+      // Dual detuning creates thick analog Reese beat phasing
+      osc1.detune.setValueAtTime(-14, time);
+      osc2.detune.setValueAtTime(14, time);
+
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(resonance || 8.5, time);
+      const cutoffPeak = isCombat ? 3200 : 900;
+      const cutoffBase = isCombat ? 320 : 150;
+      filter.frequency.setValueAtTime(cutoffPeak, time);
+      filter.frequency.exponentialRampToValueAtTime(cutoffBase, time + dur * 0.7);
+
+      gain.gain.setValueAtTime(0.001, time);
+      gain.gain.linearRampToValueAtTime(gainLevel * 0.75, time + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      const cleanup = () => {
+        try {
+          osc1.disconnect();
+          osc2.disconnect();
+          filter.disconnect();
+          gain.disconnect();
+        } catch (_) {}
+      };
+      osc1.onended = cleanup;
+      osc1.start(time);
+      osc2.start(time);
+      osc1.stop(time + dur);
+      osc2.stop(time + dur);
+      return;
+    }
+
+    if (profile === 'EBM') {
+      // Ring 2: Punchy FM-style bass (carrier modulated by modulator oscillator)
+      const carrier = this.ctx.createOscillator();
+      const modulator = this.ctx.createOscillator();
+      const modGain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      carrier.type = 'sawtooth';
+      carrier.frequency.setValueAtTime(freq, time);
+
+      modulator.type = 'sine';
+      modulator.frequency.setValueAtTime(freq * 2, time); // 2:1 FM ratio for metallic bite
+      modGain.gain.setValueAtTime(freq * 1.5, time);
+      modGain.gain.exponentialRampToValueAtTime(Math.max(1, freq * 0.1), time + dur * 0.5);
+
+      modulator.connect(carrier.frequency);
+
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(resonance || 6.5, time);
+      filter.frequency.setValueAtTime(isCombat ? 2400 : 700, time);
+      filter.frequency.exponentialRampToValueAtTime(isCombat ? 250 : 120, time + dur * 0.6);
+
+      gain.gain.setValueAtTime(0.001, time);
+      gain.gain.linearRampToValueAtTime(gainLevel, time + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+      carrier.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      carrier.onended = () => {
+        try {
+          modulator.disconnect();
+          modGain.disconnect();
+          carrier.disconnect();
+          filter.disconnect();
+          gain.disconnect();
+        } catch (_) {}
+      };
+      modulator.start(time);
+      carrier.start(time);
+      modulator.stop(time + dur);
+      carrier.stop(time + dur);
+      return;
+    }
+
+    // Default & Ring 3 (SYNTHWAVE) / Ring 1 (DARKSYNTH)
     const osc = this.ctx.createOscillator();
     const filter = this.ctx.createBiquadFilter();
     const gain = this.ctx.createGain();
 
-    osc.type = 'sawtooth';
+    osc.type = profile === 'SYNTHWAVE' ? 'sawtooth' : 'triangle';
     osc.frequency.setValueAtTime(freq, time);
-    // Detune by -6 cents for dark synth fullness
-    osc.detune.setValueAtTime(-6, time);
+    osc.detune.setValueAtTime(profile === 'SYNTHWAVE' ? -4 : -8, time);
 
     filter.type = 'lowpass';
     filter.Q.setValueAtTime(resonance, time);
 
-    const dur = this.stepDuration * 0.92;
-    const isCombat = this.intensity === MUSIC_INTENSITY.COMBAT;
-    const cutoffPeak = isCombat ? 2200 : 800;
-    const cutoffBase = isCombat ? 220 : 120;
+    const cutoffPeak = isCombat ? (profile === 'SYNTHWAVE' ? 1400 : 2600) : 650;
+    const cutoffBase = isCombat ? (profile === 'SYNTHWAVE' ? 180 : 200) : 100;
 
     filter.frequency.setValueAtTime(cutoffPeak, time);
     filter.frequency.exponentialRampToValueAtTime(cutoffBase, time + dur * 0.7);
@@ -639,28 +789,40 @@ export class SynthMusic {
   }
 
   /**
-   * Channel 2: Cyber square wave arp with dynamic lowpass sweep
+   * Channel 2: Lead synth with distinct characteristics per ring:
+   * - Ring 3 (SYNTHWAVE): Warm soft square / triangle lead
+   * - Ring 2 (EBM): Crisp driving 16th square arp
+   * - Ring 1 (DARKSYNTH): Distorted square lead with aggressive pitch slides
+   * - Ring 0 (CYBERCORE): Screaming rapid lead
    * @private
    */
   _playArpNote(freq, time, isCombat) {
+    if (!freq) return;
     const osc = this.ctx.createOscillator();
     const filter = this.ctx.createBiquadFilter();
     const gain = this.ctx.createGain();
+    const profile = this.currentTrackConfig?.profile || 'DARKSYNTH';
 
-    osc.type = 'square';
+    osc.type = profile === 'SYNTHWAVE' ? 'sawtooth' : 'square';
     osc.frequency.setValueAtTime(freq, time);
 
-    filter.type = 'lowpass';
-    filter.Q.setValueAtTime(isCombat ? 5 : 2, time);
+    // Ring 1 Darksynth pitch slides on accents
+    if (profile === 'DARKSYNTH' && this.currentStep % 4 === 0) {
+      const slideTarget = Math.max(20, freq * 1.06);
+      osc.frequency.exponentialRampToValueAtTime(slideTarget, time + this.stepDuration * 0.4);
+    }
 
-    const cutoffPeak = isCombat ? 2600 : 750;
-    const cutoffBase = isCombat ? 420 : 250;
-    const dur = this.stepDuration * 0.85;
+    filter.type = 'lowpass';
+    filter.Q.setValueAtTime(isCombat ? (profile === 'DARKSYNTH' ? 7 : 4) : 2, time);
+
+    const cutoffPeak = isCombat ? (profile === 'SYNTHWAVE' ? 1600 : 2800) : 750;
+    const cutoffBase = isCombat ? (profile === 'SYNTHWAVE' ? 320 : 450) : 250;
+    const dur = this.stepDuration * (profile === 'SYNTHWAVE' ? 0.95 : 0.85);
 
     filter.frequency.setValueAtTime(cutoffPeak, time);
     filter.frequency.exponentialRampToValueAtTime(cutoffBase, time + dur);
 
-    const gainPeak = isCombat ? 0.16 : 0.09;
+    const gainPeak = isCombat ? (profile === 'CYBERCORE' ? 0.18 : 0.15) : 0.08;
     gain.gain.setValueAtTime(0.001, time);
     gain.gain.linearRampToValueAtTime(gainPeak, time + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur);

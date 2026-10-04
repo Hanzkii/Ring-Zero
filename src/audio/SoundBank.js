@@ -132,6 +132,15 @@ export class SoundBank {
   }
 
   /**
+   * Short, harsh glitch/noise tick for Rootkit EMP purge or kernel security override
+   */
+  playGlitchTick() {
+    if (!this.synth?.initialized) return;
+    this.synth.playGlitchTone(980, 240, 0.06, 900);
+    this.synth.playFilteredNoise(0.04, 'bandpass', 1800, 300, 0.35);
+  }
+
+  /**
    * Catastrophic radial explosion and glitch audio cue for Kernel Panic
    */
   playKernelPanic() {

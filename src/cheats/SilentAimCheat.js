@@ -81,33 +81,25 @@ export class SilentAimCheat extends CheatInterceptor {
       if (!enemy.active || enemy.markedForRemoval) continue;
 
       // 1. Direct enemy body targeting
-      const dx = enemy.x - player.x;
-      const dy = enemy.y - player.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
 
       if (dist >= 10 && dist <= maxRange) {
-        const angleToEnemy = Math.atan2(dy, dx);
-        const diff = Math.abs(angleDiff(rawAimAngle, angleToEnemy));
+        const hasDirectLOS =
+          hasWallhack ||
+          !raycaster ||
+          raycaster.hasLineOfSight(player.x, player.y, enemy.x, enemy.y, wallSegments);
 
-        if (diff <= fovHalfAngle) {
-          const hasDirectLOS =
-            hasWallhack ||
-            !raycaster ||
-            raycaster.hasLineOfSight(player.x, player.y, enemy.x, enemy.y, wallSegments);
+        if (hasDirectLOS) {
+          const tLead = dist / bulletSpeed;
+          const lx = enemy.x + (enemy.vx || 0) * tLead;
+          const ly = enemy.y + (enemy.vy || 0) * tLead;
 
-          if (hasDirectLOS) {
-            const tLead = dist / bulletSpeed;
-            const lx = enemy.x + (enemy.vx || 0) * tLead;
-            const ly = enemy.y + (enemy.vy || 0) * tLead;
-
-            const score = diff * 0.6 + (dist / maxRange) * 0.4;
-            if (score < bestScore) {
-              bestScore = score;
-              bestTarget = enemy;
-              bestTargetX = lx;
-              bestTargetY = ly;
-              isBacktrack = false;
-            }
+          if (dist < bestScore) {
+            bestScore = dist;
+            bestTarget = enemy;
+            bestTargetX = lx;
+            bestTargetY = ly;
+            isBacktrack = false;
           }
         }
       }
@@ -119,30 +111,21 @@ export class SilentAimCheat extends CheatInterceptor {
           const step = Math.max(1, Math.floor(history.length / 5));
           for (let i = 0; i < history.length - 1; i += step) {
             const snap = history[i];
-            const gdx = snap.x - player.x;
-            const gdy = snap.y - player.y;
-            const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
+            const gDist = Math.hypot(snap.x - player.x, snap.y - player.y);
             if (gDist < 10 || gDist > maxRange) continue;
 
-            const gAngle = Math.atan2(gdy, gdx);
-            const gDiff = Math.abs(angleDiff(rawAimAngle, gAngle));
+            const hasGhostLOS =
+              hasWallhack ||
+              !raycaster ||
+              raycaster.hasLineOfSight(player.x, player.y, snap.x, snap.y, wallSegments);
 
-            if (gDiff <= fovHalfAngle) {
-              const hasGhostLOS =
-                hasWallhack ||
-                !raycaster ||
-                raycaster.hasLineOfSight(player.x, player.y, snap.x, snap.y, wallSegments);
-
-              if (hasGhostLOS) {
-                // Prioritize backtrack ghost ticks when close or with great line of sight
-                const gScore = gDiff * 0.55 + (gDist / maxRange) * 0.35;
-                if (gScore < bestScore) {
-                  bestScore = gScore;
-                  bestTarget = enemy;
-                  bestTargetX = snap.x;
-                  bestTargetY = snap.y;
-                  isBacktrack = true;
-                }
+            if (hasGhostLOS) {
+              if (gDist < bestScore) {
+                bestScore = gDist;
+                bestTarget = enemy;
+                bestTargetX = snap.x;
+                bestTargetY = snap.y;
+                isBacktrack = true;
               }
             }
           }
@@ -158,6 +141,10 @@ export class SilentAimCheat extends CheatInterceptor {
       this.targetLeadPos.set(bestTargetX, bestTargetY);
       const desiredAngle = Math.atan2(bestTargetY - player.y, bestTargetX - player.x);
       this.currentLockedAngle = desiredAngle;
+      if (aimVector) {
+        aimVector.x = Math.cos(desiredAngle);
+        aimVector.y = Math.sin(desiredAngle);
+      }
       return desiredAngle;
     }
 
