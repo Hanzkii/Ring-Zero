@@ -5,7 +5,6 @@
  */
 
 import { COLOR } from '../core/Constants.js';
-import { TerminalUI } from './TerminalUI.js';
 
 export const MENU_ICONS = {
   // Navigation Tabs
@@ -38,10 +37,10 @@ export const MENU_ICONS = {
 };
 
 /**
- * MainMenu wraps TerminalUI for direct instantiation or access
+ * MainMenu interface and presentation helper
  */
-export class MainMenu extends TerminalUI {
-  constructor(options) {
-    super(options);
+export class MainMenu {
+  static get icons() {
+    return MENU_ICONS;
   }
 }
